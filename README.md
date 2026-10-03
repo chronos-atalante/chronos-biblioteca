@@ -1,7 +1,8 @@
 # Webtoons Biblioteca
 
 Aplicativo desktop (Electron + TypeScript + React) para anotar o progresso das suas leituras de
-**webtoons, manhwas, manhuas, mangás e livros**: capa da obra, título, sinopse, barra de progresso
+**webtoons, manhwas, manhuas, mangás e livros**: capa da obra, título, descrição, barra de
+progresso
 em porcentagem e marcação de conclusão — com **backup automático-manual no Google Drive** em uma
 pasta oculta.
 
@@ -15,10 +16,10 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
   progresso.
 - **Capa da obra**: escolha uma imagem JPG/PNG/WebP do disco — ela é copiada para a biblioteca
   local e servida pelo protocolo interno `cover://`.
-- **Título e sinopse** livres, além de uma marcação opcional (`Cap. 45`, `Vol. 3`).
-- **Barra de progresso** com slider (arraste para anotar a qualquer momento), botões rápidos
-  `−10%` / `+10%`, valor numérico e **marcar como concluído** (100%) / **reabrir**.
-- **Busca** por título ou sinopse e **filtros** por status (Lendo, Planejados, Pausados,
+- **Título e descrição** livres, além de uma marcação opcional (`Cap. 45`, `Vol. 3`).
+- **Barra de progresso** com botões rápidos `−10` / `+10`, campo numérico direto e **concluir**
+  (100%) / **zerar**.
+- **Busca** por título ou descrição e **filtros** por status (Lendo, Planejados, Pausados,
   Concluídos) com estatísticas no topo.
 - **Backup no Google Drive**: pasta oculta **`.webtoons-backup`**, OAuth direto no app (sem
   servidor intermediário), com **Fazer backup agora**, **Restaurar** e **Desconectar**.

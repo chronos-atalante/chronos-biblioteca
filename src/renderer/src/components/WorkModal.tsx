@@ -179,10 +179,10 @@ export default function WorkModal({
           </div>
 
           <div className="field">
-            <label>Sinopse</label>
+            <label>Descrição</label>
             <textarea
               value={draft.synopsis}
-              placeholder="Escreva a sinopse da obra..."
+              placeholder="Escreva a descrição da obra..."
               onChange={(event) => patch({ synopsis: event.target.value })}
             />
           </div>
