@@ -84,7 +84,7 @@
     },
     "deb": {
       "fpm": [
-        "--deb-postrm=build/postrm"
+        "--after-remove=build/postrm"
       ],
       "priority": "optional",
       "depends": [
