@@ -6,6 +6,7 @@ import {
   STATUS_OPTIONS,
   TYPE_LABELS,
   TYPE_OPTIONS,
+  CATEGORIES,
   clampProgress,
   coverUrl,
 } from '../constants';
@@ -193,6 +194,22 @@ export default function WorkModal({
               </select>
             </div>
             <div className="field">
+              <label>Categoria</label>
+              <select
+                value={draft.category ?? ''}
+                onChange={(event) =>
+                  patch({ category: event.target.value === '' ? undefined : event.target.value })
+                }
+              >
+                <option value="">Nenhuma</option>
+                {CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
               <label>Marcação (opcional)</label>
               <input
                 type="text"
@@ -224,10 +241,7 @@ export default function WorkModal({
               <button className="btn small" onClick={() => setProgress(draft.progress + 10)}>
                 <i className="fa-solid fa-plus" /> 10%
               </button>
-              <button
-                className="btn small success"
-                onClick={() => patch({ status: 'concluido' })}
-              >
+              <button className="btn small success" onClick={() => patch({ status: 'concluido' })}>
                 <i className="fa-solid fa-check" /> Marcar como concluído
               </button>
               <button

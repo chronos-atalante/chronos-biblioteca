@@ -35,6 +35,9 @@ export function saveSettings(settings: AppSettings): AppSettings {
     driveClientSecret: settings.driveClientSecret.trim(),
     drivePassphrase: settings.drivePassphrase,
   };
-  fs.writeFileSync(settingsPath(), JSON.stringify(next, null, 2), { encoding: 'utf-8', mode: 0o600 });
+  fs.writeFileSync(settingsPath(), JSON.stringify(next, null, 2), {
+    encoding: 'utf-8',
+    mode: 0o600,
+  });
   return next;
 }

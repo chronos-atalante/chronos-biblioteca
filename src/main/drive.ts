@@ -73,7 +73,10 @@ function loadState(): void {
 function persistState(): void {
   ensureConfig();
   if (state.tokens !== null) {
-    fs.writeFileSync(statePath(), JSON.stringify(state.tokens, null, 2), { encoding: 'utf-8', mode: 0o600 });
+    fs.writeFileSync(statePath(), JSON.stringify(state.tokens, null, 2), {
+      encoding: 'utf-8',
+      mode: 0o600,
+    });
   } else if (fs.existsSync(statePath())) {
     fs.unlinkSync(statePath());
   }

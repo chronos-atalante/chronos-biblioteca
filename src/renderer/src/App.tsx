@@ -157,7 +157,9 @@ export default function App(): JSX.Element {
       .filter((work) =>
         term === ''
           ? true
-          : work.title.toLowerCase().includes(term) || work.synopsis.toLowerCase().includes(term),
+          : work.title.toLowerCase().includes(term) ||
+            work.synopsis.toLowerCase().includes(term) ||
+            (work.category ?? '').toLowerCase().includes(term),
       )
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [works, query, filter]);

@@ -42,6 +42,9 @@ export default function WorkCard({
       <div className="card-body">
         <div className="card-title">{work.title !== '' ? work.title : 'Sem título'}</div>
         {marker !== undefined && marker !== '' ? <div className="card-marker">{marker}</div> : null}
+        {work.category !== undefined && work.category !== '' ? (
+          <div className="card-category">{work.category}</div>
+        ) : null}
 
         <div className="progress-row">
           <span>Progresso</span>

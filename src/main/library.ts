@@ -93,6 +93,7 @@ export function upsertWork(
     progress,
     marker: input.marker,
     coverFile: input.coverFile,
+    category: input.category,
     createdAt: previous?.createdAt ?? input.createdAt ?? now,
     updatedAt: now,
   };

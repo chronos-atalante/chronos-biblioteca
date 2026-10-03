@@ -829,3 +829,14 @@ input[type='range']::-webkit-slider-thumb {
     transform: translate(-50%, 12px);
   }
 }
+
+.card-category {
+  align-self: flex-start;
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-top: -4px;
+}

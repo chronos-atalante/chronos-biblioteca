@@ -35,6 +35,25 @@ export const STATUS_COLORS: Record<WorkStatus, string> = {
 export const TYPE_OPTIONS = Object.keys(TYPE_LABELS) as WorkType[];
 export const STATUS_OPTIONS = Object.keys(STATUS_LABELS) as WorkStatus[];
 
+export const CATEGORIES: string[] = [
+  'Isekai',
+  'Ação',
+  'Artes Marciais',
+  'Fantasia',
+  'Comédia',
+  'Romance',
+  'Drama',
+  'Aventura',
+  'Suspense',
+  'Terror',
+  'Mistério',
+  'Shounen',
+  'Seinen',
+  'Slice of Life',
+  'Esportes',
+  'Escolar',
+];
+
 export type StatusFilter = 'todos' | WorkStatus;
 
 export const FILTERS: { value: StatusFilter; label: string }[] = [

@@ -14,6 +14,8 @@ export interface Work {
   marker?: string | undefined;
   /** Nome do arquivo da capa dentro da pasta de capas */
   coverFile?: string | undefined;
+  /** Categoria principal da obra, ex.: 'Isekai' */
+  category?: string | undefined;
   createdAt: string;
   updatedAt: string;
 }
