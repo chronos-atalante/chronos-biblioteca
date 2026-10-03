@@ -1,9 +1,9 @@
-import fs from 'fs'
-import path from 'path'
-import { URL } from 'url'
-import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
-import { coversDir, deleteWork, importCover, loadLibrary, mimeFor, upsertWork } from './library'
-import { loadSettings, saveSettings } from './settings'
+import fs from 'fs';
+import path from 'path';
+import { URL } from 'url';
+import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron';
+import { coversDir, deleteWork, importCover, loadLibrary, mimeFor, upsertWork } from './library';
+import { loadSettings, saveSettings } from './settings';
 import {
   authorize,
   backupInfo,
@@ -12,18 +12,18 @@ import {
   getStatus,
   initDrive,
   onStatus,
-  restoreNow
-} from './drive'
-import type { AppSettings, DriveStatus, Work } from '../shared/types'
+  restoreNow,
+} from './drive';
+import type { AppSettings, DriveStatus, Work } from '../shared/types';
 
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'cover',
-    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
-  }
-])
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+  },
+]);
 
-let mainWindow: BrowserWindow | null = null
+let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -32,121 +32,131 @@ function createWindow(): void {
     minWidth: 860,
     minHeight: 560,
     title: 'Webtoons Biblioteca',
-    backgroundColor: '#0f1117',
+    backgroundColor: '#000000',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      webSecurity: true
-    }
-  })
+      webSecurity: true,
+    },
+  });
 
-  mainWindow.once('ready-to-show', () => mainWindow?.show())
+  mainWindow.once('ready-to-show', () => mainWindow?.show());
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url)
-    return { action: 'deny' }
-  })
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
 
-  if (process.env.ELECTRON_RENDERER_URL) {
-    void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
+  const devUrl = process.env.ELECTRON_RENDERER_URL;
+  if (devUrl !== undefined && devUrl !== '') {
+    void mainWindow.loadURL(devUrl);
   } else {
-    void mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
+    void mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
 
   mainWindow.on('closed', () => {
-    mainWindow = null
-  })
+    mainWindow = null;
+  });
 }
 
 function registerCoverProtocol(): void {
   protocol.handle('cover', (request) => {
     try {
-      const url = new URL(request.url)
-      const name = path.basename(decodeURIComponent(url.pathname))
-      if (!name) return new Response('Não encontrado', { status: 404 })
-      const full = path.join(coversDir(), name)
-      if (!fs.existsSync(full)) return new Response('Não encontrado', { status: 404 })
-      const buffer = fs.readFileSync(full)
+      const url = new URL(request.url);
+      const name = path.basename(decodeURIComponent(url.pathname));
+      if (name === '') return new Response('Não encontrado', { status: 404 });
+      const full = path.join(coversDir(), name);
+      if (!fs.existsSync(full)) return new Response('Não encontrado', { status: 404 });
+      const buffer = fs.readFileSync(full);
       return new Response(new Uint8Array(buffer), {
         headers: {
           'Content-Type': mimeFor(name),
-          'Cache-Control': 'max-age=3600'
-        }
-      })
+          'Cache-Control': 'max-age=3600',
+        },
+      });
     } catch {
-      return new Response('Erro', { status: 500 })
+      return new Response('Erro', { status: 500 });
     }
-  })
+  });
 }
 
 function registerIpc(): void {
-  ipcMain.handle('library:get', (): Work[] => loadLibrary())
+  ipcMain.handle('library:get', (): Work[] => loadLibrary());
 
-  ipcMain.handle('library:save', (_event, work: Work): Work[] => upsertWork(work))
+  ipcMain.handle('library:save', (_event, work: Work): Work[] => upsertWork(work));
 
-  ipcMain.handle('library:delete', (_event, id: string): Work[] => deleteWork(id))
+  ipcMain.handle('library:delete', (_event, id: string): Work[] => deleteWork(id));
 
   ipcMain.handle('cover:pick', async (event): Promise<string | null> => {
     const options = {
       title: 'Escolher imagem da capa',
       properties: ['openFile' as const],
       filters: [
-        { name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'bmp'] }
-      ]
-    }
-    const window = BrowserWindow.fromWebContents(event.sender)
-    const result = window
-      ? await dialog.showOpenDialog(window, options)
-      : await dialog.showOpenDialog(options)
-    if (result.canceled || !result.filePaths[0]) return null
-    return importCover(result.filePaths[0])
-  })
+        { name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'bmp'] },
+      ],
+    };
+    const window = BrowserWindow.fromWebContents(event.sender);
+    const result =
+      window !== null
+        ? await dialog.showOpenDialog(window, options)
+        : await dialog.showOpenDialog(options);
+    const first = result.filePaths[0];
+    if (result.canceled || first === undefined || first === '') return null;
+    return importCover(first);
+  });
 
-  ipcMain.handle('settings:get', (): AppSettings => loadSettings())
+  ipcMain.handle('settings:get', (): AppSettings => loadSettings());
 
-  ipcMain.handle('settings:set', (_event, settings: AppSettings): AppSettings => saveSettings(settings))
+  ipcMain.handle('settings:set', (_event, settings: AppSettings): AppSettings =>
+    saveSettings(settings),
+  );
 
-  ipcMain.handle('drive:status', (): DriveStatus => getStatus())
-  ipcMain.handle('drive:auth', () => authorize())
-  ipcMain.handle('drive:backup', () => backupNow())
-  ipcMain.handle('drive:restore', () => restoreNow())
-  ipcMain.handle('drive:backup-info', () => backupInfo())
-  ipcMain.handle('drive:disconnect', (): DriveStatus => disconnect())
+  ipcMain.handle('drive:status', (): DriveStatus => getStatus());
+  ipcMain.handle('drive:auth', () => authorize());
+  ipcMain.handle('drive:backup', () => backupNow());
+  ipcMain.handle('drive:restore', () => restoreNow());
+  ipcMain.handle('drive:backup-info', () => backupInfo());
+  ipcMain.handle('drive:disconnect', (): DriveStatus => disconnect());
 
   onStatus((status) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('drive:status-changed', status)
+    if (mainWindow !== null && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('drive:status-changed', status);
     }
-  })
+  });
 }
 
-const gotLock = app.requestSingleInstanceLock()
+const gotLock = app.requestSingleInstanceLock();
 
 if (!gotLock) {
-  app.quit()
+  app.quit();
 } else {
   app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore()
-      mainWindow.focus()
+    if (mainWindow !== null) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
     }
-  })
+  });
 
-  app.whenReady().then(() => {
-    registerCoverProtocol()
-    registerIpc()
-    initDrive()
-    createWindow()
+  app
+    .whenReady()
+    .then(() => {
+      registerCoverProtocol();
+      registerIpc();
+      initDrive();
+      createWindow();
 
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+      app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      });
     })
-  })
+    .catch((error: unknown) => {
+      console.error('Falha ao iniciar o aplicativo:', error);
+    });
 
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit()
-  })
+    if (process.platform !== 'darwin') app.quit();
+  });
 }

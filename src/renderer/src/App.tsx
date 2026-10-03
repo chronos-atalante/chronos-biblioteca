@@ -1,17 +1,27 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { DriveStatus, Work } from '@shared/types'
-import { FILTERS, STATUS_COLORS, clampProgress, type StatusFilter } from './constants'
-import WorkCard from './components/WorkCard'
-import WorkModal from './components/WorkModal'
-import SettingsModal from './components/SettingsModal'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { JSX } from 'react';
+import type { DriveStatus, Work } from '@shared/types';
+import { FILTERS, STATUS_COLORS, clampProgress, type StatusFilter } from './constants';
+import WorkCard from './components/WorkCard';
+import WorkModal from './components/WorkModal';
+import SettingsModal from './components/SettingsModal';
 
 interface EditingState {
-  work: Work
-  isNew: boolean
+  work: Work;
+  isNew: boolean;
+}
+
+interface Stats {
+  total: number;
+  reading: number;
+  done: number;
+  planned: number;
+  paused: number;
+  average: number;
 }
 
 function blankWork(): Work {
-  const now = new Date().toISOString()
+  const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),
     title: '',
@@ -21,145 +31,163 @@ function blankWork(): Work {
     progress: 0,
     marker: '',
     createdAt: now,
-    updatedAt: now
-  }
+    updatedAt: now,
+  };
 }
 
-export default function App() {
-  const [works, setWorks] = useState<Work[]>([])
-  const [loading, setLoading] = useState(true)
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<StatusFilter>('todos')
-  const [editing, setEditing] = useState<EditingState | null>(null)
-  const [showSettings, setShowSettings] = useState(false)
-  const [drive, setDrive] = useState<DriveStatus | null>(null)
-  const [toast, setToast] = useState<{ message: string; kind: 'info' | 'error' } | null>(null)
+export default function App(): JSX.Element {
+  const [works, setWorks] = useState<Work[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<StatusFilter>('todos');
+  const [editing, setEditing] = useState<EditingState | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [drive, setDrive] = useState<DriveStatus | null>(null);
+  const [toast, setToast] = useState<{ message: string; kind: 'info' | 'error' } | null>(null);
 
-  const saveTimers = useRef(new Map<string, number>())
-  const toastTimer = useRef<number | undefined>(undefined)
+  const saveTimers = useRef<Map<string, number>>(new Map());
+  const toastTimer = useRef<number | undefined>(undefined);
 
-  const notify = useCallback((message: string, kind: 'info' | 'error' = 'info') => {
-    setToast({ message, kind })
-    window.clearTimeout(toastTimer.current)
-    toastTimer.current = window.setTimeout(() => setToast(null), 3500)
-  }, [])
+  const notify = useCallback((message: string, kind: 'info' | 'error' = 'info'): void => {
+    setToast({ message, kind });
+    window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 3500);
+  }, []);
 
-  const reload = useCallback(async () => {
-    const [library, status] = await Promise.all([window.api.library.get(), window.api.drive.status()])
-    setWorks(library)
-    setDrive(status)
-    setLoading(false)
-  }, [])
+  const reload = useCallback(async (): Promise<void> => {
+    const [library, status] = await Promise.all([
+      window.api.library.get(),
+      window.api.drive.status(),
+    ]);
+    setWorks(library);
+    setDrive(status);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    void reload()
-    const unsubscribe = window.api.drive.onStatus((status) => setDrive(status))
-    return unsubscribe
-  }, [reload])
+    void reload();
+    const unsubscribe = window.api.drive.onStatus((status) => setDrive(status));
+    return () => {
+      unsubscribe();
+    };
+  }, [reload]);
 
-  const persist = useCallback(async (work: Work) => {
-    const saved = await window.api.library.save(work)
-    setWorks(saved)
-  }, [])
+  const persist = useCallback(async (work: Work): Promise<void> => {
+    const saved = await window.api.library.save(work);
+    setWorks(saved);
+  }, []);
 
   const scheduleSave = useCallback(
-    (work: Work) => {
-      const timers = saveTimers.current
-      const existing = timers.get(work.id)
-      if (existing) window.clearTimeout(existing)
+    (work: Work): void => {
+      const timers = saveTimers.current;
+      const existing = timers.get(work.id);
+      if (existing !== undefined) window.clearTimeout(existing);
       const handle = window.setTimeout(() => {
-        timers.delete(work.id)
-        void persist(work).catch(() => notify('Não foi possível salvar a obra.', 'error'))
-      }, 450)
-      timers.set(work.id, handle)
+        timers.delete(work.id);
+        void persist(work).catch(() => notify('Não foi possível salvar a obra.', 'error'));
+      }, 450);
+      timers.set(work.id, handle);
     },
-    [notify, persist]
-  )
+    [notify, persist],
+  );
 
   useEffect(() => {
-    const timers = saveTimers.current
+    const timers = saveTimers.current;
     return () => {
-      for (const handle of timers.values()) window.clearTimeout(handle)
-      timers.clear()
-    }
-  }, [])
+      for (const handle of timers.values()) window.clearTimeout(handle);
+      timers.clear();
+    };
+  }, []);
 
   const updateProgress = useCallback(
-    (work: Work, rawProgress: number) => {
-      const progress = clampProgress(rawProgress)
+    (work: Work, rawProgress: number): void => {
+      const progress = clampProgress(rawProgress);
       const next: Work = {
         ...work,
         progress,
         status: progress >= 100 ? 'concluido' : work.status === 'concluido' ? 'lendo' : work.status,
-        updatedAt: new Date().toISOString()
-      }
-      setWorks((current) => current.map((item) => (item.id === next.id ? next : item)))
-      scheduleSave(next)
+        updatedAt: new Date().toISOString(),
+      };
+      setWorks((current) => current.map((item) => (item.id === next.id ? next : item)));
+      scheduleSave(next);
     },
-    [scheduleSave]
-  )
+    [scheduleSave],
+  );
 
   const complete = useCallback(
-    (work: Work) => updateProgress(work, 100),
-    [updateProgress]
-  )
+    (work: Work): void => {
+      updateProgress(work, 100);
+    },
+    [updateProgress],
+  );
 
   const reopen = useCallback(
-    (work: Work) => {
-      const next: Work = { ...work, status: 'lendo', updatedAt: new Date().toISOString() }
-      setWorks((current) => current.map((item) => (item.id === next.id ? next : item)))
-      scheduleSave(next)
+    (work: Work): void => {
+      const next: Work = { ...work, status: 'lendo', updatedAt: new Date().toISOString() };
+      setWorks((current) => current.map((item) => (item.id === next.id ? next : item)));
+      scheduleSave(next);
     },
-    [scheduleSave]
-  )
+    [scheduleSave],
+  );
 
   const saveEdited = useCallback(
-    async (work: Work) => {
-      const saved = await window.api.library.save(work)
-      setWorks(saved)
-      notify('Obra salva.')
+    async (work: Work): Promise<void> => {
+      const saved = await window.api.library.save(work);
+      setWorks(saved);
+      notify('Obra salva.');
     },
-    [notify]
-  )
+    [notify],
+  );
 
   const deleteWork = useCallback(
-    async (work: Work) => {
-      const saved = await window.api.library.remove(work.id)
-      setWorks(saved)
-      notify('Obra removida.')
+    async (work: Work): Promise<void> => {
+      const saved = await window.api.library.remove(work.id);
+      setWorks(saved);
+      notify('Obra removida.');
     },
-    [notify]
-  )
+    [notify],
+  );
 
   const visible = useMemo(() => {
-    const term = query.trim().toLowerCase()
+    const term = query.trim().toLowerCase();
     return works
       .filter((work) => (filter === 'todos' ? true : work.status === filter))
       .filter((work) =>
-        !term
+        term === ''
           ? true
-          : work.title.toLowerCase().includes(term) || work.synopsis.toLowerCase().includes(term)
+          : work.title.toLowerCase().includes(term) || work.synopsis.toLowerCase().includes(term),
       )
-      .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
-  }, [works, query, filter])
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }, [works, query, filter]);
 
-  const stats = useMemo(() => {
-    const total = works.length
-    const reading = works.filter((w) => w.status === 'lendo').length
-    const done = works.filter((w) => w.status === 'concluido').length
-    const planned = works.filter((w) => w.status === 'planejado').length
-    const paused = works.filter((w) => w.status === 'pausado').length
-    const average = total ? Math.round(works.reduce((sum, w) => sum + w.progress, 0) / total) : 0
-    return { total, reading, done, planned, paused, average }
-  }, [works])
+  const stats: Stats = useMemo(() => {
+    const total = works.length;
+    const reading = works.filter((w) => w.status === 'lendo').length;
+    const done = works.filter((w) => w.status === 'concluido').length;
+    const planned = works.filter((w) => w.status === 'planejado').length;
+    const paused = works.filter((w) => w.status === 'pausado').length;
+    const average =
+      total !== 0 ? Math.round(works.reduce((sum, w) => sum + w.progress, 0) / total) : 0;
+    return { total, reading, done, planned, paused, average };
+  }, [works]);
 
-  const driveDotClass = drive?.syncing ? 'dot busy' : drive?.connected ? 'dot on' : 'dot'
+  const driveSyncing = drive?.syncing === true;
+  const driveConnected = drive?.connected === true;
+  const driveDotClass = driveSyncing ? 'dot busy' : driveConnected ? 'dot on' : 'dot';
+  const driveLabel = driveSyncing
+    ? 'Sincronizando…'
+    : driveConnected
+      ? 'Drive conectado'
+      : 'Drive off';
+  const hasWorks = works.length !== 0;
 
   return (
     <div className="app">
       <header className="header">
         <div className="brand">
-          <div className="brand-logo">📚</div>
+          <div className="brand-logo">
+            <i className="fa-solid fa-book-open" />
+          </div>
           <div>
             <h1>Webtoons Biblioteca</h1>
             <small>
@@ -169,7 +197,9 @@ export default function App() {
         </div>
 
         <div className="search">
-          <span>⌕</span>
+          <span>
+            <i className="fa-solid fa-magnifying-glass" />
+          </span>
           <input
             type="text"
             value={query}
@@ -197,13 +227,20 @@ export default function App() {
             title="Configurações do backup no Google Drive"
           >
             <span className={driveDotClass} />
-            {drive?.syncing ? 'Sincronizando…' : drive?.connected ? 'Drive conectado' : 'Drive off'}
+            {driveLabel}
           </button>
-          <button className="btn ghost" onClick={() => setShowSettings(true)} title="Configurações">
-            ⚙
+          <button
+            className="btn ghost icon-only"
+            onClick={() => setShowSettings(true)}
+            title="Configurações"
+          >
+            <i className="fa-solid fa-gear" />
           </button>
-          <button className="btn primary" onClick={() => setEditing({ work: blankWork(), isNew: true })}>
-            ＋ Nova obra
+          <button
+            className="btn primary"
+            onClick={() => setEditing({ work: blankWork(), isNew: true })}
+          >
+            <i className="fa-solid fa-plus" /> Nova obra
           </button>
         </div>
       </header>
@@ -237,19 +274,26 @@ export default function App() {
         </div>
 
         {loading ? (
-          <div className="loading">Carregando biblioteca…</div>
+          <div className="loading">
+            <i className="fa-solid fa-spinner fa-spin" /> Carregando biblioteca…
+          </div>
         ) : visible.length === 0 ? (
           <div className="empty">
-            <div className="icon">📚</div>
-            <h3>{works.length === 0 ? 'Sua biblioteca está vazia' : 'Nenhuma obra encontrada'}</h3>
+            <div className="icon">
+              <i className="fa-solid fa-book-open" />
+            </div>
+            <h3>{hasWorks ? 'Nenhuma obra encontrada' : 'Sua biblioteca está vazia'}</h3>
             <p>
-              {works.length === 0
-                ? 'Adicione sua primeira obra: capa, título, sinopse e acompanhe o progresso em porcentagem.'
-                : 'Tente outro filtro ou termo de busca.'}
+              {hasWorks
+                ? 'Tente outro filtro ou termo de busca.'
+                : 'Adicione sua primeira obra: capa, título, sinopse e acompanhe o progresso em porcentagem.'}
             </p>
-            {works.length === 0 ? (
-              <button className="btn primary" onClick={() => setEditing({ work: blankWork(), isNew: true })}>
-                ＋ Adicionar primeira obra
+            {!hasWorks ? (
+              <button
+                className="btn primary"
+                onClick={() => setEditing({ work: blankWork(), isNew: true })}
+              >
+                <i className="fa-solid fa-plus" /> Adicionar primeira obra
               </button>
             ) : null}
           </div>
@@ -269,7 +313,7 @@ export default function App() {
         )}
       </main>
 
-      {editing ? (
+      {editing !== null ? (
         <WorkModal
           work={editing.work}
           isNew={editing.isNew}
@@ -279,11 +323,13 @@ export default function App() {
         />
       ) : null}
 
-      {showSettings ? <SettingsModal onClose={() => setShowSettings(false)} notify={notify} /> : null}
+      {showSettings ? (
+        <SettingsModal onClose={() => setShowSettings(false)} notify={notify} />
+      ) : null}
 
-      {toast ? (
+      {toast !== null ? (
         <div className={`toast${toast.kind === 'error' ? ' error' : ''}`}>{toast.message}</div>
       ) : null}
     </div>
-  )
+  );
 }
