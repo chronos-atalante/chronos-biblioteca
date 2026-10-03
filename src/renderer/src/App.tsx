@@ -105,7 +105,7 @@ export default function App(): JSX.Element {
       const next: Work = {
         ...work,
         progress,
-        status: progress >= 100 ? 'concluido' : work.status === 'concluido' ? 'lendo' : work.status,
+        status: work.status === 'concluido' ? 'lendo' : work.status,
         updatedAt: new Date().toISOString(),
       };
       setWorks((current) => current.map((item) => (item.id === next.id ? next : item)));
@@ -116,9 +116,11 @@ export default function App(): JSX.Element {
 
   const complete = useCallback(
     (work: Work): void => {
-      updateProgress(work, 100);
+      const next: Work = { ...work, status: 'concluido', updatedAt: new Date().toISOString() };
+      setWorks((current) => current.map((item) => (item.id === next.id ? next : item)));
+      scheduleSave(next);
     },
-    [updateProgress],
+    [scheduleSave],
   );
 
   const reopen = useCallback(
@@ -166,8 +168,7 @@ export default function App(): JSX.Element {
     const done = works.filter((w) => w.status === 'concluido').length;
     const planned = works.filter((w) => w.status === 'planejado').length;
     const paused = works.filter((w) => w.status === 'pausado').length;
-    const average =
-      total !== 0 ? Math.round(works.reduce((sum, w) => sum + w.progress, 0) / total) : 0;
+    const average = total !== 0 ? Math.round((done / total) * 100) : 0;
     return { total, reading, done, planned, paused, average };
   }, [works]);
 

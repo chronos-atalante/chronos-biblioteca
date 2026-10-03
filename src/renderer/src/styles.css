@@ -97,7 +97,6 @@ textarea {
   place-items: center;
   font-size: 17px;
   color: #ffffff;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
 }
 
 .brand h1 {
@@ -248,7 +247,6 @@ textarea {
 .btn.primary {
   background: var(--accent-strong);
   border-color: transparent;
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
 }
 
 .btn.ghost {
@@ -308,8 +306,8 @@ textarea {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(228px, 1fr));
+  gap: 17px;
 }
 
 /* ---------- cartões ---------- */
@@ -438,6 +436,21 @@ textarea {
   background: var(--success);
 }
 
+.bar-fill.indeterminate {
+  width: 40%;
+  transition: none;
+  animation: bar-indeterminate 1.1s ease-in-out infinite;
+}
+
+@keyframes bar-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
 input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
@@ -458,7 +471,6 @@ input[type='range']::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid #000000;
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.6);
   cursor: grab;
 }
 

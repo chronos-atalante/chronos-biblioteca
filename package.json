@@ -83,6 +83,7 @@
       "syncDesktopName": true
     },
     "deb": {
+      "fpm": ["--deb-postrm=build/postrm"],
       "priority": "optional",
       "depends": [
         "libgtk-3-0",

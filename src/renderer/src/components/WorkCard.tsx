@@ -45,26 +45,14 @@ export default function WorkCard({
 
         <div className="progress-row">
           <span>Progresso</span>
-          <b>{work.progress}%</b>
+          <b>{done ? '100%' : `Cap. ${work.progress}`}</b>
         </div>
         <div className="bar">
           <div
-            className={`bar-fill${done ? ' done' : ''}`}
-            style={{ width: `${work.progress}%` }}
+            className={`bar-fill${done ? ' done' : ' indeterminate'}`}
+            style={done ? { width: '100%' } : undefined}
           />
         </div>
-
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={work.progress}
-          onClick={(event) => event.stopPropagation()}
-          onChange={(event) => {
-            event.stopPropagation();
-            onProgress(work, Number(event.target.value));
-          }}
-        />
 
         <div className="card-actions" onClick={(event) => event.stopPropagation()}>
           <button

@@ -2,10 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import http from 'http';
 import { URLSearchParams } from 'url';
-import { app, shell } from 'electron';
+import { shell } from 'electron';
 import type { BackupSummary, DriveStatus, Work } from '../shared/types';
 import { loadSettings } from './settings';
-import { backupFiles, loadLibrary, restoreLibrary } from './library';
+import { backupFiles, configDir, coversDir, loadLibrary, restoreLibrary } from './library';
 
 const SCOPES = ['https://www.googleapis.com/auth/drive.file', 'openid', 'email'].join(' ');
 
@@ -49,11 +49,16 @@ const state: State = { tokens: null, lastError: null, syncing: false };
 
 let statusListener: ((status: DriveStatus) => void) | null = null;
 
+function ensureConfig(): void {
+  fs.mkdirSync(configDir(), { recursive: true });
+}
+
 function statePath(): string {
-  return path.join(app.getPath('userData'), 'drive-tokens.json');
+  return path.join(configDir(), 'drive-tokens.json');
 }
 
 function loadState(): void {
+  ensureConfig();
   try {
     const file = statePath();
     if (fs.existsSync(file)) {
@@ -65,8 +70,9 @@ function loadState(): void {
 }
 
 function persistState(): void {
+  ensureConfig();
   if (state.tokens !== null) {
-    fs.writeFileSync(statePath(), JSON.stringify(state.tokens, null, 2), 'utf-8');
+    fs.writeFileSync(statePath(), JSON.stringify(state.tokens, null, 2), { encoding: 'utf-8', mode: 0o600 });
   } else if (fs.existsSync(statePath())) {
     fs.unlinkSync(statePath());
   }
@@ -477,7 +483,7 @@ export async function restoreNow(): Promise<{ ok: boolean; error?: string; works
     const works = parsed as Work[];
 
     const covers = remote.filter((file) => file.name !== 'library.json');
-    const coversPath = path.join(app.getPath('userData'), 'covers');
+    const coversPath = coversDir();
     fs.mkdirSync(coversPath, { recursive: true });
     for (const cover of covers) {
       const buffer = await downloadFile(cover.id);

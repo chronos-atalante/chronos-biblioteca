@@ -46,16 +46,11 @@ export default function WorkModal({
 
   const setProgress = (value: number): void => {
     const progress = clampProgress(value);
-    if (progress >= 100) {
-      patch({ progress, status: 'concluido' });
-      return;
-    }
     patch({ progress, status: draft.status === 'concluido' ? 'lendo' : draft.status });
   };
 
   const setStatus = (status: WorkStatus): void => {
-    if (status === 'concluido') patch({ status, progress: 100 });
-    else patch({ status });
+    patch({ status });
   };
 
   const chooseCover = async (): Promise<void> => {
@@ -212,21 +207,15 @@ export default function WorkModal({
             <label>Progresso da leitura</label>
             <div className="progress-editor">
               <input
-                type="range"
-                min={0}
-                max={100}
-                value={draft.progress}
-                onChange={(event) => setProgress(Number(event.target.value))}
-              />
-              <input
                 className="progress-value"
                 type="number"
                 min={0}
-                max={100}
                 value={draft.progress}
                 onChange={(event) => setProgress(Number(event.target.value))}
               />
-              <span className="progress-percent">{draft.progress}%</span>
+              <span className="progress-percent">
+                {draft.status === 'concluido' ? '100%' : `Cap. ${draft.progress}`}
+              </span>
             </div>
             <div className="quick-row">
               <button className="btn small" onClick={() => setProgress(draft.progress - 10)}>
@@ -237,7 +226,7 @@ export default function WorkModal({
               </button>
               <button
                 className="btn small success"
-                onClick={() => patch({ progress: 100, status: 'concluido' })}
+                onClick={() => patch({ status: 'concluido' })}
               >
                 <i className="fa-solid fa-check" /> Marcar como concluído
               </button>

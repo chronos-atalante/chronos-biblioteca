@@ -2,7 +2,17 @@ import fs from 'fs';
 import path from 'path';
 import { URL } from 'url';
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron';
-import { coversDir, deleteWork, importCover, loadLibrary, mimeFor, upsertWork } from './library';
+import {
+  cacheDir,
+  configDir,
+  coversDir,
+  dataDir,
+  deleteWork,
+  importCover,
+  loadLibrary,
+  mimeFor,
+  upsertWork,
+} from './library';
 import { loadSettings, saveSettings } from './settings';
 import {
   authorize,
@@ -22,6 +32,38 @@ protocol.registerSchemesAsPrivileged([
     privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
   },
 ]);
+
+const legacyDirs = [
+  path.join(app.getPath('appData'), 'Webtoons Biblioteca'),
+  path.join(app.getPath('appData'), 'webtoons-biblioteca'),
+];
+app.setPath('userData', cacheDir());
+
+(function migrateLegacyData(): void {
+  try {
+    for (const legacy of legacyDirs) {
+      if (!fs.existsSync(legacy)) continue;
+      const mapping: [string, string][] = [
+        ['library.json', path.join(dataDir(), 'library.json')],
+        ['covers', path.join(dataDir(), 'covers')],
+        ['settings.json', path.join(configDir(), 'settings.json')],
+        ['drive-tokens.json', path.join(configDir(), 'drive-tokens.json')],
+      ];
+      for (const [name, to] of mapping) {
+        const from = path.join(legacy, name);
+        if (fs.existsSync(from) && !fs.existsSync(to)) {
+          fs.mkdirSync(path.dirname(to), { recursive: true });
+          fs.cpSync(from, to, { recursive: true });
+        }
+      }
+    }
+    fs.mkdirSync(dataDir(), { recursive: true });
+    fs.mkdirSync(configDir(), { recursive: true });
+    coversDir();
+  } catch {
+    // ignora falhas de migração
+  }
+})();
 
 let mainWindow: BrowserWindow | null = null;
 

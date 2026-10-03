@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
+import { configDir } from './library';
 import type { AppSettings } from '../shared/types';
 
 const DEFAULTS: AppSettings = {
@@ -8,8 +8,13 @@ const DEFAULTS: AppSettings = {
   driveClientSecret: '',
 };
 
+function ensureConfigDir(): void {
+  fs.mkdirSync(configDir(), { recursive: true });
+}
+
 function settingsPath(): string {
-  return path.join(app.getPath('userData'), 'settings.json');
+  ensureConfigDir();
+  return path.join(configDir(), 'settings.json');
 }
 
 export function loadSettings(): AppSettings {
@@ -28,6 +33,6 @@ export function saveSettings(settings: AppSettings): AppSettings {
     driveClientId: settings.driveClientId.trim(),
     driveClientSecret: settings.driveClientSecret.trim(),
   };
-  fs.writeFileSync(settingsPath(), JSON.stringify(next, null, 2), 'utf-8');
+  fs.writeFileSync(settingsPath(), JSON.stringify(next, null, 2), { encoding: 'utf-8', mode: 0o600 });
   return next;
 }

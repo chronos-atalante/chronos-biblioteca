@@ -1,23 +1,40 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { app } from 'electron';
+import os from 'os';
 import type { Work } from '../shared/types';
 
-const RATING_CLAMPS = { min: 0, max: 100 } as const;
+const RATING_CLAMPS = { min: 0 } as const;
+
+function xdgDir(envVar: string, fallback: string): string {
+  const value = process.env[envVar];
+  return value !== undefined && value !== '' ? value : path.join(os.homedir(), fallback);
+}
+
+export function dataDir(): string {
+  return path.join(xdgDir('XDG_DATA_HOME', path.join('.local', 'share')), 'webtoons-biblioteca');
+}
+
+export function configDir(): string {
+  return path.join(xdgDir('XDG_CONFIG_HOME', '.config'), 'webtoons-biblioteca');
+}
+
+export function cacheDir(): string {
+  return path.join(xdgDir('XDG_CACHE_HOME', '.cache'), 'webtoons-biblioteca');
+}
 
 export function userDataDir(): string {
-  return app.getPath('userData');
+  return dataDir();
 }
 
 export function coversDir(): string {
-  const dir = path.join(userDataDir(), 'covers');
+  const dir = path.join(dataDir(), 'covers');
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
 
 function libraryPath(): string {
-  return path.join(userDataDir(), 'library.json');
+  return path.join(dataDir(), 'library.json');
 }
 
 function readJson<T>(file: string, fallback: T): T {
@@ -38,7 +55,7 @@ function writeJson(file: string, data: unknown): void {
 
 export function clampProgress(value: number): number {
   if (Number.isNaN(value)) return 0;
-  return Math.min(RATING_CLAMPS.max, Math.max(RATING_CLAMPS.min, Math.round(value)));
+  return Math.max(RATING_CLAMPS.min, Math.round(value));
 }
 
 export function loadLibrary(): Work[] {
@@ -62,7 +79,7 @@ export function upsertWork(
   const works = loadLibrary();
   const now = new Date().toISOString();
   const status = input.status;
-  const progress = status === 'concluido' ? 100 : clampProgress(input.progress);
+  const progress = clampProgress(input.progress);
 
   const index = works.findIndex((w) => w.id === input.id);
   const previous = index === -1 ? undefined : works[index];
