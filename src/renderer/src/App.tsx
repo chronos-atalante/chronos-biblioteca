@@ -289,7 +289,7 @@ export default function App(): JSX.Element {
             <p>
               {hasWorks
                 ? 'Tente outro filtro ou termo de busca.'
-                : 'Adicione sua primeira obra: capa, título, sinopse e acompanhe o progresso em porcentagem.'}
+                : 'Adicione sua primeira obra: capa, título, sinopse e acompanhe o progresso.'}
             </p>
             {!hasWorks ? (
               <button
