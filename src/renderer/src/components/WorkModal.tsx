@@ -2,14 +2,18 @@ import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { Work, WorkStatus, WorkType } from '@shared/types';
 import {
+  STATUS_COLORS,
   STATUS_LABELS,
   STATUS_OPTIONS,
+  TYPE_COLORS,
   TYPE_LABELS,
   TYPE_OPTIONS,
   CATEGORIES,
   clampProgress,
   coverUrl,
 } from '../constants';
+import Select from './Select';
+import type { SelectOption } from './Select';
 
 interface WorkModalProps {
   work: Work;
@@ -94,6 +98,23 @@ export default function WorkModal({
   const url = coverUrl(draft.coverFile);
   const hasCover = draft.coverFile !== undefined && draft.coverFile !== '';
 
+  const typeOptions: SelectOption<WorkType>[] = TYPE_OPTIONS.map((type) => ({
+    value: type,
+    label: TYPE_LABELS[type],
+    color: TYPE_COLORS[type],
+  }));
+
+  const statusOptions: SelectOption<WorkStatus>[] = STATUS_OPTIONS.map((status) => ({
+    value: status,
+    label: STATUS_LABELS[status],
+    color: STATUS_COLORS[status],
+  }));
+
+  const categoryOptions: SelectOption<string>[] = [
+    { value: '', label: 'Nenhuma' },
+    ...CATEGORIES.map((category) => ({ value: category, label: category })),
+  ];
+
   return (
     <div
       className="overlay"
@@ -169,45 +190,23 @@ export default function WorkModal({
           <div className="form-row">
             <div className="field">
               <label>Tipo</label>
-              <select
+              <Select
                 value={draft.type}
-                onChange={(event) => patch({ type: event.target.value as WorkType })}
-              >
-                {TYPE_OPTIONS.map((type) => (
-                  <option key={type} value={type}>
-                    {TYPE_LABELS[type]}
-                  </option>
-                ))}
-              </select>
+                options={typeOptions}
+                onChange={(type) => patch({ type })}
+              />
             </div>
             <div className="field">
               <label>Status</label>
-              <select
-                value={draft.status}
-                onChange={(event) => setStatus(event.target.value as WorkStatus)}
-              >
-                {STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
-                    {STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
+              <Select value={draft.status} options={statusOptions} onChange={setStatus} />
             </div>
             <div className="field">
               <label>Categoria</label>
-              <select
+              <Select
                 value={draft.category ?? ''}
-                onChange={(event) =>
-                  patch({ category: event.target.value === '' ? undefined : event.target.value })
-                }
-              >
-                <option value="">Nenhuma</option>
-                {CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
+                options={categoryOptions}
+                onChange={(category) => patch({ category: category === '' ? undefined : category })}
+              />
             </div>
             <div className="field">
               <label>Marcação (opcional)</label>
@@ -220,36 +219,47 @@ export default function WorkModal({
             </div>
           </div>
 
-          <div className="field">
-            <label>Progresso da leitura</label>
-            <div className="progress-editor">
-              <input
-                className="progress-value"
-                type="number"
-                min={0}
-                value={draft.progress}
-                onChange={(event) => setProgress(Number(event.target.value))}
-              />
-              <span className="progress-percent">
-                {draft.status === 'concluido' ? '100%' : `Cap. ${draft.progress}`}
-              </span>
-            </div>
-            <div className="quick-row">
-              <button className="btn small" onClick={() => setProgress(draft.progress - 10)}>
-                <i className="fa-solid fa-minus" /> 10%
-              </button>
-              <button className="btn small" onClick={() => setProgress(draft.progress + 10)}>
-                <i className="fa-solid fa-plus" /> 10%
-              </button>
-              <button className="btn small success" onClick={() => patch({ status: 'concluido' })}>
-                <i className="fa-solid fa-check" /> Marcar como concluído
-              </button>
-              <button
-                className="btn small ghost"
-                onClick={() => patch({ progress: 0, status: 'planejado' })}
-              >
-                <i className="fa-solid fa-arrow-rotate-left" /> Zerar
-              </button>
+          <div className="form-row progress-card">
+            <div className="field">
+              <label>Progresso da leitura</label>
+              <div className="progress-editor">
+                <input
+                  className="progress-value"
+                  type="number"
+                  min={0}
+                  value={draft.progress}
+                  onChange={(event) => setProgress(Number(event.target.value))}
+                />
+                <button
+                  className="btn small"
+                  title="Diminuir 10"
+                  onClick={() => setProgress(draft.progress - 10)}
+                >
+                  <i className="fa-solid fa-minus" /> 10
+                </button>
+                <button
+                  className="btn small"
+                  title="Aumentar 10"
+                  onClick={() => setProgress(draft.progress + 10)}
+                >
+                  <i className="fa-solid fa-plus" /> 10
+                </button>
+                <span className="progress-percent">
+                  {draft.status === 'concluido' ? '100%' : `Cap. ${draft.progress}`}
+                </span>
+                <button
+                  className="btn small success"
+                  onClick={() => patch({ status: 'concluido' })}
+                >
+                  <i className="fa-solid fa-check" /> Concluir
+                </button>
+                <button
+                  className="btn small ghost"
+                  onClick={() => patch({ progress: 0, status: 'planejado' })}
+                >
+                  <i className="fa-solid fa-rotate-left" /> Zerar
+                </button>
+              </div>
             </div>
           </div>
         </div>

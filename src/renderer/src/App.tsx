@@ -206,7 +206,7 @@ export default function App(): JSX.Element {
           <input
             type="text"
             value={query}
-            placeholder="Buscar por título ou sinopse…"
+            placeholder="Buscar por título…"
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
@@ -289,7 +289,7 @@ export default function App(): JSX.Element {
             <p>
               {hasWorks
                 ? 'Tente outro filtro ou termo de busca.'
-                : 'Adicione sua primeira obra: capa, título, sinopse e acompanhe o progresso.'}
+                : 'Adicione sua primeira obra: capa, título e acompanhe o progresso.'}
             </p>
             {!hasWorks ? (
               <button
