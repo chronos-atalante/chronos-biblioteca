@@ -6,6 +6,7 @@ import type { AppSettings } from '../shared/types';
 const DEFAULTS: AppSettings = {
   driveClientId: '',
   driveClientSecret: '',
+  drivePassphrase: '',
 };
 
 function ensureConfigDir(): void {
@@ -32,6 +33,7 @@ export function saveSettings(settings: AppSettings): AppSettings {
   const next: AppSettings = {
     driveClientId: settings.driveClientId.trim(),
     driveClientSecret: settings.driveClientSecret.trim(),
+    drivePassphrase: settings.drivePassphrase,
   };
   fs.writeFileSync(settingsPath(), JSON.stringify(next, null, 2), { encoding: 'utf-8', mode: 0o600 });
   return next;

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import http from 'http';
+import crypto from 'crypto';
 import { URLSearchParams } from 'url';
 import { shell } from 'electron';
 import type { BackupSummary, DriveStatus, Work } from '../shared/types';
@@ -403,6 +404,56 @@ async function downloadFile(fileId: string): Promise<Buffer> {
 }
 
 // ---------------------------------------------------------------------------
+// Criptografia do backup (AES-256-GCM, chave via scrypt)
+// ---------------------------------------------------------------------------
+
+const ENC_MAGIC = Buffer.from('WTENC1');
+
+function deriveKey(passphrase: string, salt: Buffer): Buffer {
+  return crypto.scryptSync(passphrase, salt, 32);
+}
+
+function encryptBuffer(data: Buffer, passphrase: string): Buffer {
+  const salt = crypto.randomBytes(16);
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', deriveKey(passphrase, salt), iv);
+  const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
+  return Buffer.concat([ENC_MAGIC, salt, iv, cipher.getAuthTag(), encrypted]);
+}
+
+function isEncrypted(data: Buffer): boolean {
+  return data.subarray(0, ENC_MAGIC.length).equals(ENC_MAGIC);
+}
+
+function decryptBuffer(data: Buffer, passphrase: string): Buffer {
+  const salt = data.subarray(ENC_MAGIC.length, ENC_MAGIC.length + 16);
+  const iv = data.subarray(ENC_MAGIC.length + 16, ENC_MAGIC.length + 28);
+  const tag = data.subarray(ENC_MAGIC.length + 28, ENC_MAGIC.length + 44);
+  const payload = data.subarray(ENC_MAGIC.length + 44);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', deriveKey(passphrase, salt), iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(payload), decipher.final()]);
+}
+
+function maybeEncrypt(data: Buffer): Buffer {
+  const passphrase = loadSettings().drivePassphrase;
+  if (passphrase === '') {
+    throw new Error('Defina uma senha de criptografia do backup nas configurações.');
+  }
+  return encryptBuffer(data, passphrase);
+}
+
+function maybeDecrypt(data: Buffer): Buffer {
+  if (!isEncrypted(data)) return data;
+  const passphrase = loadSettings().drivePassphrase;
+  try {
+    return decryptBuffer(data, passphrase);
+  } catch {
+    throw new Error('Senha de criptografia incorreta ou backup corrompido.');
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Operações
 // ---------------------------------------------------------------------------
 
@@ -426,7 +477,7 @@ export async function backupNow(): Promise<{
       await uploadMultipart(
         folderId,
         file.name,
-        file.buffer,
+        maybeEncrypt(file.buffer),
         file.mime,
         remoteByName.get(file.name)?.id,
       );
@@ -475,7 +526,7 @@ export async function restoreNow(): Promise<{ ok: boolean; error?: string; works
       throw new Error('Nenhum backup encontrado na pasta oculta do Drive.');
     }
 
-    const libraryBuffer = await downloadFile(libraryFile.id);
+    const libraryBuffer = maybeDecrypt(await downloadFile(libraryFile.id));
     const parsed: unknown = JSON.parse(libraryBuffer.toString('utf-8'));
     if (!Array.isArray(parsed) || !parsed.every(isWorkRecord)) {
       throw new Error('Backup inválido (library.json corrompido).');
@@ -486,7 +537,7 @@ export async function restoreNow(): Promise<{ ok: boolean; error?: string; works
     const coversPath = coversDir();
     fs.mkdirSync(coversPath, { recursive: true });
     for (const cover of covers) {
-      const buffer = await downloadFile(cover.id);
+      const buffer = maybeDecrypt(await downloadFile(cover.id));
       fs.writeFileSync(path.join(coversPath, path.basename(cover.name)), buffer);
     }
 

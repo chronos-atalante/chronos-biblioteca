@@ -21,6 +21,7 @@ export interface Work {
 export interface AppSettings {
   driveClientId: string;
   driveClientSecret: string;
+  drivePassphrase: string;
 }
 
 export interface DriveStatus {

@@ -12,6 +12,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
   const [settings, setSettings] = useState<AppSettings>({
     driveClientId: '',
     driveClientSecret: '',
+    drivePassphrase: '',
   });
   const [status, setStatus] = useState<DriveStatus | null>(null);
   const [info, setInfo] = useState<BackupSummary | null>(null);
@@ -144,6 +145,18 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
               placeholder="GOCSPX-..."
               onChange={(event) =>
                 setSettings({ ...settings, driveClientSecret: event.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Senha de criptografia do backup</label>
+            <input
+              type="password"
+              value={settings.drivePassphrase}
+              placeholder="Usada para criptografar o backup no Drive"
+              onChange={(event) =>
+                setSettings({ ...settings, drivePassphrase: event.target.value })
               }
             />
           </div>
