@@ -19,6 +19,13 @@ Diretrizes para agentes e contribuidores deste repositório.
 - `npm run security:audit` — verifica vulnerabilidades nas dependências via OSV Scanner.
 - `npm run dev` / `npm run build` / `npm run dist` — desenvolvimento, build e empacotamento.
 
+## Documentação
+
+- Manter a documentação alinhada com o código **a cada mudança**: qualquer alteração de comportamento, fluxo, configuração, caminhos, mensagens exibidas ou dependências deve atualizar `README.md` e/ou `docs/*.md` na **mesma** mudança (nunca deixar para depois).
+- Ao alterar um documento, revisar também os diagramas Mermaid, as tabelas de sintoma/causa e os exemplos de comando — eles costumam quebrar em silêncio.
+- Documentação nova (guias, troubleshooting, arquitetura) vai em `docs/`; manter o `README.md` como índice que aponte para ela.
+- Verificação: após `npm run check`, reler os trechos de doc afetados pela mudança.
+
 ## Segurança
 
 - Vulnerabilidades sem fix upstream só podem ser ignoradas com justificativa em `.osv-scanner.toml` (com data de revisão).

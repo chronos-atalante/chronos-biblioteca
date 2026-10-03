@@ -120,6 +120,7 @@ conectado e a base tenha mudado).
 | "Fanout/​Upload failed" ou erro de rede      | Sem conexão, proxy/VPN bloqueando, ou cota da Drive. Tente novamente.                                                                     |
 | Janela abre mas nada acontece após consentir | O navegador não conseguiu voltar para `127.0.0.1` (porta bloqueada). Feche e tente de novo — uma porta livre é escolhida automaticamente. |
 | "Restaurar" falha                            | O backup está vazio ou corrompido. Verifique se existe `library.json` dentro de `.webtoons-backup`.                                       |
+| "Fazer backup" falha / nada local            | A base local ainda não existe (instalação nova). Adicione ao menos uma obra antes de fazer o backup.                                      |
 | App desinstalado                             | Os tokens vão embora com `~/.config/Webtoons Biblioteca/`; recrie a conexão — a pasta no Drive é reaproveitada pelo mesmo nome.           |
 
 ---

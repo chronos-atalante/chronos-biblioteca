@@ -194,8 +194,16 @@ export function restoreLibrary(works: Work[]): Work[] {
   return sanitized;
 }
 
-export function backupFiles(): { name: string; buffer: Buffer; mime: string }[] {
-  const files: { name: string; buffer: Buffer; mime: string }[] = [];
+export interface BackupFile {
+  name: string;
+  buffer: Buffer;
+  mime: string;
+}
+
+/** Retorna `null` quando a base local ainda não existe (instalação nova). */
+export function backupFiles(): BackupFile[] | null {
+  if (!fs.existsSync(libraryPath())) return null;
+  const files: BackupFile[] = [];
   const library = fs.readFileSync(libraryPath());
   files.push({ name: 'library.json', buffer: library, mime: 'application/json' });
   for (const cover of listCoverFiles()) {

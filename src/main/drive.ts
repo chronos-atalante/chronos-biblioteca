@@ -471,10 +471,14 @@ export async function backupNow(): Promise<{
   setError(null);
   emit();
   try {
+    const files = backupFiles();
+    if (files === null) {
+      throw new Error('Nenhuma biblioteca local para backup. Adicione ao menos uma obra.');
+    }
+
     const folderId = await ensureFolder();
     const remote = await listFolder(folderId);
     const remoteByName = new Map(remote.map((file) => [file.name, file]));
-    const files = backupFiles();
 
     for (const file of files) {
       await uploadMultipart(
