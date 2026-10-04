@@ -25,7 +25,9 @@ describe('Select', () => {
   });
 
   it('mostra o placeholder quando o valor não existe nas opções', () => {
-    render(<Select value="zz" options={OPTIONS} onChange={() => undefined} placeholder="Escolha" />);
+    render(
+      <Select value="zz" options={OPTIONS} onChange={() => undefined} placeholder="Escolha" />,
+    );
     expect(screen.getByText('Escolha')).toBeInTheDocument();
   });
 
@@ -39,10 +41,7 @@ describe('Select', () => {
     await user.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getAllByRole('option')).toHaveLength(3);
-    expect(screen.getByRole('option', { name: /Alpha/ })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    expect(screen.getByRole('option', { name: /Alpha/ })).toHaveAttribute('aria-selected', 'true');
 
     await user.click(screen.getByRole('option', { name: /Gamma/ }));
     expect(onChange).toHaveBeenCalledWith('c');

@@ -16,7 +16,7 @@ const api: ElectronApi = {
     status: () => ipcRenderer.invoke('drive:status'),
     auth: () => ipcRenderer.invoke('drive:auth'),
     backup: () => ipcRenderer.invoke('drive:backup'),
-    restore: () => ipcRenderer.invoke('drive:restore'),
+    restore: (passphrase: string) => ipcRenderer.invoke('drive:restore', passphrase),
     backupInfo: () => ipcRenderer.invoke('drive:backup-info'),
     disconnect: () => ipcRenderer.invoke('drive:disconnect'),
     onStatus: (cb: (status: DriveStatus) => void) => {

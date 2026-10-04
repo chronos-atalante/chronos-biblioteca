@@ -53,9 +53,10 @@ export const protocol = {
 };
 
 export const dialog = {
-  showOpenDialog: vi.fn<() => Promise<{ canceled: boolean; filePaths: string[] }>>(
-    async () => ({ canceled: true, filePaths: [] }),
-  ),
+  showOpenDialog: vi.fn<() => Promise<{ canceled: boolean; filePaths: string[] }>>(async () => ({
+    canceled: true,
+    filePaths: [],
+  })),
 };
 
 export const shell = {

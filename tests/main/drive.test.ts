@@ -528,10 +528,7 @@ describe('restoreNow', () => {
     const drive = new FakeDrive();
     drive.folderId = FOLDER_ID;
     const payload = [makeWork({ id: 'cifrada' })];
-    drive.seed(
-      'library.json',
-      encryptForTest(Buffer.from(JSON.stringify(payload)), 'outra-senha'),
-    );
+    drive.seed('library.json', encryptForTest(Buffer.from(JSON.stringify(payload)), 'outra-senha'));
     stubFetch((call) => drive.handle(call));
 
     const result = await restoreNow();
@@ -612,7 +609,11 @@ describe('backupInfo', () => {
     await connect();
     const drive = new FakeDrive();
     drive.folderId = FOLDER_ID;
-    drive.seed('library.json', Buffer.from(JSON.stringify([makeWork(), makeWork({ id: 'b' })])), '2048');
+    drive.seed(
+      'library.json',
+      Buffer.from(JSON.stringify([makeWork(), makeWork({ id: 'b' })])),
+      '2048',
+    );
     stubFetch((call) => drive.handle(call));
 
     const info = await backupInfo();

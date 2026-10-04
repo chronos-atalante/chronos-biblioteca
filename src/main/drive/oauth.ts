@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import http from 'http';
 import { URLSearchParams } from 'url';
 import { shell } from 'electron';
@@ -5,9 +6,11 @@ import {
   AUTH_ENDPOINT,
   AUTH_TIMEOUT_MS,
   SCOPES,
+  SCOPE_VERSION,
   TOKEN_ENDPOINT,
   USERINFO_ENDPOINT,
 } from '@zero/main/drive/constants';
+import { ensureLegacyMigration } from '@zero/main/drive/migrate';
 import {
   credentials,
   emit,
@@ -73,6 +76,7 @@ async function exchangeCode(
   clientId: string,
   clientSecret: string,
   redirectUri: string,
+  codeVerifier: string,
 ): Promise<Tokens> {
   const body = new URLSearchParams({
     code,
@@ -80,6 +84,7 @@ async function exchangeCode(
     client_secret: clientSecret,
     redirect_uri: redirectUri,
     grant_type: 'authorization_code',
+    code_verifier: codeVerifier,
   });
   const res = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
@@ -98,6 +103,7 @@ async function exchangeCode(
     expiresAt: Date.now() + data.expires_in * 1000,
     accountEmail: null,
     lastSync: null,
+    scopeVersion: SCOPE_VERSION,
   };
 }
 
@@ -114,15 +120,11 @@ async function fetchAccountEmail(token: string): Promise<string | null> {
 
 export async function authorize(): Promise<{ ok: boolean; error?: string }> {
   const creds = credentials();
-  if (creds === null) {
-    return {
-      ok: false,
-      error: 'Configure o Client ID e o Client Secret do Google nas configurações.',
-    };
-  }
   try {
     const port = await freePort();
     const redirectUri = `http://127.0.0.1:${port}/callback`;
+    const codeVerifier = crypto.randomBytes(32).toString('base64url');
+    const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
     const params = new URLSearchParams({
       client_id: creds.clientId,
       redirect_uri: redirectUri,
@@ -131,14 +133,27 @@ export async function authorize(): Promise<{ ok: boolean; error?: string }> {
       access_type: 'offline',
       prompt: 'consent',
       include_granted_scopes: 'true',
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
     });
     const code = await openBrowser(`${AUTH_ENDPOINT}?${params.toString()}`, port);
-    const tokens = await exchangeCode(code, creds.clientId, creds.clientSecret, redirectUri);
+    const tokens = await exchangeCode(
+      code,
+      creds.clientId,
+      creds.clientSecret,
+      redirectUri,
+      codeVerifier,
+    );
     tokens.accountEmail = await fetchAccountEmail(tokens.accessToken);
     state.tokens = tokens;
     setError(null);
     persistState();
     emit();
+    try {
+      await ensureLegacyMigration();
+    } catch {
+      // a migração da pasta legada é retentada no próximo backup/restauração
+    }
     return { ok: true };
   } catch (err) {
     const message = toMessage(err);
@@ -162,7 +177,7 @@ function freePort(): Promise<number> {
 export async function refreshAccessToken(): Promise<string> {
   const creds = credentials();
   const refreshToken = state.tokens?.refreshToken;
-  if (creds === null || refreshToken === undefined || refreshToken === '') {
+  if (refreshToken === undefined || refreshToken === '') {
     throw new Error('Sessão expirada. Conecte a conta Google novamente.');
   }
   const body = new URLSearchParams({

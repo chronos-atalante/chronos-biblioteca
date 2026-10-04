@@ -1,16 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import type { BackupSummary, DriveStatus, Work } from '@zero/types';
-import { DRIVE_API } from '@zero/main/drive/constants';
-import { maybeDecrypt, maybeEncrypt } from '@zero/main/drive/crypto';
-import {
-  downloadFile,
-  driveFetch,
-  ensureFolder,
-  findBackupFolder,
-  listFolder,
-  uploadMultipart,
-} from '@zero/main/drive/rest';
+import { APP_DATA_SPACE } from '@zero/main/drive/constants';
+import { decryptWith, maybeEncrypt } from '@zero/main/drive/crypto';
+import { ensureLegacyMigration } from '@zero/main/drive/migrate';
+import { deleteFile, downloadFile, listAppDataFiles, uploadMultipart } from '@zero/main/drive/rest';
 import {
   emit,
   getStatus,
@@ -21,6 +15,7 @@ import {
   toMessage,
 } from '@zero/main/drive/state';
 import { backupFiles, coversDir, loadLibrary, restoreLibrary } from '@zero/main/library';
+import { loadSettings } from '@zero/main/settings';
 
 /** Valida a forma mínima de uma obra vinda do backup. */
 function isWorkRecord(value: unknown): boolean {
@@ -52,13 +47,13 @@ export async function backupNow(): Promise<{
       throw new Error('Nenhuma biblioteca local para backup. Adicione ao menos uma obra.');
     }
 
-    const folderId = await ensureFolder();
-    const remote = await listFolder(folderId);
+    await ensureLegacyMigration();
+    const remote = await listAppDataFiles();
     const remoteByName = new Map(remote.map((file) => [file.name, file]));
 
     for (const file of files) {
       await uploadMultipart(
-        folderId,
+        APP_DATA_SPACE,
         file.name,
         maybeEncrypt(file.buffer),
         file.mime,
@@ -69,7 +64,7 @@ export async function backupNow(): Promise<{
     const localNames = new Set(files.map((file) => file.name));
     for (const file of remote) {
       if (!localNames.has(file.name)) {
-        await driveFetch(`${DRIVE_API}/files/${file.id}`, { method: 'DELETE' });
+        await deleteFile(file.id);
       }
     }
 
@@ -95,21 +90,25 @@ export async function backupNow(): Promise<{
   }
 }
 
-export async function restoreNow(): Promise<{ ok: boolean; error?: string; works?: number }> {
+export async function restoreNow(passphrase: string): Promise<{
+  ok: boolean;
+  error?: string;
+  works?: number;
+}> {
   if (state.syncing) return { ok: false, error: 'Sincronização já em andamento.' };
   if (state.tokens === null) return { ok: false, error: 'Conecte a conta Google primeiro.' };
   state.syncing = true;
   setError(null);
   emit();
   try {
-    const folderId = await ensureFolder();
-    const remote = await listFolder(folderId);
+    await ensureLegacyMigration();
+    const remote = await listAppDataFiles();
     const libraryFile = remote.find((file) => file.name === 'library.json');
     if (libraryFile === undefined) {
-      throw new Error('Nenhum backup encontrado na pasta oculta do Drive.');
+      throw new Error('Nenhum backup encontrado no espaço oculto do Drive.');
     }
 
-    const libraryBuffer = maybeDecrypt(await downloadFile(libraryFile.id));
+    const libraryBuffer = decryptWith(await downloadFile(libraryFile.id), passphrase);
     const parsed: unknown = JSON.parse(libraryBuffer.toString('utf-8'));
     if (!Array.isArray(parsed) || !parsed.every(isWorkRecord)) {
       throw new Error('Backup inválido (library.json corrompido).');
@@ -120,7 +119,7 @@ export async function restoreNow(): Promise<{ ok: boolean; error?: string; works
     const coversPath = coversDir();
     fs.mkdirSync(coversPath, { recursive: true });
     for (const cover of covers) {
-      const buffer = maybeDecrypt(await downloadFile(cover.id));
+      const buffer = decryptWith(await downloadFile(cover.id), passphrase);
       fs.writeFileSync(path.join(coversPath, path.basename(cover.name)), buffer);
     }
 
@@ -139,23 +138,29 @@ export async function restoreNow(): Promise<{ ok: boolean; error?: string; works
 export async function backupInfo(): Promise<BackupSummary | null> {
   try {
     if (state.tokens === null) return null;
-    const folderId = await findBackupFolder();
-    if (folderId === null) return null;
-    const remote = await listFolder(folderId);
+    const remote = await listAppDataFiles();
     const libraryFile = remote.find((file) => file.name === 'library.json');
     if (libraryFile === undefined) return null;
     const buffer = await downloadFile(libraryFile.id);
-    const parsed: unknown = JSON.parse(buffer.toString('utf-8'));
     const size =
       libraryFile.size !== undefined && libraryFile.size !== ''
         ? Number(libraryFile.size)
         : buffer.byteLength;
+    let works: number | null = null;
+    try {
+      const parsed: unknown = JSON.parse(
+        decryptWith(buffer, loadSettings().drivePassphrase).toString('utf-8'),
+      );
+      if (Array.isArray(parsed)) works = parsed.length;
+    } catch {
+      works = null;
+    }
     return {
       id: libraryFile.id,
       name: libraryFile.name,
       modifiedTime: libraryFile.modifiedTime,
       size,
-      works: Array.isArray(parsed) ? parsed.length : 0,
+      works,
     };
   } catch {
     return null;

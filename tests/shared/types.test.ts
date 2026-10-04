@@ -32,9 +32,7 @@ describe('tipos compartilhados', () => {
   });
 
   it('domínios de status e tipo', () => {
-    expectTypeOf<WorkStatus>().toEqualTypeOf<
-      'planejado' | 'lendo' | 'pausado' | 'concluido'
-    >();
+    expectTypeOf<WorkStatus>().toEqualTypeOf<'planejado' | 'lendo' | 'pausado' | 'concluido'>();
     expectTypeOf<WorkType>().toEqualTypeOf<
       'webtoon' | 'manhwa' | 'manhua' | 'manga' | 'livro' | 'outro'
     >();

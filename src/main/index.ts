@@ -159,7 +159,7 @@ function registerIpc(): void {
   ipcMain.handle('drive:status', (): DriveStatus => getStatus());
   ipcMain.handle('drive:auth', () => authorize());
   ipcMain.handle('drive:backup', () => backupNow());
-  ipcMain.handle('drive:restore', () => restoreNow());
+  ipcMain.handle('drive:restore', (_event, passphrase: string) => restoreNow(passphrase));
   ipcMain.handle('drive:backup-info', () => backupInfo());
   ipcMain.handle('drive:disconnect', (): DriveStatus => disconnect());
 

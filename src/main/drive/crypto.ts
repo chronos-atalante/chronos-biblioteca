@@ -37,9 +37,11 @@ export function maybeEncrypt(data: Buffer): Buffer {
   return encryptBuffer(data, passphrase);
 }
 
-export function maybeDecrypt(data: Buffer): Buffer {
+export function decryptWith(data: Buffer, passphrase: string): Buffer {
   if (!isEncrypted(data)) return data;
-  const passphrase = loadSettings().drivePassphrase;
+  if (passphrase === '') {
+    throw new Error('Este backup está criptografado. Informe a senha de criptografia.');
+  }
   try {
     return decryptBuffer(data, passphrase);
   } catch {

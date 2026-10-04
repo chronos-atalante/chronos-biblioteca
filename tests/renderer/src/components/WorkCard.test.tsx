@@ -19,7 +19,9 @@ function setup(overrides: Partial<Parameters<typeof WorkCard>[0]> = {}) {
 
 describe('WorkCard', () => {
   it('renderiza título, tipo, status e progresso', () => {
-    setup({ work: makeWork({ title: 'Tower of God', progress: 42, type: 'manhwa', status: 'lendo' }) });
+    setup({
+      work: makeWork({ title: 'Tower of God', progress: 42, type: 'manhwa', status: 'lendo' }),
+    });
     expect(screen.getByText('Tower of God')).toBeInTheDocument();
     expect(screen.getByText('Manhwa')).toBeInTheDocument();
     expect(screen.getByText('Lendo')).toBeInTheDocument();
@@ -67,15 +69,9 @@ describe('WorkCard', () => {
     const user = userEvent.setup();
     const props = setup({ work: makeWork({ progress: 50 }) });
     await user.click(screen.getByTitle('Aumentar 10%'));
-    expect(props.onProgress).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'work-1' }),
-      60,
-    );
+    expect(props.onProgress).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }), 60);
     await user.click(screen.getByTitle('Diminuir 10%'));
-    expect(props.onProgress).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'work-1' }),
-      40,
-    );
+    expect(props.onProgress).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }), 40);
     expect(props.onOpen).not.toHaveBeenCalled();
   });
 

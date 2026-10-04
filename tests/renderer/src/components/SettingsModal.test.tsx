@@ -34,7 +34,10 @@ async function typeCredentials(): Promise<void> {
   const user = userEvent.setup();
   await user.type(screen.getByPlaceholderText('xxxxxxxx.apps.googleusercontent.com'), 'meu-id');
   await user.type(screen.getByPlaceholderText('GOCSPX-...'), 'meu-segredo');
-  await user.type(screen.getByPlaceholderText('Usada para criptografar o backup no Drive'), 'frase');
+  await user.type(
+    screen.getByPlaceholderText('Usada para criptografar o backup no Drive'),
+    'frase',
+  );
 }
 
 describe('SettingsModal — carregamento', () => {
@@ -133,9 +136,7 @@ describe('SettingsModal — ações do Drive', () => {
 
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /Conectar ao Drive/ }));
-    await waitFor(() =>
-      expect(notify).toHaveBeenCalledWith('Conta Google conectada com sucesso.'),
-    );
+    await waitFor(() => expect(notify).toHaveBeenCalledWith('Conta Google conectada com sucesso.'));
     expect(mock.driveAuth).toHaveBeenCalledTimes(1);
   });
 
@@ -175,7 +176,9 @@ describe('SettingsModal — ações do Drive', () => {
     await user.click(screen.getByRole('button', { name: /Conectar ao Drive/ }));
     expect(await screen.findByRole('button', { name: /Autorizando/ })).toBeDisabled();
     release();
-    await waitFor(() => expect(screen.getByRole('button', { name: /Conectar ao Drive/ })).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Conectar ao Drive/ })).toBeEnabled(),
+    );
   });
 
   it('faz backup e informa o sucesso', async () => {
@@ -211,9 +214,7 @@ describe('SettingsModal — ações do Drive', () => {
     }
 
     await userEvent.setup().click(screen.getByRole('button', { name: /Restaurar/ }));
-    await waitFor(() =>
-      expect(notify).toHaveBeenCalledWith('Backup restaurado com 7 obra(s).'),
-    );
+    await waitFor(() => expect(notify).toHaveBeenCalledWith('Backup restaurado com 7 obra(s).'));
     expect(mock.driveRestore).toHaveBeenCalledTimes(1);
     if (spied) expect(reload).toHaveBeenCalledTimes(1);
   });
@@ -260,9 +261,9 @@ describe('SettingsModal — configurações exibidas', () => {
       'id-salvo',
     );
     expect(screen.getByPlaceholderText('GOCSPX-...')).toHaveValue('segredo-salvo');
-    expect(
-      screen.getByPlaceholderText('Usada para criptografar o backup no Drive'),
-    ).toHaveValue('frase-salva');
+    expect(screen.getByPlaceholderText('Usada para criptografar o backup no Drive')).toHaveValue(
+      'frase-salva',
+    );
   });
 
   it('mostra a data do último backup formatada', async () => {

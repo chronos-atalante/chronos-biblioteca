@@ -8,7 +8,7 @@ Diretrizes para agentes e contribuidores deste repositório.
 - Evitar arquivos monolíticos: ao atingir ~500 linhas, refatorar extraindo módulos/componentes.
 - Type safety rigoroso: sem `any` implícito, evitar casts; preferir tipos/interfaces bem definidos e `unknown` quando necessário.
 - arquivos com nome index devem ser usados apenas para barrels, arquivos que nao são barrels devem receber nomes apropriados para o arquivo.
-- Imports dentro de `src/` sempre pelos aliases ESM `@zero/*` (`@zero/types`, `@zero/main/*`, `@zero/preload/*`, `@zero/renderer/*`); nenhum caminho relativo entre pastas. O mapa é declarado em `tsconfig.base.json` e espelhado em `electron.vite.config.ts`, `vitest.config.ts` e `src/node.loader.ts` — mudar um alias vale nos quatro lugares.
+- Imports dentro de `src/` sempre pelos aliases ESM `@zero/*` (`@zero/types`, `@zero/main/*`, `@zero/preload/*`, `@zero/renderer/*`); nenhum caminho relativo entre pastas. O mapa é declarado em `tsconfig.base.json` e espelhado em `electron.vite.config.mts`, `vitest.config.mts` e `src/node.loader.ts` — mudar um alias vale nos quatro lugares. Os `paths` do `tsconfig` usam extensão explícita (`.ts`/`.tsx`/`index.tsx`) porque o projeto roda com `module: nodenext`; `allowImportingTsExtensions: true` na base é o que permite esses candidatos de `paths` sem erro de import.
 
 ## Dependências
 

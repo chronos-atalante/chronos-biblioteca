@@ -4,11 +4,11 @@ import { defineConfig } from 'vitest/config';
 
 /** Espelha `paths` de tsconfig.base.json e o mapa de `node.loader.ts`. */
 const aliases = {
-  '@zero/types': resolve(__dirname, 'src/types'),
-  '@zero/main': resolve(__dirname, 'src/main'),
-  '@zero/preload': resolve(__dirname, 'src/preload'),
-  '@zero/renderer': resolve(__dirname, 'src/renderer/src'),
-  electron: resolve(__dirname, 'tests/mocks/electron.ts'),
+  '@zero/types': resolve(import.meta.dirname, 'src/types'),
+  '@zero/main': resolve(import.meta.dirname, 'src/main'),
+  '@zero/preload': resolve(import.meta.dirname, 'src/preload'),
+  '@zero/renderer': resolve(import.meta.dirname, 'src/renderer/src'),
+  electron: resolve(import.meta.dirname, 'tests/mocks/electron.ts'),
 };
 
 export default defineConfig({
@@ -18,7 +18,7 @@ export default defineConfig({
   },
   test: {
     name: 'webtoons-biblioteca',
-    root: __dirname,
+    root: import.meta.dirname,
     environment: 'jsdom',
     pool: 'forks',
     // O registro de IPC/scheme do processo main acontece no import; limpar mocks

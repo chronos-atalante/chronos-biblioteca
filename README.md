@@ -3,8 +3,8 @@
 Aplicativo desktop (Electron + TypeScript + React) para anotar o progresso das suas leituras de
 **webtoons, manhwas, manhuas, mangás e livros**: capa da obra, título, descrição, barra de
 progresso
-em porcentagem e marcação de conclusão — com **backup automático-manual no Google Drive** em uma
-pasta oculta.
+em porcentagem e marcação de conclusão — com **backup manual no Google Drive** em um espaço
+oculto.
 
 Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 
@@ -21,8 +21,10 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
   (100%) / **zerar**.
 - **Busca** por título ou descrição e **filtros** por status (Lendo, Planejados, Pausados,
   Concluídos) com estatísticas no topo.
-- **Backup no Google Drive**: pasta oculta **`.webtoons-backup`**, OAuth direto no app (sem
-  servidor intermediário), com **Fazer backup agora**, **Restaurar** e **Desconectar**.
+- **Backup no Google Drive**: espaço **oculto `appDataFolder`** (invisível na interface do
+  Drive), OAuth direto no app com **credenciais embutidas** (sem configuração prévia), arquivos
+  sempre **criptografados**, com **Fazer backup agora**, **Restaurar** (pede a senha) e
+  **Desconectar**.
 - Tema escuro com fundo preto (`#000`) e paleta sólida azul; ícones **Font Awesome**.
 
 ---
@@ -53,7 +55,7 @@ O aplicativo aparece no menu do sistema como **Webtoons Biblioteca**.
 | Comando                | O que faz                                          |
 | ---------------------- | -------------------------------------------------- |
 | `npm run dev`          | Sobe o app em modo desenvolvimento (hot reload)    |
-| `npm run typecheck`    | `tsc --noEmit` nos projetos node e web             |
+| `npm run typecheck`    | `tsc --noEmit` nos projetos node, web e testes     |
 | `npm run lint`         | ESLint rigoroso (type-aware) em todo o repositório |
 | `npm run lint:fix`     | ESLint com correção automática                     |
 | `npm run format`       | Formata tudo com Prettier                          |
@@ -72,6 +74,8 @@ O projeto roda com o máximo de rigor disponível:
 
 ```jsonc
 "strict": true,
+"module": "nodenext",                // ESM em src/ (src/package.json "type": "module")
+"allowImportingTsExtensions": true,  // noEmit: permite candidatos de paths com .ts/.tsx
 "noUncheckedIndexedAccess": true,   // acesso a índice vira T | undefined
 "exactOptionalPropertyTypes": true, // opcional ≠ undefined explícito
 "noImplicitReturns": true,
@@ -106,16 +110,19 @@ Dentro de `src/` **não existe import relativo**: todo módulo é referenciado p
 `@zero/*`. O mapa é declarado uma única vez em `tsconfig.base.json` e espelhado nos três
 resolvers que o projeto usa (build, testes e Node puro):
 
-| Alias              | Alvo                  | Onde é resolvido                                      |
-| ------------------ | --------------------- | ----------------------------------------------------- |
-| `@zero/types`      | `src/types/` (barrel) | `electron.vite.config.ts`, `vitest.config.ts`, loader |
-| `@zero/types/*`    | `src/types/*`         | `tsconfig.base.json`                                  |
-| `@zero/main/*`     | `src/main/*`          | `electron.vite.config.ts`, `vitest.config.ts`, loader |
-| `@zero/preload/*`  | `src/preload/*`       | `electron.vite.config.ts`, `vitest.config.ts`, loader |
-| `@zero/renderer/*` | `src/renderer/src/*`  | `electron.vite.config.ts`, `vitest.config.ts`, loader |
+| Alias              | Alvo                  | Onde é resolvido                                        |
+| ------------------ | --------------------- | ------------------------------------------------------- |
+| `@zero/types`      | `src/types/` (barrel) | `electron.vite.config.mts`, `vitest.config.mts`, loader |
+| `@zero/types/*`    | `src/types/*`         | `tsconfig.base.json`                                    |
+| `@zero/main/*`     | `src/main/*`          | `electron.vite.config.mts`, `vitest.config.mts`, loader |
+| `@zero/preload/*`  | `src/preload/*`       | `electron.vite.config.mts`, `vitest.config.mts`, loader |
+| `@zero/renderer/*` | `src/renderer/src/*`  | `electron.vite.config.mts`, `vitest.config.mts`, loader |
 
 - **Build** (`npm run dev` / `npm run build`): electron-vite (Vite) resolve os aliases.
 - **Testes** (`npm test`): vitest resolve os mesmos aliases.
+- Com `module: nodenext`, os candidatos de `paths` em `tsconfig.base.json` declaram a extensão
+  (`.ts` / `.tsx` / `index.tsx`); `allowImportingTsExtensions: true` (que exige `noEmit`) é o
+  que permite isso sem erro de import.
 - **Node puro** (sem bundler): o loader `src/node.loader.ts` registra hooks de resolução com
   `module.registerHooks()` — hooks **síncronos, na mesma thread** (estáveis desde o
   Node 22.15/23.5). O caminho antigo, `module.register()` com hooks assíncronos em thread
@@ -154,20 +161,20 @@ flowchart TD
     subgraph MAIN["Main — Electron (src/main)"]
         IDX["index.ts — janela, IPC, protocolo cover:"]
         LIB["library.ts — library.json + capas"]
-        SET["settings.ts — Client ID/Secret"]
-        DRV["drive/ — OAuth, REST, backup"]
+        SET["settings.ts — credenciais e senha do backup"]
+        DRV["drive/ — OAuth, REST, backup, migração"]
     end
 
     subgraph STORAGE["Persistência"]
         LOKAL[("~/.config/Webtoons Biblioteca/<br/>library.json · covers/ · settings.json · drive-tokens.json")]
-        DRIVE[("Google Drive · pasta oculta .webtoons-backup")]
+        DRIVE[("Google Drive · espaço oculto appDataFolder")]
     end
 
     BRIDGE -->|"ipcRenderer.invoke"| IDX
     IDX --> LIB --> LOKAL
     IDX --> SET --> LOKAL
     IDX --> DRV
-    DRV <-->|"HTTPS (fetch) · scope drive.file"| DRIVE
+    DRV <-->|"HTTPS (fetch) · scopes drive.appdata + drive.file"| DRIVE
     IDX -.->|"cover://imagens-da-capa"| UI1
 ```
 
@@ -223,10 +230,11 @@ Webtoons/
 │   │   ├── settings.ts       # credenciais OAuth
 │   │   └── drive/            # OAuth, Drive REST, backup/restauração
 │   │       ├── index.ts      # barrel da API pública (authorize, backupNow…)
-│   │       ├── constants.ts  # endpoints e nome da pasta oculta
+│   │       ├── constants.ts  # escopos, credenciais embutidas, appDataFolder
 │   │       ├── state.ts      # tokens, status e listener
-│   │       ├── oauth.ts      # autorização + refresh do token
-│   │       ├── rest.ts       # chamadas REST do Drive
+│   │       ├── oauth.ts      # autorização (PKCE) + refresh do token
+│   │       ├── rest.ts       # chamadas REST do Drive (appDataFolder)
+│   │       ├── migrate.ts    # migração da pasta legada .webtoons-backup
 │   │       ├── crypto.ts     # AES-256-GCM do backup
 │   │       └── backup.ts     # backup, restauração e desconexão
 │   ├── preload/index.ts      # contextBridge (window.api)
@@ -244,7 +252,7 @@ Webtoons/
 ├── eslint.config.mjs
 ├── .prettierrc.json
 ├── tsconfig*.json
-└── electron.vite.config.ts
+└── electron.vite.config.mts
 ```
 
 ---
@@ -278,13 +286,18 @@ Detalhes da configuração (campo `build` do `package.json`):
 
 Fluxo resumido (passo a passo completo em [`docs/google-drive.md`](docs/google-drive.md)):
 
-1. ⚙ → crie um **ID do cliente OAuth** (tipo _Aplicativo para computador_) no Google Cloud
-   Console e cole **Client ID** + **Client Secret** em _Configurações_.
+1. ⚙ → defina a **senha de criptografia do backup** (obrigatória). As credenciais OAuth já vêm
+   **embutidas** no app — não é preciso criar nada no Google Cloud Console (os campos de
+   Client ID/Secret são opcionais, para quem tem projeto próprio).
 2. **Conectar ao Drive** → janela do navegador → consentimento → tokens guardados localmente em
-   `drive-tokens.json`.
-3. **Fazer backup agora** → `library.json` + capas sobem para a pasta oculta
-   **`.webtoons-backup`** (escopo `drive.file`: o app só enxerga arquivos que ele mesmo criou).
-4. **Restaurar** baixa o backup e substitui a biblioteca local.
+   `drive-tokens.json` (PKCE + loopback em `127.0.0.1`).
+3. **Fazer backup agora** → `library.json` + capas, **sempre criptografadas** (AES-256-GCM), no
+   espaço **oculto `appDataFolder`** — invisível na interface do Drive e acessível só por este
+   app (escopos `drive.appdata` + `drive.file`).
+4. **Restaurar** → pede a **senha de criptografia**, baixa o backup e substitui a biblioteca
+   local.
+5. **Migração automática**: backups antigos na pasta `.webtoons-backup` são movidos para o
+   `appDataFolder` e a pasta antiga é apagada após a primeira conexão.
 
 ```mermaid
 sequenceDiagram
@@ -294,20 +307,26 @@ sequenceDiagram
     participant D as Google Drive
 
     U->>App: Configurações → Conectar ao Drive
-    App->>G: abre o navegador (authorize + scope drive.file)
+    App->>G: abre o navegador (PKCE + scopes drive.appdata + drive.file)
     G->>U: tela de consentimento
     U->>G: aprova
     G-->>App: redirect http://127.0.0.1:port/callback?code=...
-    App->>G: POST /oauth2/token (code)
+    App->>G: POST /oauth2/token (code + code_verifier)
     G-->>App: access_token + refresh_token
     App->>App: grava drive-tokens.json
+    App->>D: migração: pasta legada .webtoons-backup → appDataFolder
 
     U->>App: Fazer backup agora
-    App->>D: procura (ou cria) a pasta .webtoons-backup
-    App->>D: upload multipart de library.json + capas
+    App->>App: criptografa library.json + capas (AES-256-GCM)
+    App->>D: upload para o espaço oculto appDataFolder
     App->>D: apaga arquivos remotos órfãos
     D-->>App: ok
     App-->>U: "Backup concluído"
+
+    U->>App: Restaurar
+    App-->>U: pede a senha de criptografia
+    App->>D: baixa os arquivos e decifra
+    App-->>U: "Backup restaurado"
 ```
 
 ---

@@ -2,7 +2,7 @@ import { defineConfig } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
-const root = __dirname;
+const root = import.meta.dirname;
 
 /** Espelha `paths` de tsconfig.base.json e o mapa de `node.loader.ts`. */
 const typesAlias = { '@zero/types': resolve(root, 'src/types') } as const;

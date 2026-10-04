@@ -19,7 +19,7 @@ export interface ElectronApi {
     status: () => Promise<DriveStatus>;
     auth: () => Promise<{ ok: boolean; error?: string }>;
     backup: () => Promise<{ ok: boolean; error?: string; summary?: BackupSummary }>;
-    restore: () => Promise<{ ok: boolean; error?: string; works?: number }>;
+    restore: (passphrase: string) => Promise<{ ok: boolean; error?: string; works?: number }>;
     backupInfo: () => Promise<BackupSummary | null>;
     disconnect: () => Promise<DriveStatus>;
     onStatus: (cb: (status: DriveStatus) => void) => () => void;

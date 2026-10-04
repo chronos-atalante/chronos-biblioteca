@@ -124,9 +124,7 @@ describe('biblioteca', () => {
   });
 
   it('upsertWork aceita createdAt/updatedAt explícitos em obra nova', () => {
-    const works = upsertWork(
-      makeDraft({ id: 'beta', createdAt: '2020-01-01T00:00:00.000Z' }),
-    );
+    const works = upsertWork(makeDraft({ id: 'beta', createdAt: '2020-01-01T00:00:00.000Z' }));
     expect(works[0]?.createdAt).toBe('2020-01-01T00:00:00.000Z');
   });
 

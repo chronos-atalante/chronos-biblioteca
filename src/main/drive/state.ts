@@ -1,6 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import type { DriveStatus } from '@zero/types';
+import {
+  EMBEDDED_CLIENT_ID,
+  EMBEDDED_CLIENT_SECRET,
+  SCOPE_VERSION,
+} from '@zero/main/drive/constants';
 import { configDir } from '@zero/main/library';
 import { loadSettings } from '@zero/main/settings';
 
@@ -10,6 +15,8 @@ export interface Tokens {
   expiresAt: number;
   accountEmail: string | null;
   lastSync: string | null;
+  scopeVersion: number;
+  legacyMigrated?: boolean | undefined;
 }
 
 export interface DriveState {
@@ -36,7 +43,12 @@ export function loadState(): void {
   try {
     const file = statePath();
     if (fs.existsSync(file)) {
-      state.tokens = JSON.parse(fs.readFileSync(file, 'utf-8')) as Tokens;
+      const tokens = JSON.parse(fs.readFileSync(file, 'utf-8')) as Tokens;
+      if (tokens.scopeVersion === SCOPE_VERSION) {
+        state.tokens = tokens;
+      } else {
+        state.lastError = 'Permissões do Google atualizadas. Reconecte a conta Google.';
+      }
     }
   } catch {
     state.tokens = null;
@@ -73,10 +85,12 @@ export function onStatus(listener: (status: DriveStatus) => void): void {
   statusListener = listener;
 }
 
-export function credentials(): { clientId: string; clientSecret: string } | null {
+export function credentials(): { clientId: string; clientSecret: string } {
   const settings = loadSettings();
-  if (settings.driveClientId === '' || settings.driveClientSecret === '') return null;
-  return { clientId: settings.driveClientId, clientSecret: settings.driveClientSecret };
+  if (settings.driveClientId !== '' && settings.driveClientSecret !== '') {
+    return { clientId: settings.driveClientId, clientSecret: settings.driveClientSecret };
+  }
+  return { clientId: EMBEDDED_CLIENT_ID, clientSecret: EMBEDDED_CLIENT_SECRET };
 }
 
 export function setError(message: string | null): void {

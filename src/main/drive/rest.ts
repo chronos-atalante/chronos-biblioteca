@@ -1,4 +1,10 @@
-import { DRIVE_API, FOLDER_MIME, FOLDER_NAME, UPLOAD_API } from '@zero/main/drive/constants';
+import {
+  APP_DATA_SPACE,
+  DRIVE_API,
+  FOLDER_MIME,
+  LEGACY_FOLDER_NAME,
+  UPLOAD_API,
+} from '@zero/main/drive/constants';
 import { accessToken, refreshAccessToken } from '@zero/main/drive/oauth';
 
 export interface RemoteFile {
@@ -39,48 +45,68 @@ function escapeQuery(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
-export async function findBackupFolder(): Promise<string | null> {
-  const q = `name='${escapeQuery(FOLDER_NAME)}' and mimeType='${FOLDER_MIME}' and trashed=false`;
+async function listPages(buildUrl: (pageToken: string) => string): Promise<RemoteFile[]> {
+  const files: RemoteFile[] = [];
+  let pageToken = '';
+  do {
+    const res = await driveFetch(buildUrl(pageToken));
+    const data = (await res.json()) as {
+      files?: RemoteFile[] | undefined;
+      nextPageToken?: string | undefined;
+    };
+    files.push(...(data.files ?? []));
+    pageToken = data.nextPageToken ?? '';
+  } while (pageToken !== '');
+  return files;
+}
+
+const FILE_FIELDS = 'nextPageToken,files(id,name,modifiedTime,size)';
+
+/** Lista os arquivos no espaço oculto appDataFolder (invisível na interface do Drive). */
+export function listAppDataFiles(): Promise<RemoteFile[]> {
+  return listPages((pageToken) => {
+    const params = new URLSearchParams({
+      spaces: APP_DATA_SPACE,
+      q: 'trashed=false',
+      fields: FILE_FIELDS,
+      pageSize: '1000',
+      pageToken,
+    });
+    return `${DRIVE_API}/files?${params.toString()}`;
+  });
+}
+
+/** Procura a pasta legada ".webtoons-backup" em "Meu Drive" (migração). */
+export async function findLegacyFolder(): Promise<string | null> {
+  const q = `name='${escapeQuery(LEGACY_FOLDER_NAME)}' and mimeType='${FOLDER_MIME}' and trashed=false`;
   const url = `${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&pageSize=1`;
   const res = await driveFetch(url);
   const data = (await res.json()) as { files?: { id: string }[] | undefined };
   return data.files?.[0]?.id ?? null;
 }
 
-async function createBackupFolder(): Promise<string> {
-  const url = `${DRIVE_API}/files?fields=id`;
-  const res = await driveFetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: FOLDER_NAME, mimeType: FOLDER_MIME }),
-  });
-  const data = (await res.json()) as { id: string };
-  return data.id;
-}
-
-export async function ensureFolder(): Promise<string> {
-  const existing = await findBackupFolder();
-  if (existing !== null) return existing;
-  return createBackupFolder();
-}
-
-export async function listFolder(folderId: string): Promise<RemoteFile[]> {
+export function listFolder(folderId: string): Promise<RemoteFile[]> {
   const q = `'${escapeQuery(folderId)}' in parents and trashed=false`;
-  const url = `${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name,modifiedTime,size)&pageSize=1000`;
-  const res = await driveFetch(url);
-  const data = (await res.json()) as { files?: RemoteFile[] | undefined };
-  return data.files ?? [];
+  return listPages((pageToken) => {
+    const params = new URLSearchParams({
+      q,
+      fields: FILE_FIELDS,
+      pageSize: '1000',
+      pageToken,
+    });
+    return `${DRIVE_API}/files?${params.toString()}`;
+  });
 }
 
 export async function uploadMultipart(
-  folderId: string,
+  parent: string,
   name: string,
   buffer: Buffer,
   mime: string,
   existingId?: string,
 ): Promise<void> {
   const boundary = `----webtoons${Date.now()}${Math.random().toString(16).slice(2)}`;
-  const meta = existingId === undefined ? { name, parents: [folderId] } : { name };
+  const meta = existingId === undefined ? { name, parents: [parent] } : { name };
   const head = Buffer.from(
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
       `--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`,
@@ -105,4 +131,8 @@ export async function downloadFile(fileId: string): Promise<Buffer> {
   const res = await driveFetch(`${DRIVE_API}/files/${fileId}?alt=media`);
   const data = await res.arrayBuffer();
   return Buffer.from(data);
+}
+
+export async function deleteFile(fileId: string): Promise<void> {
+  await driveFetch(`${DRIVE_API}/files/${fileId}`, { method: 'DELETE' });
 }

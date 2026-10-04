@@ -11,5 +11,5 @@ export interface BackupSummary {
   name: string;
   modifiedTime: string;
   size: number;
-  works: number;
+  works: number | null;
 }

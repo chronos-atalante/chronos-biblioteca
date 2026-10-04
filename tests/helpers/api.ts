@@ -1,12 +1,6 @@
 import { vi } from 'vitest';
 import type { Mock } from 'vitest';
-import type {
-  AppSettings,
-  BackupSummary,
-  DriveStatus,
-  ElectronApi,
-  Work,
-} from '@zero/types';
+import type { AppSettings, BackupSummary, DriveStatus, ElectronApi, Work } from '@zero/types';
 
 type SaveInput = Parameters<ElectronApi['library']['save']>[0];
 
@@ -62,7 +56,8 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
   const librarySave = vi.fn(async (work: SaveInput): Promise<Work[]> => {
     const stored = work as Work;
     const index = works.findIndex((item) => item.id === stored.id);
-    works = index === -1 ? [...works, stored] : works.map((item, i) => (i === index ? stored : item));
+    works =
+      index === -1 ? [...works, stored] : works.map((item, i) => (i === index ? stored : item));
     return [...works];
   });
 
@@ -96,9 +91,10 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     async (): Promise<BackupSummary | null> => options.backupInfo ?? null,
   );
 
-  const driveDisconnect = vi.fn(
-    async (): Promise<DriveStatus> => ({ ...DEFAULT_STATUS, connected: false }),
-  );
+  const driveDisconnect = vi.fn(async (): Promise<DriveStatus> => ({
+    ...DEFAULT_STATUS,
+    connected: false,
+  }));
 
   const driveOnStatus = vi.fn((callback: (status: DriveStatus) => void): (() => void) => {
     listeners.add(callback);

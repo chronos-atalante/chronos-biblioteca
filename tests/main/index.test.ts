@@ -72,7 +72,11 @@ beforeAll(async () => {
   fs.mkdirSync(path.join(legacyData, 'covers'), { recursive: true });
   fs.writeFileSync(path.join(legacyData, 'library.json'), JSON.stringify([makeWork()]), 'utf-8');
   fs.writeFileSync(path.join(legacyData, 'covers', 'legada.png'), 'legacy-image', 'utf-8');
-  fs.writeFileSync(path.join(legacyData, 'settings.json'), JSON.stringify({ driveClientId: 'id-legado' }), 'utf-8');
+  fs.writeFileSync(
+    path.join(legacyData, 'settings.json'),
+    JSON.stringify({ driveClientId: 'id-legado' }),
+    'utf-8',
+  );
   fs.writeFileSync(
     path.join(legacyData, 'drive-tokens.json'),
     JSON.stringify({
@@ -134,9 +138,7 @@ describe('inicialização', () => {
     expect(options.webPreferences.nodeIntegration).toBe(false);
     expect(options.webPreferences.sandbox).toBe(true);
     expect(options.webPreferences.webSecurity).toBe(true);
-    expect(String(options.webPreferences.preload)).toContain(
-      path.join('preload', 'index.js'),
-    );
+    expect(String(options.webPreferences.preload)).toContain(path.join('preload', 'index.js'));
     expect(win?.loadFile.mock.calls[0]?.[0]).toContain(path.join('renderer', 'index.html'));
     expect(win?.loadURL).not.toHaveBeenCalled();
   });

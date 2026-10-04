@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { AppSettings, BackupSummary, DriveStatus } from '@zero/types';
 import { formatDate } from '@zero/renderer/constants';
+import RestorePasswordModal from '@zero/renderer/components/RestorePasswordModal';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -18,6 +19,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
   const [info, setInfo] = useState<BackupSummary | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [promptRestore, setPromptRestore] = useState(false);
 
   useEffect(() => {
     const unsubscribe = window.api.drive.onStatus((next) => setStatus(next));
@@ -82,9 +84,9 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
       await refreshDriveStatus();
     });
 
-  const restore = (): Promise<void> =>
+  const restore = (passphrase: string): Promise<void> =>
     run('restore', async () => {
-      const result = await window.api.drive.restore();
+      const result = await window.api.drive.restore(passphrase);
       if (!result.ok) notify(result.error ?? 'Falha ao restaurar.', 'error');
       else notify(`Backup restaurado com ${result.works ?? 0} obra(s).`);
       await refreshDriveStatus();
@@ -98,165 +100,169 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
       notify('Conta Google desconectada.');
     });
 
-  const hasCreds = settings.driveClientId !== '' && settings.driveClientSecret !== '';
   const connected = status?.connected === true;
   const lastError = status?.lastError ?? '';
   const syncing = status?.syncing === true;
 
   return (
-    <div
-      className="overlay"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div className="modal wide">
-        <div className="modal-header">
-          <h2>
-            <i className="fa-solid fa-gear" /> Configurações
-          </h2>
-          <button className="modal-close" onClick={onClose} title="Fechar">
-            <i className="fa-solid fa-xmark" />
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <div className="banner info">
-            <strong>Backup no Google Drive.</strong> O aplicativo grava sua biblioteca em uma pasta
-            oculta chamada <code>.webtoons-backup</code> na sua conta do Google, usando OAuth direto
-            (sem servidor intermediário).
+    <>
+      <div
+        className="overlay"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) onClose();
+        }}
+      >
+        <div className="modal wide">
+          <div className="modal-header">
+            <h2>
+              <i className="fa-solid fa-gear" /> Configurações
+            </h2>
+            <button className="modal-close" onClick={onClose} title="Fechar">
+              <i className="fa-solid fa-xmark" />
+            </button>
           </div>
 
-          <div className="field">
-            <label>Google OAuth Client ID</label>
-            <input
-              type="text"
-              value={settings.driveClientId}
-              placeholder="xxxxxxxx.apps.googleusercontent.com"
-              onChange={(event) => setSettings({ ...settings, driveClientId: event.target.value })}
-            />
-          </div>
-
-          <div className="field">
-            <label>Google OAuth Client Secret</label>
-            <input
-              type="password"
-              value={settings.driveClientSecret}
-              placeholder="GOCSPX-..."
-              onChange={(event) =>
-                setSettings({ ...settings, driveClientSecret: event.target.value })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Senha de criptografia do backup</label>
-            <input
-              type="password"
-              value={settings.drivePassphrase}
-              placeholder="Usada para criptografar o backup no Drive"
-              onChange={(event) =>
-                setSettings({ ...settings, drivePassphrase: event.target.value })
-              }
-            />
-          </div>
-
-          <div className="help">
-            Como obter as credenciais (grátis):
-            <ol>
-              <li>
-                Acesse o <strong>Google Cloud Console</strong> → <strong>Credenciais</strong> →{' '}
-                <strong>Criar credenciais</strong> → <strong>ID do cliente OAuth</strong>.
-              </li>
-              <li>
-                Escolha o tipo <strong>Aplicativo para computador</strong> e copie o{' '}
-                <strong>ID do cliente</strong> e o <strong>Segredo do cliente</strong>.
-              </li>
-              <li>
-                Se necessário, publique o app de teste no OAuth consent screen para autorizar sua
-                própria conta.
-              </li>
-            </ol>
-          </div>
-
-          <div className="drive-meta">
-            <div className="stat">
-              <b>{connected ? 'Conectado' : 'Desconectado'}</b>
-              <span>{status?.accountEmail ?? 'Conta Google'}</span>
-            </div>
-            <div className="stat">
-              <b>{formatDate(status?.lastSync ?? null)}</b>
-              <span>Último backup</span>
-            </div>
-            <div className="stat">
-              <b>{info !== null ? `${info.works} obra(s)` : '—'}</b>
-              <span>No backup do Drive</span>
-            </div>
-          </div>
-
-          {lastError !== '' ? <div className="banner error">{lastError}</div> : null}
-          {syncing ? (
+          <div className="modal-body">
             <div className="banner info">
-              <i className="fa-solid fa-spinner fa-spin" /> Sincronizando com o Google Drive…
+              <strong>Backup no Google Drive.</strong> Sua biblioteca é gravada no espaço{' '}
+              <strong>oculto</strong> do Drive (<code>appDataFolder</code>): ele não aparece na
+              interface do Google Drive e só é acessível por este aplicativo. Todos os arquivos
+              sobem criptografados (AES-256-GCM) — defina a senha de criptografia abaixo antes do
+              primeiro backup.
             </div>
-          ) : null}
 
-          {loading ? <div className="help">Carregando…</div> : null}
-        </div>
+            <div className="field">
+              <label>
+                Google OAuth Client ID (opcional — usamos credenciais embutidas por padrão)
+              </label>
+              <input
+                type="text"
+                value={settings.driveClientId}
+                placeholder="xxxxxxxx.apps.googleusercontent.com"
+                onChange={(event) =>
+                  setSettings({ ...settings, driveClientId: event.target.value })
+                }
+              />
+            </div>
 
-        <div className="modal-footer">
-          <button
-            className="btn ghost"
-            onClick={() => {
-              void disconnect();
-            }}
-            disabled={!connected || busy !== null}
-          >
-            <i className="fa-solid fa-link-slash" /> Desconectar
-          </button>
-          <span className="spacer" />
-          <button
-            className="btn"
-            onClick={() => {
-              void saveSettings();
-            }}
-            disabled={busy !== null}
-          >
-            <i className="fa-solid fa-floppy-disk" /> Salvar credenciais
-          </button>
-          <button
-            className="btn"
-            onClick={() => {
-              void connect();
-            }}
-            disabled={!hasCreds || busy !== null}
-          >
-            <i className="fa-brands fa-google" />{' '}
-            {busy === 'auth' ? 'Autorizando…' : 'Conectar ao Drive'}
-          </button>
-          <button
-            className="btn"
-            onClick={() => {
-              void restore();
-            }}
-            disabled={!connected || busy !== null}
-            title="Baixa o backup do Drive e substitui a biblioteca atual"
-          >
-            <i className="fa-solid fa-clock-rotate-left" />{' '}
-            {busy === 'restore' ? 'Restaurando…' : 'Restaurar'}
-          </button>
-          <button
-            className="btn primary"
-            onClick={() => {
-              void backup();
-            }}
-            disabled={!connected || busy !== null}
-          >
-            <i className="fa-solid fa-cloud-arrow-up" />{' '}
-            {busy === 'backup' ? 'Enviando…' : 'Fazer backup agora'}
-          </button>
+            <div className="field">
+              <label>Google OAuth Client Secret (opcional)</label>
+              <input
+                type="password"
+                value={settings.driveClientSecret}
+                placeholder="GOCSPX-..."
+                onChange={(event) =>
+                  setSettings({ ...settings, driveClientSecret: event.target.value })
+                }
+              />
+            </div>
+
+            <div className="field">
+              <label>Senha de criptografia do backup</label>
+              <input
+                type="password"
+                value={settings.drivePassphrase}
+                placeholder="Usada para criptografar o backup no Drive"
+                onChange={(event) =>
+                  setSettings({ ...settings, drivePassphrase: event.target.value })
+                }
+              />
+            </div>
+
+            <div className="help">
+              O app já vem com credenciais OAuth prontas —{' '}
+              <strong>não é preciso configurar nada</strong>. Os campos acima são avançados:
+              preencha-os apenas se quiser usar um projeto Google Cloud próprio (o mesmo fluxo
+              continua funcionando).
+            </div>
+
+            <div className="drive-meta">
+              <div className="stat">
+                <b>{connected ? 'Conectado' : 'Desconectado'}</b>
+                <span>{status?.accountEmail ?? 'Conta Google'}</span>
+              </div>
+              <div className="stat">
+                <b>{formatDate(status?.lastSync ?? null)}</b>
+                <span>Último backup</span>
+              </div>
+              <div className="stat">
+                <b>{info?.works != null ? `${info.works} obra(s)` : '—'}</b>
+                <span>No backup do Drive</span>
+              </div>
+            </div>
+
+            {lastError !== '' ? <div className="banner error">{lastError}</div> : null}
+            {syncing ? (
+              <div className="banner info">
+                <i className="fa-solid fa-spinner fa-spin" /> Sincronizando com o Google Drive…
+              </div>
+            ) : null}
+
+            {loading ? <div className="help">Carregando…</div> : null}
+          </div>
+
+          <div className="modal-footer">
+            <button
+              className="btn ghost"
+              onClick={() => {
+                void disconnect();
+              }}
+              disabled={!connected || busy !== null}
+            >
+              <i className="fa-solid fa-link-slash" /> Desconectar
+            </button>
+            <span className="spacer" />
+            <button
+              className="btn"
+              onClick={() => {
+                void saveSettings();
+              }}
+              disabled={busy !== null}
+            >
+              <i className="fa-solid fa-floppy-disk" /> Salvar
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                void connect();
+              }}
+              disabled={busy !== null}
+            >
+              <i className="fa-brands fa-google" />{' '}
+              {busy === 'auth' ? 'Autorizando…' : 'Conectar ao Drive'}
+            </button>
+            <button
+              className="btn"
+              onClick={() => setPromptRestore(true)}
+              disabled={!connected || busy !== null}
+              title="Baixa o backup do Drive e substitui a biblioteca atual"
+            >
+              <i className="fa-solid fa-clock-rotate-left" />{' '}
+              {busy === 'restore' ? 'Restaurando…' : 'Restaurar'}
+            </button>
+            <button
+              className="btn primary"
+              onClick={() => {
+                void backup();
+              }}
+              disabled={!connected || busy !== null}
+            >
+              <i className="fa-solid fa-cloud-arrow-up" />{' '}
+              {busy === 'backup' ? 'Enviando…' : 'Fazer backup agora'}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {promptRestore ? (
+        <RestorePasswordModal
+          onCancel={() => setPromptRestore(false)}
+          onConfirm={(passphrase) => {
+            setPromptRestore(false);
+            void restore(passphrase);
+          }}
+        />
+      ) : null}
+    </>
   );
 }
