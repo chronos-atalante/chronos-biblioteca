@@ -1,0 +1,391 @@
+# OpenAPI 3.1 da API interna do Webtoons Biblioteca (ponte IPC `window.api`).
+#
+# Esta aplicação é desktop (Electron), não HTTP: cada `path` abaixo modela um
+# canal IPC (`x-ipc-channel`) como uma operação POST para que a especificação
+# possa ser lida por Swagger UI, Redoc e outras ferramentas do ecossistema.
+# Referência narrativa em `api.md`. Tipos-fonte em `src/types/`.
+openapi: 3.1.0
+info:
+  title: Webtoons Biblioteca — API interna (ponte IPC)
+  version: 1.0.0
+  description: >
+    Ponte `window.api` (contextBridge) entre o renderer e o processo main:
+    biblioteca de obras, capas, configurações e backup no Google Drive.
+    Respostas do Drive usam o envelope `{ ok, error?, ... }` e nunca lançam;
+    mensagens de erro são em pt-BR (ver `docs/api.md`, §5).
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit
+servers:
+  - url: ipc://webtoons-biblioteca
+    description: Processo main via Electron IPC (sem rede)
+tags:
+  - name: biblioteca
+    description: Obras e capas locais (`library.json`, `covers/`)
+  - name: configuracoes
+    description: Credenciais e senha de backup (`settings.json`, modo 0600)
+  - name: drive
+    description: Sessão Google, backup criptografado e restauração
+paths:
+  /library/get:
+    post:
+      tags: [biblioteca]
+      summary: Listar obras
+      description: Devolve todas as obras salvas; lista vazia se não há obras.
+      x-ipc-channel: library:get
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              maxProperties: 0
+      responses:
+        '200':
+          description: Lista de obras
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Work'
+  /library/save:
+    post:
+      tags: [biblioteca]
+      summary: Criar ou atualizar obra
+      description: Carimbos `createdAt`/`updatedAt` gerados pelo main; `progress` fixado em >= 0.
+      x-ipc-channel: library:save
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkDraft'
+      responses:
+        '200':
+          description: Lista completa atualizada
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Work'
+  /library/delete:
+    post:
+      tags: [biblioteca]
+      summary: Remover obra
+      description: Remove a obra e apaga a capa órfã, se houver.
+      x-ipc-channel: library:delete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: string
+                  description: Identificador da obra
+      responses:
+        '200':
+          description: Lista restante
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Work'
+  /cover/pick:
+    post:
+      tags: [biblioteca]
+      summary: Escolher capa no disco
+      description: Diálogo nativo (JPG/PNG/WebP/GIF/AVIF/BMP); copia para `covers/` e devolve o nome do arquivo, ou null se cancelado. Servida via `cover://` (ver `docs/api.md`, §6).
+      x-ipc-channel: cover:pick
+      responses:
+        '200':
+          description: Nome do arquivo da capa ou null
+          content:
+            application/json:
+              schema:
+                type: [string, 'null']
+  /settings/get:
+    post:
+      tags: [configuracoes]
+      summary: Ler configurações
+      description: Campos ausentes ou inválidos no disco caem para `''`.
+      x-ipc-channel: settings:get
+      responses:
+        '200':
+          description: Configurações atuais
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppSettings'
+  /settings/set:
+    post:
+      tags: [configuracoes]
+      summary: Salvar configurações
+      description: Normaliza (`trim` em ID/secret) e grava com permissão 0600.
+      x-ipc-channel: settings:set
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppSettings'
+      responses:
+        '200':
+          description: Valor salvo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppSettings'
+  /drive/status:
+    post:
+      tags: [drive]
+      summary: Estado da sessão Google
+      description: Montado a partir dos tokens em memória (`drive-tokens.json`).
+      x-ipc-channel: drive:status
+      responses:
+        '200':
+          description: Estado atual
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriveStatus'
+  /drive/auth:
+    post:
+      tags: [drive]
+      summary: Conectar conta Google (OAuth PKCE)
+      description: Abre o navegador (loopback 127.0.0.1), troca o código por tokens e persiste em `drive-tokens.json` (0600).
+      x-ipc-channel: drive:auth
+      responses:
+        '200':
+          description: Resultado da autorização
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthOutcome'
+  /drive/backup:
+    post:
+      tags: [drive]
+      summary: Fazer backup agora
+      description: Exige conta conectada, biblioteca não vazia e senha definida. Envia `library.json` + capas sempre criptografados (AES-256-GCM) ao `appDataFolder` e apaga órfãos remotos.
+      x-ipc-channel: drive:backup
+      responses:
+        '200':
+          description: Resultado com resumo do envio
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Outcome'
+                  - type: object
+                    properties:
+                      summary:
+                        $ref: '#/components/schemas/BackupSummary'
+  /drive/restore:
+    post:
+      tags: [drive]
+      summary: Restaurar backup
+      description: Baixa, decifra com a senha e substitui a biblioteca local (inclui capas).
+      x-ipc-channel: drive:restore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [passphrase]
+              properties:
+                passphrase:
+                  type: string
+                  description: Senha de criptografia usada no backup
+      responses:
+        '200':
+          description: Resultado com nº de obras restauradas
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Outcome'
+                  - type: object
+                    properties:
+                      works:
+                        type: integer
+                        minimum: 0
+  /drive/backup-info:
+    post:
+      tags: [drive]
+      summary: Metadados do backup remoto
+      description: Null se desconectado, sem backup ou ilegível.
+      x-ipc-channel: drive:backup-info
+      responses:
+        '200':
+          description: Resumo remoto ou null
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/BackupSummary'
+                  - type: 'null'
+  /drive/disconnect:
+    post:
+      tags: [drive]
+      summary: Desconectar conta
+      description: Apaga `drive-tokens.json` local. O backup na nuvem permanece.
+      x-ipc-channel: drive:disconnect
+      responses:
+        '200':
+          description: Estado desconectado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriveStatus'
+  /drive/status-changed:
+    post:
+      tags: [drive]
+      summary: Evento de mudança de estado (assinatura)
+      description: >
+        Não é `invoke`, e sim evento push: `drive.onStatus(cb)` assina
+        `drive:status-changed` e devolve a função de cancelamento. Emitido a
+        cada transição (conectar, sincronizar, erro, desconectar).
+      x-ipc-event: drive:status-changed
+      responses:
+        '200':
+          description: Novo estado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriveStatus'
+components:
+  schemas:
+    WorkType:
+      type: string
+      enum: [webtoon, manhwa, manhua, manga, livro, outro]
+    WorkStatus:
+      type: string
+      enum: [planejado, lendo, pausado, concluido, cancelado]
+    Work:
+      type: object
+      required: [id, title, synopsis, type, status, progress, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        synopsis:
+          type: string
+        type:
+          $ref: '#/components/schemas/WorkType'
+        status:
+          $ref: '#/components/schemas/WorkStatus'
+        progress:
+          type: number
+          minimum: 0
+          description: Porcentagem de leitura, sem limite superior
+        marker:
+          type: string
+          description: Indicação livre, ex. "Cap. 45"
+        coverFile:
+          type: string
+          description: Arquivo em `covers/`, servido via `cover://`
+        category:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    WorkDraft:
+      description: Obra para `library:save` (carimbos gerados pelo main)
+      type: object
+      required: [id, title, synopsis, type, status, progress]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        synopsis:
+          type: string
+        type:
+          $ref: '#/components/schemas/WorkType'
+        status:
+          $ref: '#/components/schemas/WorkStatus'
+        progress:
+          type: number
+          minimum: 0
+        marker:
+          type: string
+        coverFile:
+          type: string
+        category:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AppSettings:
+      type: object
+      required: [driveClientId, driveClientSecret, drivePassphrase]
+      properties:
+        driveClientId:
+          type: string
+          description: "'' usa as credenciais embutidas"
+        driveClientSecret:
+          type: string
+          description: "'' usa as credenciais embutidas"
+        drivePassphrase:
+          type: string
+          description: Senha de criptografia do backup (obrigatória para enviar)
+    DriveStatus:
+      type: object
+      required: [connected, syncing, lastSync, lastError, accountEmail]
+      properties:
+        connected:
+          type: boolean
+        syncing:
+          type: boolean
+        lastSync:
+          type: [string, 'null']
+          format: date-time
+        lastError:
+          type: [string, 'null']
+        accountEmail:
+          type: [string, 'null']
+    BackupSummary:
+      type: object
+      required: [id, name, modifiedTime, size, works]
+      properties:
+        id:
+          type: string
+          description: Id remoto do library.json ('novo' no primeiro backup)
+        name:
+          type: string
+        modifiedTime:
+          type: string
+          format: date-time
+        size:
+          type: integer
+          minimum: 0
+        works:
+          type: [integer, 'null']
+          minimum: 0
+    Outcome:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        error:
+          type: string
+          description: Mensagem em pt-BR (presente quando ok=false)
+    AuthOutcome:
+      allOf:
+        - $ref: '#/components/schemas/Outcome'
+        - type: object
+          properties: {}

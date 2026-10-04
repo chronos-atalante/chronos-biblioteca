@@ -12,7 +12,7 @@ Diretrizes para agentes e contribuidores deste repositório.
 
 ## Dependências
 
-- Usar apenas dependências com licenças permissivas (MIT, Apache-2.0, BSD, ISC). Sem copyleft forte (GPL, AGPL, LGPL em dependências obrigatórias). Licenças de atribuição para fontes, ícones e dados (OFL-1.1, CC-BY-4.0, CC0-1.0) são aceitas apenas para assets — ex.: `@fortawesome/fontawesome-free` (código MIT; fontes OFL-1.1, ícones CC-BY-4.0) e dados transitivos (`caniuse-lite`, `mdn-data`) — nunca para código executado pelo app.
+- Usar apenas dependências com licenças permissivas aprovadas pela OSI (MIT, Apache-2.0, BSD, ISC, BlueOak-1.0.0). Sem copyleft forte (GPL, AGPL, LGPL em dependências obrigatórias). Licenças de atribuição para fontes, ícones e dados (OFL-1.1, CC-BY-4.0, CC0-1.0) são aceitas apenas para assets — ex.: `@fortawesome/fontawesome-free` (código MIT; fontes OFL-1.1, ícones CC-BY-4.0) e dados transitivos (`caniuse-lite`, `mdn-data`) — nunca para código executado pelo app.
 - Antes de adicionar uma dependência, verificar a licença e preferir alternativas já presentes no projeto.
 
 ## Comandos

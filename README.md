@@ -69,7 +69,8 @@ O aplicativo aparece no menu do sistema como **Webtoons Biblioteca**.
 | `npm test`               | Roda a suíte Vitest (`tests/**/*.test.{ts,tsx}`)   |
 | `npm run security:audit` | Auditoria de vulnerabilidades via OSV Scanner      |
 | `npm run check`          | `typecheck` + `lint` + `format:check` + auditoria  |
-| `npm run build`          | Compila main/preload/renderer com electron-vite    |
+| `npm run clean`          | Apaga `out/` (build anterior) com rimraf           |
+| `npm run build`          | Limpa + compila main/preload/renderer              |
 | `npm run dist`           | Build + gera o `.deb` com electron-builder         |
 
 ---
@@ -372,6 +373,22 @@ python3 build/make-icon.py
 
 ---
 
+## Documentação
+
+Guias e referências (tudo em pt-BR):
+
+| Documento                                      | Conteúdo                                              |
+| ---------------------------------------------- | ----------------------------------------------------- |
+| [`docs/google-drive.md`](docs/google-drive.md) | Guia do backup: OAuth, criptografia, troubleshooting  |
+| [`docs/api.md`](docs/api.md)                   | Referência da API interna (`window.api` + canais IPC) |
+| [`docs/openapi.yaml`](docs/openapi.yaml)       | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)   |
+| [`CHANGELOG.md`](CHANGELOG.md)                 | Histórico de mudanças por versão                      |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md)           | Como contribuir (ambiente, scripts, convenções)       |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)     | Código de conduta da comunidade                       |
+| [`SECURITY.md`](SECURITY.md)                   | Política de segurança e como reportar falhas          |
+
+---
+
 ## Licença
 
-MIT
+[MIT](LICENSE) — ver o texto integral em [`LICENSE`](LICENSE).
