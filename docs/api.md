@@ -133,8 +133,15 @@ grava `drive-tokens.json` (modo `0600`). Falhas típicas: `access_denied`
 
 Pré-condições, nesta ordem: conta conectada, biblioteca local não vazia,
 senha de criptografia definida, nenhuma sincronização em andamento. Envia
-`library.json` + capas **sempre criptografados** (AES-256-GCM, formato
-`WTENC1`) ao espaço oculto `appDataFolder` e apaga arquivos remotos órfãos.
+`library.json` + capas **sempre criptografados** ao espaço oculto
+`appDataFolder` e apaga arquivos remotos órfãos.
+
+Cifra (ver `src/main/drive/crypto.ts`): AES-256-GCM com chave de 32 bytes
+derivada por **scrypt explícito** (`N=2¹⁶`, `r=8`, `p=1`), salt de 16 e IV de
+12 bytes aleatórios por arquivo, tag de 16 bytes verificada na leitura.
+Formato atual `WTENC2`; backups antigos `WTENC1` (scrypt padrão) continuam
+restauráveis. A migração da pasta legada recifra arquivos em claro quando há
+senha configurada (nunca há dupla criptografia).
 
 ```ts
 interface BackupSummary {

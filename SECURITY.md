@@ -27,7 +27,10 @@ contrário).
 - **Tokens só na máquina**: `drive-tokens.json` com permissão `0600`, nunca em
   repositório (coberto pelo `.gitignore`).
 - **Backup sempre criptografado**: AES-256-GCM com chave derivada por scrypt
-  (salt e IV aleatórios por arquivo); o Google guarda só o blob cifrado.
+  explícito (`N=2¹⁶`, `r=8`, `p=1`; salt e IV aleatórios por arquivo, tag
+  verificada na leitura). Formato atual `WTENC2`, com leitura dos legados
+  `WTENC1`; o Google guarda só o blob cifrado (nomes/tamanhos dos arquivos,
+  não — limitação conhecida da API do Drive).
 - **Escopos mínimos**: `drive.appdata` + `drive.file` + `openid email`.
 - **Sem servidor intermediário**: do PC direto para o Google (`fetch` nativo).
 - **Credenciais embutidas**: o `client_secret` de app desktop não é segredo

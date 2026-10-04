@@ -1,4 +1,5 @@
 import { APP_DATA_SPACE } from '@zero/main/drive/constants';
+import { encryptIfNeeded } from '@zero/main/drive/crypto';
 import { mimeFor } from '@zero/main/library';
 import {
   deleteFile,
@@ -29,7 +30,14 @@ async function migrate(): Promise<void> {
   for (const file of legacyFiles) {
     if (existingNames.has(file.name)) continue;
     const buffer = await downloadFile(file.id);
-    await uploadMultipart(APP_DATA_SPACE, file.name, buffer, mimeForBackup(file.name));
+    // Legados em claro são cifrados aqui quando há senha configurada; os já
+    // cifrados (v1/v2) passam intactos — nunca há dupla criptografia.
+    await uploadMultipart(
+      APP_DATA_SPACE,
+      file.name,
+      encryptIfNeeded(buffer),
+      mimeForBackup(file.name),
+    );
   }
 
   for (const file of legacyFiles) {

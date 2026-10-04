@@ -70,7 +70,7 @@ export function coversPath(name: string): string {
   return path.join(sandboxPath('XDG_DATA_HOME'), 'webtoons-biblioteca', 'covers', name);
 }
 
-/** Reproduz o formato WTENC1 usado pelo backup (AES-256-GCM + scrypt). */
+/** Reproduz o formato legado WTENC1 (scrypt padrão) para testar restauração antiga. */
 export function encryptForTest(data: Buffer, passphrase: string): Buffer {
   const salt = crypto.randomBytes(16);
   const iv = crypto.randomBytes(12);

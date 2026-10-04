@@ -98,9 +98,13 @@ async function exchangeCode(
     refresh_token?: string | undefined;
     expires_in: number;
   }>(res);
+  if (!isTokenResponse(data)) throw new Error(`Resposta de tokens inválida (${res.status}).`);
   return {
     accessToken: data.access_token,
-    refreshToken: data.refresh_token,
+    refreshToken:
+      'refresh_token' in data && typeof data.refresh_token === 'string'
+        ? data.refresh_token
+        : undefined,
     expiresAt: Date.now() + data.expires_in * 1000,
     accountEmail: null,
     lastSync: null,
@@ -108,9 +112,28 @@ async function exchangeCode(
   };
 }
 
+/** Valida a forma mínima da resposta de tokens antes de usar (falha fechada). */
+function isTokenResponse(
+  data: unknown,
+): data is { access_token: string; refresh_token?: string | undefined; expires_in: number } {
+  if (typeof data !== 'object' || data === null) return false;
+  if (!('access_token' in data && 'expires_in' in data)) return false;
+  if (typeof data.access_token !== 'string' || typeof data.expires_in !== 'number') {
+    return false;
+  }
+  return (
+    !('refresh_token' in data) ||
+    data.refresh_token === undefined ||
+    typeof data.refresh_token === 'string'
+  );
+}
+
 async function fetchAccountEmail(token: string): Promise<string | null> {
   try {
-    const res = await fetch(`${USERINFO_ENDPOINT}?access_token=${encodeURIComponent(token)}`);
+    // Token no header Authorization (nunca na query string: URL vaza em logs/proxies).
+    const res = await fetch(USERINFO_ENDPOINT, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (!res.ok) return null;
     const data = await parseJson<{ email?: string | undefined }>(res);
     return data.email ?? null;
@@ -194,6 +217,7 @@ export async function refreshAccessToken(): Promise<string> {
   });
   if (!res.ok) throw new Error('Não foi possível renovar a sessão do Google Drive.');
   const data = await parseJson<{ access_token: string; expires_in: number }>(res);
+  if (!isTokenResponse(data)) throw new Error('Não foi possível renovar a sessão do Google Drive.');
   const tokens = state.tokens;
   if (tokens === null) throw new Error('Nenhuma conta Google conectada.');
   tokens.accessToken = data.access_token;

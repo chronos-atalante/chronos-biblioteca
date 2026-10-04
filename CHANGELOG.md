@@ -6,6 +6,15 @@ em português do Brasil.
 
 ## [Não publicado]
 
+### Segurança
+
+- Cifra do backup com scrypt explícito (`N=2¹⁶`, `r=8`, `p=1`) e formato
+  `WTENC2`, mantendo leitura dos backups antigos `WTENC1`.
+- Migração da pasta legada recifra arquivos em claro quando há senha
+  configurada (sem dupla criptografia).
+- OAuth: e-mail da conta via header `Authorization` (fora da URL) e validação
+  da resposta de tokens antes de usar (falha fechada).
+
 ## [1.0.0] - 2026-10-04
 
 Primeira versão pública do **Webtoons Biblioteca** (pacote `.deb` para Linux Mint).

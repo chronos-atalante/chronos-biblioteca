@@ -91,7 +91,7 @@ describe('backupNow', () => {
 
     const uploads = [...drive.files.values()].map((file) => file.content);
     expect(uploads.length).toBeGreaterThan(0);
-    expect(uploads.some((body) => body.includes(Buffer.from('WTENC1')))).toBe(true);
+    expect(uploads.some((body) => body.includes(Buffer.from('WTENC2')))).toBe(true);
     expect(uploads.some((body) => body.includes(Buffer.from('Título Sigiloso')))).toBe(false);
   });
 
