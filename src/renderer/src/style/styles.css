@@ -491,24 +491,27 @@ input[type='range']::-webkit-slider-thumb {
 
 .card-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 4px;
   margin-top: auto;
 }
 
 .card-actions .btn {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 5px 9px;
 }
 
 .card-actions .step-buttons {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  gap: 4px;
 }
 
 .card-actions .step-buttons .btn {
   flex: 0 0 auto;
-  padding: 4px 10px;
+  padding: 5px 9px;
 }
 
 .empty {

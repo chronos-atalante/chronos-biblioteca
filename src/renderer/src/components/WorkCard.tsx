@@ -81,29 +81,53 @@ export default function WorkCard({
             </button>
           </div>
           {done ? (
-            <button className="btn small ghost" onClick={() => onStatus(work, 'lendo')}>
-              <i className="fa-solid fa-rotate-left" /> Reabrir
+            <button
+              className="btn small ghost icon-only"
+              title="Reabrir"
+              onClick={() => onStatus(work, 'lendo')}
+            >
+              <i className="fa-solid fa-rotate-left" />
             </button>
           ) : cancelled ? (
-            <button className="btn small ghost" onClick={() => onStatus(work, 'lendo')}>
-              <i className="fa-solid fa-play" /> Retomar
+            <button
+              className="btn small ghost icon-only"
+              title="Retomar"
+              onClick={() => onStatus(work, 'lendo')}
+            >
+              <i className="fa-solid fa-play" />
             </button>
           ) : (
             <>
-              <button className="btn small success" onClick={() => onStatus(work, 'concluido')}>
-                <i className="fa-solid fa-check" /> Concluir
+              <button
+                className="btn small success icon-only"
+                title="Concluir"
+                onClick={() => onStatus(work, 'concluido')}
+              >
+                <i className="fa-solid fa-check" />
               </button>
               {paused ? (
-                <button className="btn small" onClick={() => onStatus(work, 'lendo')}>
-                  <i className="fa-solid fa-play" /> Retomar
+                <button
+                  className="btn small icon-only"
+                  title="Retomar"
+                  onClick={() => onStatus(work, 'lendo')}
+                >
+                  <i className="fa-solid fa-play" />
                 </button>
               ) : (
-                <button className="btn small" onClick={() => onStatus(work, 'pausado')}>
-                  <i className="fa-solid fa-pause" /> Pausar
+                <button
+                  className="btn small icon-only"
+                  title="Pausar"
+                  onClick={() => onStatus(work, 'pausado')}
+                >
+                  <i className="fa-solid fa-pause" />
                 </button>
               )}
-              <button className="btn small danger" onClick={() => onStatus(work, 'cancelado')}>
-                <i className="fa-solid fa-ban" /> Cancelar
+              <button
+                className="btn small danger icon-only"
+                title="Cancelar"
+                onClick={() => onStatus(work, 'cancelado')}
+              >
+                <i className="fa-solid fa-ban" />
               </button>
             </>
           )}

@@ -18,8 +18,9 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
   local e servida pelo protocolo interno `cover://`.
 - **Título e descrição** livres, além de uma marcação opcional (`Cap. 45`, `Vol. 3`).
 - **Barra de progresso** no card com setas `↑` / `↓` (ajuste de 1 em 1) e botões de status
-  contextuais: **Concluir**, **Pausar**/**Retomar** e **Cancelar**; no modal de edição, campo
-  numérico direto, `−10` / `+10`, **concluir** e **zerar**.
+  contextuais — **Concluir**, **Pausar**/**Retomar** e **Cancelar** — todos em uma única linha e
+  compactos (só ícone, com a ação no tooltip); no modal de edição, campo numérico direto,
+  `−10` / `+10`, **concluir** e **zerar**.
 - **Busca** por título ou descrição e **filtros** por status (Lendo, Planejados, Pausados,
   Concluídos, Cancelados); o contador e o progresso médio do cabeçalho acompanham o que está
   sendo exibido, e o bloco de estatísticas continua mostrando o total da biblioteca.
