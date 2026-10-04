@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import WorkModal from '@/components/WorkModal';
+import WorkModal from '@zero/renderer/components/WorkModal';
 import { makeWork } from '../../../helpers/fixtures';
 
 function setup(work = makeWork(), isNew = false) {

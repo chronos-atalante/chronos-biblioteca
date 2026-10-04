@@ -1,6 +1,12 @@
 import type { JSX } from 'react';
-import type { Work } from '@shared/types';
-import { STATUS_COLORS, STATUS_LABELS, TYPE_COLORS, TYPE_LABELS, coverUrl } from '../constants';
+import type { Work } from '@zero/types';
+import {
+  STATUS_COLORS,
+  STATUS_LABELS,
+  TYPE_COLORS,
+  TYPE_LABELS,
+  coverUrl,
+} from '@zero/renderer/constants';
 
 interface WorkCardProps {
   work: Work;

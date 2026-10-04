@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import SettingsModal from '@/components/SettingsModal';
-import type { AppSettings, BackupSummary, DriveStatus } from '@shared/types';
+import SettingsModal from '@zero/renderer/components/SettingsModal';
+import type { AppSettings, BackupSummary, DriveStatus } from '@zero/types';
 import { createApiMock, installApiMock } from '../../../helpers/api';
 
 const CONNECTED: DriveStatus = {

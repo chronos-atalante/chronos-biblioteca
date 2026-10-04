@@ -12,8 +12,8 @@ import {
   loadLibrary,
   mimeFor,
   upsertWork,
-} from './library';
-import { loadSettings, saveSettings } from './settings';
+} from '@zero/main/library';
+import { loadSettings, saveSettings } from '@zero/main/settings';
 import {
   authorize,
   backupInfo,
@@ -23,8 +23,8 @@ import {
   initDrive,
   onStatus,
   restoreNow,
-} from './drive';
-import type { AppSettings, DriveStatus, Work } from '../shared/types';
+} from '@zero/main/drive';
+import type { AppSettings, DriveStatus, Work } from '@zero/types';
 
 protocol.registerSchemesAsPrivileged([
   {

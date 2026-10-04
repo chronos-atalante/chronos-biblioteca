@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import App from '@/App';
-import type { Work } from '@shared/types';
+import App from '@zero/renderer/App';
+import type { Work } from '@zero/types';
 import { createApiMock, installApiMock } from '../../helpers/api';
 import { makeWork } from '../../helpers/fixtures';
 

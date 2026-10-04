@@ -6,7 +6,7 @@ import type {
   DriveStatus,
   ElectronApi,
   Work,
-} from '../../src/shared/types';
+} from '@zero/types';
 
 type SaveInput = Parameters<ElectronApi['library']['save']>[0];
 

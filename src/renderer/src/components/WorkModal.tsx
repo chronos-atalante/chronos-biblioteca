@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import type { Work, WorkStatus, WorkType } from '@shared/types';
+import type { Work, WorkStatus, WorkType } from '@zero/types';
 import {
   STATUS_COLORS,
   STATUS_LABELS,
@@ -11,9 +11,9 @@ import {
   CATEGORIES,
   clampProgress,
   coverUrl,
-} from '../constants';
-import Select from './Select';
-import type { SelectOption } from './Select';
+} from '@zero/renderer/constants';
+import Select from '@zero/renderer/components/Select';
+import type { SelectOption } from '@zero/renderer/components/Select';
 
 interface WorkModalProps {
   work: Work;

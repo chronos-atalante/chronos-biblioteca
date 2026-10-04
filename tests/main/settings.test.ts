@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { loadSettings, saveSettings } from '../../src/main/settings';
+import { loadSettings, saveSettings } from '@zero/main/settings';
 import { resetSandbox, sandboxPath } from '../helpers/sandbox';
 
 function settingsFile(): string {

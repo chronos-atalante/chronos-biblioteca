@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import type { AppSettings, BackupSummary, DriveStatus } from '@shared/types';
-import { formatDate } from '../constants';
+import type { AppSettings, BackupSummary, DriveStatus } from '@zero/types';
+import { formatDate } from '@zero/renderer/constants';
 
 interface SettingsModalProps {
   onClose: () => void;

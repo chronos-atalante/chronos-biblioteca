@@ -1,4 +1,4 @@
-import type { Work } from '../../src/shared/types';
+import type { Work } from '@zero/types';
 
 export function makeWork(overrides: Partial<Work> = {}): Work {
   return {

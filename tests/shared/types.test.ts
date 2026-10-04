@@ -7,7 +7,7 @@ import type {
   Work,
   WorkStatus,
   WorkType,
-} from '../../src/shared/types';
+} from '@zero/types';
 
 describe('tipos compartilhados', () => {
   it('Work tem a forma esperada', () => {

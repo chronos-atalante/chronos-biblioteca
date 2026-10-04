@@ -7,6 +7,8 @@ Diretrizes para agentes e contribuidores deste repositório.
 - Seguir as melhores práticas de design patterns (separação de responsabilidades, baixo acoplamento, alta coesão).
 - Evitar arquivos monolíticos: ao atingir ~500 linhas, refatorar extraindo módulos/componentes.
 - Type safety rigoroso: sem `any` implícito, evitar casts; preferir tipos/interfaces bem definidos e `unknown` quando necessário.
+- arquivos com nome index devem ser usados apenas para barrels, arquivos que nao são barrels devem receber nomes apropriados para o arquivo.
+- Imports dentro de `src/` sempre pelos aliases ESM `@zero/*` (`@zero/types`, `@zero/main/*`, `@zero/preload/*`, `@zero/renderer/*`); nenhum caminho relativo entre pastas. O mapa é declarado em `tsconfig.base.json` e espelhado em `electron.vite.config.ts`, `vitest.config.ts` e `src/node.loader.ts` — mudar um alias vale nos quatro lugares.
 
 ## Dependências
 
@@ -18,6 +20,7 @@ Diretrizes para agentes e contribuidores deste repositório.
 - `npm run check` — typecheck + lint + format + auditoria de segurança (OSV). Deve passar antes de concluir mudanças.
 - `npm run security:audit` — verifica vulnerabilidades nas dependências via OSV Scanner.
 - `npm run dev` / `npm run build` / `npm run dist` — desenvolvimento, build e empacotamento.
+- `node --import ./src/node.loader.ts <arquivo.ts>` — executa um `.ts` direto no Node com os aliases `@zero/*` resolvidos (hooks síncronos via `module.registerHooks()`).
 
 ## Documentação
 

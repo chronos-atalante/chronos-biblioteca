@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
-import type { Work } from '../shared/types';
+import type { Work } from '@zero/types';
 
 const RATING_CLAMPS = { min: 0 } as const;
 

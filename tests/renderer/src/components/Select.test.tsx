@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { fireEvent } from '@testing-library/react';
-import Select from '@/components/Select';
-import type { SelectOption } from '@/components/Select';
+import Select from '@zero/renderer/components/Select';
+import type { SelectOption } from '@zero/renderer/components/Select';
 
 const OPTIONS: SelectOption<'a' | 'b' | 'c'>[] = [
   { value: 'a', label: 'Alpha', color: '#111111' },

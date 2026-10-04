@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AppSettings, DriveStatus, ElectronApi, Work } from '../shared/types';
+import type { AppSettings, DriveStatus, ElectronApi, Work } from '@zero/types';
 
 const api: ElectronApi = {
   library: {

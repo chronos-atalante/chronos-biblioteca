@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { DriveStatus, Work } from '@shared/types';
-import { FILTERS, STATUS_COLORS, clampProgress, type StatusFilter } from './constants';
-import WorkCard from './components/WorkCard';
-import WorkModal from './components/WorkModal';
-import SettingsModal from './components/SettingsModal';
+import type { DriveStatus, Work } from '@zero/types';
+import { FILTERS, STATUS_COLORS, clampProgress, type StatusFilter } from '@zero/renderer/constants';
+import WorkCard from '@zero/renderer/components/WorkCard';
+import WorkModal from '@zero/renderer/components/WorkModal';
+import SettingsModal from '@zero/renderer/components/SettingsModal';
 
 interface EditingState {
   work: Work;

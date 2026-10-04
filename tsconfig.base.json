@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2023"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "target": "ES2024",
+    "lib": ["ES2024"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
@@ -22,8 +22,11 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "paths": {
-      "@shared/*": ["./src/shared/*"],
-      "@/*": ["./src/renderer/src/*"]
+      "@zero/types": ["./src/types/index.ts"],
+      "@zero/types/*": ["./src/types/*"],
+      "@zero/main/*": ["./src/main/*"],
+      "@zero/preload/*": ["./src/preload/*"],
+      "@zero/renderer/*": ["./src/renderer/src/*"]
     }
   }
 }

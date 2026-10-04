@@ -2,8 +2,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import type { AppSettings, Work } from '../../src/shared/types';
-import { configDir, coversDir, dataDir } from '../../src/main/library';
+import type { AppSettings, Work } from '@zero/types';
+import { configDir, coversDir, dataDir } from '@zero/main/library';
 import { makeDraft, makeWork } from '../helpers/fixtures';
 import { sandboxPath } from '../helpers/sandbox';
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from '../mocks/electron';
@@ -86,7 +86,7 @@ beforeAll(async () => {
   );
 
   app.getPath.mockReturnValue(LEGACY_ROOT);
-  await import('../../src/main/index');
+  await import('@zero/main/index');
   await vi.waitFor(() => expect(ipcMain.handle).toHaveBeenCalled());
 });
 

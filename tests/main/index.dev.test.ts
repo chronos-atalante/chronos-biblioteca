@@ -5,7 +5,7 @@ import { resetSandbox } from '../helpers/sandbox';
 beforeAll(async () => {
   resetSandbox();
   process.env.ELECTRON_RENDERER_URL = 'http://localhost:5173';
-  await import('../../src/main/index');
+  await import('@zero/main/index');
   await vi.waitFor(() => expect(BrowserWindow.instances).toHaveLength(1));
 });
 

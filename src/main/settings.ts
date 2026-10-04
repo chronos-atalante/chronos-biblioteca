@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { configDir } from './library';
-import type { AppSettings } from '../shared/types';
+import { configDir } from '@zero/main/library';
+import type { AppSettings } from '@zero/types';
 
 const DEFAULTS: AppSettings = {
   driveClientId: '',

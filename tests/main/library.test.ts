@@ -20,7 +20,7 @@ import {
   saveLibrary,
   upsertWork,
   userDataDir,
-} from '../../src/main/library';
+} from '@zero/main/library';
 import { makeDraft, makeWork, flushAsync } from '../helpers/fixtures';
 import { resetSandbox, sandboxPath } from '../helpers/sandbox';
 

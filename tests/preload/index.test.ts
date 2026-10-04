@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { AppSettings, DriveStatus, ElectronApi } from '../../src/shared/types';
+import type { AppSettings, DriveStatus, ElectronApi } from '@zero/types';
 import { makeWork } from '../helpers/fixtures';
 import { contextBridge, ipcRenderer } from '../mocks/electron';
-import '../../src/preload/index';
+import '@zero/preload/index';
 
 function exposedApi(): ElectronApi {
   const call = contextBridge.exposeInMainWorld.mock.calls[0];

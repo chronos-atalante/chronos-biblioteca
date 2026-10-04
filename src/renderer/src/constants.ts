@@ -1,4 +1,4 @@
-import type { WorkStatus, WorkType } from '@shared/types';
+import type { WorkStatus, WorkType } from '@zero/types';
 
 export const TYPE_LABELS: Record<WorkType, string> = {
   webtoon: 'Webtoon',

@@ -3,7 +3,7 @@ import fs from 'fs';
 import http from 'http';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DriveStatus } from '../../src/shared/types';
+import type { DriveStatus } from '@zero/types';
 import {
   authorize,
   backupInfo,
@@ -13,9 +13,9 @@ import {
   initDrive,
   onStatus,
   restoreNow,
-} from '../../src/main/drive';
-import { loadLibrary, saveLibrary } from '../../src/main/library';
-import { saveSettings } from '../../src/main/settings';
+} from '@zero/main/drive';
+import { loadLibrary, saveLibrary } from '@zero/main/library';
+import { saveSettings } from '@zero/main/settings';
 import { shell } from '../mocks/electron';
 import { makeWork } from '../helpers/fixtures';
 import { resetSandbox, sandboxPath } from '../helpers/sandbox';

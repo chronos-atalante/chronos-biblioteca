@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import WorkCard from '@/components/WorkCard';
+import WorkCard from '@zero/renderer/components/WorkCard';
 import { makeWork } from '../../../helpers/fixtures';
 
 function setup(overrides: Partial<Parameters<typeof WorkCard>[0]> = {}) {

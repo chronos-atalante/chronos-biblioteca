@@ -11,8 +11,8 @@ import {
   clampProgress,
   coverUrl,
   formatDate,
-} from '@/constants';
-import type { StatusFilter } from '@/constants';
+} from '@zero/renderer/constants';
+import type { StatusFilter } from '@zero/renderer/constants';
 
 describe('rótulos e cores', () => {
   it('cobre todos os tipos de obra', () => {

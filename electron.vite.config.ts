@@ -2,43 +2,50 @@ import { defineConfig } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
+const root = __dirname;
+
+/** Espelha `paths` de tsconfig.base.json e o mapa de `node.loader.ts`. */
+const typesAlias = { '@zero/types': resolve(root, 'src/types') } as const;
+
 export default defineConfig({
   main: {
     resolve: {
       alias: {
-        '@shared': resolve(__dirname, 'src/shared'),
+        ...typesAlias,
+        '@zero/main': resolve(root, 'src/main'),
       },
     },
     build: {
       rollupOptions: {
-        input: resolve(__dirname, 'src/main/index.ts'),
+        input: resolve(root, 'src/main/index.ts'),
       },
     },
   },
   preload: {
     resolve: {
       alias: {
-        '@shared': resolve(__dirname, 'src/shared'),
+        ...typesAlias,
+        '@zero/preload': resolve(root, 'src/preload'),
       },
     },
     build: {
       rollupOptions: {
-        input: resolve(__dirname, 'src/preload/index.ts'),
+        input: resolve(root, 'src/preload/index.ts'),
       },
     },
   },
   renderer: {
-    root: resolve(__dirname, 'src/renderer'),
+    root: resolve(root, 'src/renderer'),
     resolve: {
       alias: {
-        '@shared': resolve(__dirname, 'src/shared'),
-        '@': resolve(__dirname, 'src/renderer/src'),
+        ...typesAlias,
+        '@zero/renderer': resolve(root, 'src/renderer/src'),
       },
     },
     plugins: [react()],
     build: {
       rollupOptions: {
-        input: resolve(__dirname, 'src/renderer/index.html'),
+        input: resolve(root, 'src/renderer/index.html'),
       },
     },
   },

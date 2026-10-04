@@ -58,7 +58,7 @@ O aplicativo aparece no menu do sistema como **Webtoons Biblioteca**.
 | `npm run lint:fix`     | ESLint com correção automática                     |
 | `npm run format`       | Formata tudo com Prettier                          |
 | `npm run format:check` | Verifica a formatação (CI)                         |
-| `npm run check`        | `typecheck` + `lint` + `format:check`              |
+| `npm run check`        | `typecheck` + `lint` + `format:check` + auditoria  |
 | `npm run build`        | Compila main/preload/renderer com electron-vite    |
 | `npm run dist`         | Build + gera o `.deb` com electron-builder         |
 
@@ -100,6 +100,39 @@ O projeto roda com o máximo de rigor disponível:
 
 ---
 
+## Imports e aliases
+
+Dentro de `src/` **não existe import relativo**: todo módulo é referenciado por um alias ESM
+`@zero/*`. O mapa é declarado uma única vez em `tsconfig.base.json` e espelhado nos três
+resolvers que o projeto usa (build, testes e Node puro):
+
+| Alias              | Alvo                  | Onde é resolvido                                      |
+| ------------------ | --------------------- | ----------------------------------------------------- |
+| `@zero/types`      | `src/types/` (barrel) | `electron.vite.config.ts`, `vitest.config.ts`, loader |
+| `@zero/types/*`    | `src/types/*`         | `tsconfig.base.json`                                  |
+| `@zero/main/*`     | `src/main/*`          | `electron.vite.config.ts`, `vitest.config.ts`, loader |
+| `@zero/preload/*`  | `src/preload/*`       | `electron.vite.config.ts`, `vitest.config.ts`, loader |
+| `@zero/renderer/*` | `src/renderer/src/*`  | `electron.vite.config.ts`, `vitest.config.ts`, loader |
+
+- **Build** (`npm run dev` / `npm run build`): electron-vite (Vite) resolve os aliases.
+- **Testes** (`npm test`): vitest resolve os mesmos aliases.
+- **Node puro** (sem bundler): o loader `src/node.loader.ts` registra hooks de resolução com
+  `module.registerHooks()` — hooks **síncronos, na mesma thread** (estáveis desde o
+  Node 22.15/23.5). O caminho antigo, `module.register()` com hooks assíncronos em thread
+  separada (o antigo `--experimental-loader`), está **deprecado** desde o Node 25.9.
+
+```bash
+# roda um arquivo .ts direto, com os aliases @zero/* funcionando
+node --import ./src/node.loader.ts caminho/para/arquivo.ts
+```
+
+O loader só precisa dos aliases: o Node já remove as anotações de tipo dos `.ts` sozinho.
+`src/package.json` declara `"type": "module"` para que o Node interprete os arquivos de `src/`
+como ESM — a raiz continua `"type": "commonjs"`, porque o `out/main/index.js` gerado pelo
+electron-vite é CommonJS.
+
+---
+
 ## Arquitetura
 
 ```mermaid
@@ -122,7 +155,7 @@ flowchart TD
         IDX["index.ts — janela, IPC, protocolo cover:"]
         LIB["library.ts — library.json + capas"]
         SET["settings.ts — Client ID/Secret"]
-        DRV["drive.ts — OAuth + Drive REST"]
+        DRV["drive/ — OAuth, REST, backup"]
     end
 
     subgraph STORAGE["Persistência"]
@@ -188,12 +221,26 @@ Webtoons/
 │   │   ├── index.ts          # janela, IPC, protocolo cover://
 │   │   ├── library.ts        # library.json + cópia/limpeza de capas
 │   │   ├── settings.ts       # credenciais OAuth
-│   │   └── drive.ts          # OAuth, Drive REST, backup/restauração
+│   │   └── drive/            # OAuth, Drive REST, backup/restauração
+│   │       ├── index.ts      # barrel da API pública (authorize, backupNow…)
+│   │       ├── constants.ts  # endpoints e nome da pasta oculta
+│   │       ├── state.ts      # tokens, status e listener
+│   │       ├── oauth.ts      # autorização + refresh do token
+│   │       ├── rest.ts       # chamadas REST do Drive
+│   │       ├── crypto.ts     # AES-256-GCM do backup
+│   │       └── backup.ts     # backup, restauração e desconexão
 │   ├── preload/index.ts      # contextBridge (window.api)
 │   ├── renderer/             # React + Vite
 │   │   ├── index.html        # CSP com scheme cover:
 │   │   └── src/              # App, componentes, styles.css
-│   └── shared/types.ts       # tipos compartilhados main ↔ renderer
+│   ├── types/                # tipos compartilhados main ↔ renderer (@zero/types)
+│   │   ├── index.ts          # barrel (arquivo index só como barrel)
+│   │   ├── work.ts           # Work, WorkType, WorkStatus
+│   │   ├── settings.ts       # AppSettings
+│   │   ├── drive.ts          # DriveStatus, BackupSummary
+│   │   └── api.ts            # ElectronApi (contrato do preload)
+│   ├── node.loader.ts        # hooks module.registerHooks() dos aliases @zero/*
+│   └── package.json          # "type": "module" (Node executa src/ direto)
 ├── eslint.config.mjs
 ├── .prettierrc.json
 ├── tsconfig*.json
