@@ -1,10 +1,10 @@
 {
-  "name": "webtoons-biblioteca",
-  "productName": "Webtoons Biblioteca",
+  "name": "chronos-biblioteca",
+  "productName": "Chronos Biblioteca",
   "version": "1.0.0",
   "description": "Biblioteca de anotação de progresso em leituras de webtoons, manhwas, manhuas, mangás e livros",
   "main": "out/main/index.js",
-  "desktopName": "webtoons-biblioteca.desktop",
+  "desktopName": "chronos-biblioteca.desktop",
   "type": "module",
   "keywords": [
     "webtoon",
@@ -13,8 +13,8 @@
     "leitura",
     "biblioteca"
   ],
-  "author": "morgan",
-  "homepage": "https://example.com/webtoons-biblioteca",
+  "author": "chronos",
+  "homepage": "https://example.com/chronos-biblioteca",
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
@@ -72,9 +72,9 @@
     "electron-winstaller@5.4.0": true
   },
   "build": {
-    "appId": "com.morgan.webtoons",
-    "productName": "Webtoons Biblioteca",
-    "artifactName": "webtoons-biblioteca_${version}_${arch}.${ext}",
+    "appId": "com.chronos.biblioteca",
+    "productName": "Chronos Biblioteca",
+    "artifactName": "chronos-biblioteca_${version}_${arch}.${ext}",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -91,9 +91,9 @@
       ],
       "category": "Office",
       "icon": "build/icon.png",
-      "maintainer": "morgan <morgan@localhost>",
+      "maintainer": "chronos <chronos@localhost>",
       "synopsis": "Acompanhe o progresso das suas leituras: webtoons, manhwas, manhuas, mangás e livros",
-      "executableName": "webtoons-biblioteca",
+      "executableName": "chronos-biblioteca",
       "syncDesktopName": true
     },
     "deb": {

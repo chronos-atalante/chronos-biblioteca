@@ -21,7 +21,7 @@ import {
 } from '../mocks/electron.ts';
 import type { IpcHandler, WindowEventHandler } from '../mocks/electron.ts';
 
-const LEGACY_ROOT = path.join(os.tmpdir(), 'webtoons-tests-legacy');
+const LEGACY_ROOT = path.join(os.tmpdir(), 'chronos-tests-legacy');
 
 function handler(channel: string): IpcHandler {
   const call = ipcMain.handle.mock.calls.find((entry) => entry[0] === channel);
@@ -125,7 +125,7 @@ describe('inicialização', () => {
   it('move o userData para o cache XDG', () => {
     expect(app.setPath).toHaveBeenCalledWith(
       'userData',
-      path.join(sandboxPath('XDG_CACHE_HOME'), 'webtoons-biblioteca'),
+      path.join(sandboxPath('XDG_CACHE_HOME'), 'chronos-biblioteca'),
     );
   });
 
@@ -148,7 +148,7 @@ describe('inicialização', () => {
     expect(options.width).toBe(1200);
     expect(options.minWidth).toBe(520);
     expect(options.minHeight).toBe(360);
-    expect(options.title).toBe('Webtoons Biblioteca');
+    expect(options.title).toBe('Chronos Biblioteca');
     expect(options.webPreferences.contextIsolation).toBe(true);
     expect(options.webPreferences.nodeIntegration).toBe(false);
     expect(options.webPreferences.sandbox).toBe(true);
@@ -328,7 +328,7 @@ describe('handler cover:pick', () => {
   });
 
   it('importa a imagem escolhida para a pasta de capas', async () => {
-    const source = path.join(os.tmpdir(), `webtoons-pick-${Date.now()}.png`);
+    const source = path.join(os.tmpdir(), `chronos-pick-${Date.now()}.png`);
     fs.writeFileSync(source, 'imagem-escolhida', 'utf-8');
     try {
       dialog.showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: [source] });

@@ -17,7 +17,7 @@ export default defineConfig({
     alias: aliases,
   },
   test: {
-    name: 'webtoons-biblioteca',
+    name: 'chronos-biblioteca',
     root: import.meta.dirname,
     environment: 'jsdom',
     pool: 'forks',

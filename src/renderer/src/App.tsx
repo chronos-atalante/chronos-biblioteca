@@ -188,7 +188,7 @@ export default function App(): JSX.Element {
             <i className="fa-solid fa-book-open" />
           </div>
           <div>
-            <h1>Webtoons Biblioteca</h1>
+            <h1>Chronos Biblioteca</h1>
             <small>
               {visibleStats.total} obra(s) · progresso médio {visibleStats.average}%
             </small>

@@ -1,4 +1,4 @@
-# OpenAPI 3.1 da API interna do Webtoons Biblioteca (ponte IPC `window.api`).
+# OpenAPI 3.1 da API interna do Chronos Biblioteca (ponte IPC `window.api`).
 #
 # Esta aplicação é desktop (Electron), não HTTP: cada `path` abaixo modela um
 # canal IPC (`x-ipc-channel`) como uma operação POST para que a especificação
@@ -6,7 +6,7 @@
 # Referência narrativa em `api.md`. Tipos-fonte em `src/types/`.
 openapi: 3.1.0
 info:
-  title: Webtoons Biblioteca — API interna (ponte IPC)
+  title: Chronos Biblioteca — API interna (ponte IPC)
   version: 1.0.0
   description: >
     Ponte `window.api` (contextBridge) entre o renderer e o processo main:
@@ -17,7 +17,7 @@ info:
     name: MIT
     url: https://opensource.org/license/mit
 servers:
-  - url: ipc://webtoons-biblioteca
+  - url: ipc://chronos-biblioteca
     description: Processo main via Electron IPC (sem rede)
 tags:
   - name: biblioteca

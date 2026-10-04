@@ -35,9 +35,9 @@ describe('diretórios XDG', () => {
   });
 
   it('usa as variáveis XDG quando definidas', () => {
-    expect(dataDir()).toBe(path.join(sandboxPath('XDG_DATA_HOME'), 'webtoons-biblioteca'));
-    expect(configDir()).toBe(path.join(sandboxPath('XDG_CONFIG_HOME'), 'webtoons-biblioteca'));
-    expect(cacheDir()).toBe(path.join(sandboxPath('XDG_CACHE_HOME'), 'webtoons-biblioteca'));
+    expect(dataDir()).toBe(path.join(sandboxPath('XDG_DATA_HOME'), 'chronos-biblioteca'));
+    expect(configDir()).toBe(path.join(sandboxPath('XDG_CONFIG_HOME'), 'chronos-biblioteca'));
+    expect(cacheDir()).toBe(path.join(sandboxPath('XDG_CACHE_HOME'), 'chronos-biblioteca'));
     expect(userDataDir()).toBe(dataDir());
   });
 
@@ -45,7 +45,7 @@ describe('diretórios XDG', () => {
     const original = process.env.XDG_DATA_HOME;
     process.env.XDG_DATA_HOME = '';
     try {
-      expect(dataDir()).toBe(path.join(os.homedir(), '.local', 'share', 'webtoons-biblioteca'));
+      expect(dataDir()).toBe(path.join(os.homedir(), '.local', 'share', 'chronos-biblioteca'));
     } finally {
       if (original !== undefined) process.env.XDG_DATA_HOME = original;
     }
@@ -192,7 +192,7 @@ describe('capas', () => {
   });
 
   it('importCover copia mantendo a extensão permitida', () => {
-    const source = path.join(os.tmpdir(), `webtoons-src-${Date.now()}.jpg`);
+    const source = path.join(os.tmpdir(), `chronos-src-${Date.now()}.jpg`);
     fs.writeFileSync(source, 'conteudo', 'utf-8');
     try {
       const name = importCover(source, 'capa-id');
@@ -204,7 +204,7 @@ describe('capas', () => {
   });
 
   it('importCover força PNG para extensão fora da whitelist', () => {
-    const source = path.join(os.tmpdir(), `webtoons-src-${Date.now()}.svg`);
+    const source = path.join(os.tmpdir(), `chronos-src-${Date.now()}.svg`);
     fs.writeFileSync(source, '<svg/>', 'utf-8');
     try {
       const name = importCover(source, 'svg-id');
@@ -215,7 +215,7 @@ describe('capas', () => {
   });
 
   it('importCover gera id próprio quando não recebe id preferido', () => {
-    const source = path.join(os.tmpdir(), `webtoons-src-${Date.now()}.png`);
+    const source = path.join(os.tmpdir(), `chronos-src-${Date.now()}.png`);
     fs.writeFileSync(source, 'x', 'utf-8');
     try {
       const name = importCover(source);

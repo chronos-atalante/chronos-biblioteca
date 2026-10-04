@@ -51,14 +51,14 @@ export class BrowserWindow {
 }
 
 export const app = {
-  getPath: vi.fn<(name: string) => string>(() => '/tmp/webtoons-tests-appdata'),
+  getPath: vi.fn<(name: string) => string>(() => '/tmp/chronos-tests-appdata'),
   setPath: vi.fn<(name: string, value: string) => void>(),
   requestSingleInstanceLock: vi.fn<() => boolean>(() => true),
   quit: vi.fn<() => void>(),
   on: vi.fn<(event: string, listener: WindowEventHandler) => void>(),
   whenReady: vi.fn<() => Promise<void>>(() => Promise.resolve()),
-  getName: vi.fn<() => string>(() => 'webtoons-biblioteca'),
-  name: 'Webtoons Biblioteca',
+  getName: vi.fn<() => string>(() => 'chronos-biblioteca'),
+  name: 'Chronos Biblioteca',
   isPackaged: vi.fn<() => boolean>(() => false),
 };
 

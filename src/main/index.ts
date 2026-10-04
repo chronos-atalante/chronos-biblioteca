@@ -43,6 +43,7 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
+// Diretórios da marca anterior (Webtoons Biblioteca), mantidos para migração.
 const legacyDirs = [
   path.join(app.getPath('appData'), 'Webtoons Biblioteca'),
   path.join(app.getPath('appData'), 'webtoons-biblioteca'),
@@ -99,7 +100,7 @@ function createWindow(): void {
     // metade de 1600x900 = 800x430; de 1366x768 = 683x364.
     minWidth: 520,
     minHeight: 360,
-    title: 'Webtoons Biblioteca',
+    title: 'Chronos Biblioteca',
     backgroundColor: '#000000',
     icon: nativeImage.createFromPath(path.join(__dirname, '../../build/icon.png')),
     show: false,

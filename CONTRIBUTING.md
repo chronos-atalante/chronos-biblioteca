@@ -1,6 +1,6 @@
 # Como contribuir
 
-Obrigado por querer ajudar o **Webtoons Biblioteca**! Este guia resume o fluxo.
+Obrigado por querer ajudar o **Chronos Biblioteca**! Este guia resume o fluxo.
 As regras detalhadas para agentes e contribuidores estão em [`AGENTS.md`](AGENTS.md).
 
 ## 1. Preparar o ambiente

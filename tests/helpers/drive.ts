@@ -59,7 +59,7 @@ export function stubFetch(handler: FetchHandler): FetchCall[] {
 }
 
 function configPath(name: string): string {
-  return path.join(sandboxPath('XDG_CONFIG_HOME'), 'webtoons-biblioteca', name);
+  return path.join(sandboxPath('XDG_CONFIG_HOME'), 'chronos-biblioteca', name);
 }
 
 export function tokensPath(): string {
@@ -67,7 +67,7 @@ export function tokensPath(): string {
 }
 
 export function coversPath(name: string): string {
-  return path.join(sandboxPath('XDG_DATA_HOME'), 'webtoons-biblioteca', 'covers', name);
+  return path.join(sandboxPath('XDG_DATA_HOME'), 'chronos-biblioteca', 'covers', name);
 }
 
 /** Reproduz o formato legado WTENC1 (scrypt padrão) para testar restauração antiga. */

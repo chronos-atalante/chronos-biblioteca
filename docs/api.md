@@ -1,7 +1,7 @@
 # Referência da API interna (`window.api`)
 
 Documentação completa da ponte entre a interface (renderer/React) e o processo
-principal (main/Electron) do **Webtoons Biblioteca**, no padrão de referências
+principal (main/Electron) do **Chronos Biblioteca**, no padrão de referências
 OpenAPI/Swagger (ver também [`openapi.yaml`](openapi.yaml), legível por
 Swagger UI, Redoc e afins).
 

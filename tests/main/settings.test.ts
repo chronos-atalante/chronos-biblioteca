@@ -6,7 +6,7 @@ import { safeStorage } from '../mocks/electron.ts';
 import { resetSandbox, sandboxPath } from '../helpers/sandbox.ts';
 
 function settingsFile(): string {
-  return path.join(sandboxPath('XDG_CONFIG_HOME'), 'webtoons-biblioteca', 'settings.json');
+  return path.join(sandboxPath('XDG_CONFIG_HOME'), 'chronos-biblioteca', 'settings.json');
 }
 
 describe('settings', () => {

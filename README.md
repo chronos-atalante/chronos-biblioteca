@@ -1,4 +1,4 @@
-# Webtoons Biblioteca
+# Chronos Biblioteca
 
 Aplicativo desktop (Electron + TypeScript + React) para anotar o progresso das suas leituras de
 **webtoons, manhwas, manhuas, mangás e livros**: capa da obra, título, descrição, barra de
@@ -43,15 +43,15 @@ npm install
 npm run dist
 
 # instale
-sudo apt install ./release/webtoons-biblioteca_1.0.0_amd64.deb
+sudo apt install ./release/chronos-biblioteca_1.0.0_amd64.deb
 ```
 
-O aplicativo aparece no menu do sistema como **Webtoons Biblioteca**.
+O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
 
-- Executável: `/opt/Webtoons Biblioteca/webtoons-biblioteca` (alternativa
-  `/usr/bin/webtoons-biblioteca`)
-- Ícone instalado em `/usr/share/icons/hicolor/512x512/apps/webtoons-biblioteca.png`
-- Dados: `~/.config/Webtoons Biblioteca/` (`library.json`, `covers/`, `settings.json`,
+- Executável: `/opt/Chronos Biblioteca/chronos-biblioteca` (alternativa
+  `/usr/bin/chronos-biblioteca`)
+- Ícone instalado em `/usr/share/icons/hicolor/512x512/apps/chronos-biblioteca.png`
+- Dados: `~/.config/chronos-biblioteca/` (`library.json`, `covers/`, `settings.json`,
   `drive-tokens.json`)
 
 ---
@@ -178,7 +178,7 @@ flowchart TD
     end
 
     subgraph STORAGE["Persistência"]
-        LOKAL[("~/.config/Webtoons Biblioteca/<br/>library.json · covers/ · settings.json · drive-tokens.json")]
+        LOKAL[("~/.config/chronos-biblioteca/<br/>library.json · covers/ · settings.json · drive-tokens.json")]
         DRIVE[("Google Drive · espaço oculto appDataFolder")]
     end
 
@@ -296,16 +296,16 @@ flowchart LR
     PRT --> VITE
     VITE --> EB["electron-builder --linux deb"]
     ICON["build/icon.png"] --> EB
-    EB --> DEB[("release/<br/>webtoons-biblioteca_1.0.0_amd64.deb")]
+    EB --> DEB[("release/<br/>chronos-biblioteca_1.0.0_amd64.deb")]
 ```
 
 Detalhes da configuração (campo `build` do `package.json`):
 
-- Alvo exclusivo `deb`, `executableName: webtoons-biblioteca`
+- Alvo exclusivo `deb`, `executableName: chronos-biblioteca`
 - `desktopName` + `syncDesktopName` para o `StartupWMClass` casar com a janela (associação
   correta no menu/ALT+TAB do Mint)
 - Ícone empacotado em `usr/share/icons/hicolor/512x512/apps/`
-- `homepage` no `package.json` é um **placeholder** (`https://example.com/webtoons-biblioteca`):
+- `homepage` no `package.json` é um **placeholder** (`https://example.com/chronos-biblioteca`):
   o alvo `deb` do electron-builder exige uma URL no campo `Homepage:` do controle do pacote e o
   projeto não está no GitHub
 - `postinst` do electron-builder cuida do AppArmor (Ubuntu/Mint 24+) e do `chrome-sandbox`

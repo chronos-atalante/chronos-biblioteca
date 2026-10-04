@@ -1,6 +1,6 @@
 # Backup no Google Drive
 
-Guia completo de como conectar o **Webtoons Biblioteca** ao Google Drive e proteger sua
+Guia completo de como conectar o **Chronos Biblioteca** ao Google Drive e proteger sua
 biblioteca na nuvem.
 
 O app usa **OAuth 2.0 direto no aplicativo** (fluxo loopback + PKCE, sem servidor intermediário
@@ -80,14 +80,14 @@ apenas a lista de usuários permitidos.
 
 ## 2. Conectar no aplicativo
 
-1. Abra o Webtoons Biblioteca → botão **⚙ Configurações** (canto superior direito).
+1. Abra o Chronos Biblioteca → botão **⚙ Configurações** (canto superior direito).
 2. Defina a **senha de criptografia do backup** (obrigatória — ver abaixo) e clique em **Salvar**.
 3. Clique em **Conectar ao Drive** (os campos de Client ID/Secret ficam em branco: o app usa as
    credenciais embutidas):
    - O navegador padrão abre a página de consentimento do Google.
    - Após aprovar, o Google redireciona para `http://127.0.0.1:<porta>/callback?code=...`.
    - O app captura o código, troca pelos tokens (PKCE) e mostra o status **Conectado**.
-4. Os tokens ficam em `~/.config/Webtoons Biblioteca/drive-tokens.json`
+4. Os tokens ficam em `~/.config/chronos-biblioteca/drive-tokens.json`
    (`refresh_token` é usado automaticamente quando o `access_token` expira).
 5. Na primeira conexão o app **migra sozinho** qualquer backup antigo da pasta
    `.webtoons-backup` para o `appDataFolder` e apaga a pasta antiga.
@@ -165,7 +165,7 @@ sequenceDiagram
 | Janela abre mas nada acontece após consentir                       | O navegador não conseguiu voltar para `127.0.0.1` (porta bloqueada). Feche e tente de novo — uma porta livre é escolhida automaticamente. |
 | “Fazer backup” falha / nada local                                  | A base local ainda não existe (instalação nova). Adicione ao menos uma obra antes de fazer o backup.                                      |
 | Backup antigo em `.webtoons-backup` não aparece                    | Sem problema: a migração para o `appDataFolder` roda sozinha na primeira conexão e apaga a pasta antiga.                                  |
-| App reinstalado localmente                                         | Os tokens vão embora com `~/.config/Webtoons Biblioteca/`; reconecte — o backup na nuvem é reaproveitado.                                 |
+| App reinstalado localmente                                         | Os tokens vão embora com `~/.config/chronos-biblioteca/`; reconecte — o backup na nuvem é reaproveitado.                                  |
 
 ---
 

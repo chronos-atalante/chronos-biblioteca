@@ -7,7 +7,7 @@ import path from 'path';
  * temporário exclusivo deste processo de teste. Precisa rodar antes do import dos
  * módulos sob teste, por isso fica em `setupFiles`.
  */
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webtoons-biblioteca-tests-'));
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chronos-biblioteca-tests-'));
 
 process.env.XDG_DATA_HOME = path.join(root, 'data');
 process.env.XDG_CONFIG_HOME = path.join(root, 'config');

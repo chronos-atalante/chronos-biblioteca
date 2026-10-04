@@ -19,7 +19,7 @@ em português do Brasil.
 
 ## [1.0.0] - 2026-10-04
 
-Primeira versão pública do **Webtoons Biblioteca** (pacote `.deb` para Linux Mint).
+Primeira versão pública do **Chronos Biblioteca** (pacote `.deb` para Linux Mint).
 
 ### Adicionado
 
