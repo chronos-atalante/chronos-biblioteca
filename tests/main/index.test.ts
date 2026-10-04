@@ -12,13 +12,14 @@ import {
   app,
   BrowserWindow,
   dialog,
+  globalShortcut,
   ipcMain,
   Menu,
   nativeImage,
   protocol,
   shell,
 } from '../mocks/electron.ts';
-import type { IpcHandler, MockMenu, WindowEventHandler } from '../mocks/electron.ts';
+import type { IpcHandler, WindowEventHandler } from '../mocks/electron.ts';
 
 const LEGACY_ROOT = path.join(os.tmpdir(), 'webtoons-tests-legacy');
 
@@ -140,11 +141,13 @@ describe('inicialização', () => {
     const options = win?.options as {
       width: number;
       minWidth: number;
+      minHeight: number;
       title: string;
       webPreferences: Record<string, unknown>;
     };
     expect(options.width).toBe(1200);
-    expect(options.minWidth).toBe(860);
+    expect(options.minWidth).toBe(520);
+    expect(options.minHeight).toBe(360);
     expect(options.title).toBe('Webtoons Biblioteca');
     expect(options.webPreferences.contextIsolation).toBe(true);
     expect(options.webPreferences.nodeIntegration).toBe(false);
@@ -160,12 +163,11 @@ describe('inicialização', () => {
     expect(app.quit).not.toHaveBeenCalled();
   });
 
-  it('instala o menu da aplicação e esconde a barra de menus da janela', () => {
+  it('remove o menu da aplicação (sem File/Edit/View) e sem menu de botão direito', () => {
     expect(Menu.setApplicationMenu).toHaveBeenCalledTimes(1);
+    expect(Menu.setApplicationMenu).toHaveBeenCalledWith(null);
     const win = BrowserWindow.instances[0];
-    expect(win?.setMenuBarVisibility).toHaveBeenCalledWith(false);
-    expect(win?.setAutoHideMenuBar).toHaveBeenCalledWith(true);
-    expect(win?.webContents.on).toHaveBeenCalledWith('context-menu', expect.any(Function));
+    expect(win?.webContents.on).not.toHaveBeenCalled();
   });
 
   it('define o ícone da janela a partir do ícone do pacote', () => {
@@ -175,30 +177,36 @@ describe('inicialização', () => {
     );
     expect(win?.options.icon).toBeDefined();
   });
+});
 
-  it('abre o menu de contexto no clique direito sobre um campo', () => {
+describe('atalho F11 (tela cheia)', () => {
+  it('registra o F11 ao focar e libera ao desfocar/encerrar', () => {
     const win = BrowserWindow.instances[0];
     if (win === undefined) throw new Error('Janela não criada.');
-    const listener = win.webContents.on.mock.calls.find((call) => call[0] === 'context-menu')?.[1];
-    if (listener === undefined) throw new Error('Listener de context-menu ausente.');
+    globalShortcut.register.mockClear();
+    globalShortcut.unregister.mockClear();
+    globalShortcut.unregisterAll.mockClear();
 
-    Menu.buildFromTemplate.mockClear();
-    listener({}, { isEditable: true, selectionText: '', linkURL: '' });
+    appListener('browser-window-focus')();
+    expect(globalShortcut.register).toHaveBeenCalledWith('F11', expect.any(Function));
 
-    const built = Menu.buildFromTemplate.mock.results.at(-1)?.value as MockMenu | undefined;
-    expect(built?.popup).toHaveBeenCalledWith({ window: win });
-  });
+    const toggle = globalShortcut.register.mock.calls.at(-1)?.[1];
+    if (toggle === undefined) throw new Error('Callback do F11 ausente.');
 
-  it('não abre menu de contexto sem edição, seleção ou link', () => {
-    const win = BrowserWindow.instances[0];
-    if (win === undefined) throw new Error('Janela não criada.');
-    const listener = win.webContents.on.mock.calls.find((call) => call[0] === 'context-menu')?.[1];
-    if (listener === undefined) throw new Error('Listener de context-menu ausente.');
+    win.isFullScreen.mockReturnValue(false);
+    win.setFullScreen.mockClear();
+    toggle();
+    expect(win.setFullScreen).toHaveBeenCalledWith(true);
 
-    Menu.buildFromTemplate.mockClear();
-    listener({}, { isEditable: false, selectionText: '', linkURL: '' });
+    win.isFullScreen.mockReturnValue(true);
+    toggle();
+    expect(win.setFullScreen).toHaveBeenCalledWith(false);
 
-    expect(Menu.buildFromTemplate).not.toHaveBeenCalled();
+    appListener('browser-window-blur')();
+    expect(globalShortcut.unregister).toHaveBeenCalledWith('F11');
+
+    appListener('will-quit')();
+    expect(globalShortcut.unregisterAll).toHaveBeenCalled();
   });
 });
 
@@ -429,5 +437,21 @@ describe('status do Drive para o renderer', () => {
 
     invoke('drive:disconnect');
     expect(win.webContents.send).not.toHaveBeenCalled();
+  });
+});
+
+describe('F11 depois que a janela é fechada', () => {
+  it('ignora o atalho sem janela viva', () => {
+    const win = BrowserWindow.instances[0];
+    if (win === undefined) throw new Error('Janela não criada.');
+    windowEvent(win, 'closed')();
+    win.setFullScreen.mockClear();
+
+    globalShortcut.register.mockClear();
+    appListener('browser-window-focus')();
+    const toggle = globalShortcut.register.mock.calls.at(-1)?.[1];
+    if (toggle === undefined) throw new Error('Callback do F11 ausente.');
+    toggle();
+    expect(win.setFullScreen).not.toHaveBeenCalled();
   });
 });

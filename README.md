@@ -28,10 +28,9 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
   Drive), OAuth direto no app com **credenciais embutidas** (sem configuração prévia), arquivos
   sempre **criptografados**, com **Fazer backup agora**, **Restaurar** (pede a senha) e
   **Desconectar**.
-- **Janela nativa com barra de menus escondida**: decorações do gerenciador de janelas (encaixe
-  em cantos, maximizar/fechar), atalhos do menu da aplicação (copiar/colar, desfazer/refazer,
-  recarregar, zoom, `F11` em tela cheia) e menu de contexto no clique direito — sem barra
-  “File / Edit / View” no topo.
+- **Janela nativa sem barra de menus**: sem botões File/Edit/View no topo (menu da
+  aplicação removido por completo); decorações do gerenciador de janelas (encaixe em cantos
+  para dividir a tela, maximizar/fechar) e `F11` alterna tela cheia.
 - Tema escuro com fundo preto (`#000`) e paleta sólida azul; ícones **Font Awesome**.
 
 ---
@@ -171,8 +170,7 @@ flowchart TD
     end
 
     subgraph MAIN["Main — Electron (src/main)"]
-        IDX["index.ts — janela, IPC, protocolo cover:"]
-        MENU["menu.ts — menu da aplicação, atalhos e menu de contexto"]
+        IDX["index.ts — janela, IPC, protocolo cover:, F11"]
         LIB["library.ts — library.json + capas"]
         SET["settings.ts — credenciais e senha do backup"]
         DRV["drive/ — OAuth, REST, backup, migração"]
@@ -184,7 +182,6 @@ flowchart TD
     end
 
     BRIDGE -->|"ipcRenderer.invoke"| IDX
-    IDX --> MENU
     IDX --> LIB --> LOKAL
     IDX --> SET --> LOKAL
     IDX --> DRV
@@ -249,8 +246,7 @@ Webtoons/
 │   └── google-drive.md       # guia do backup + diagramas
 ├── src/
 │   ├── main/                 # processo main (Electron)
-│   │   ├── index.ts          # janela, IPC, protocolo cover://
-│   │   ├── menu.ts           # menu da aplicação, atalhos e menu de contexto
+│   │   ├── index.ts          # janela, IPC, protocolo cover://, F11 em tela cheia
 │   │   ├── library.ts        # library.json + cópia/limpeza de capas
 │   │   ├── settings.ts       # credenciais OAuth
 │   │   └── drive/            # OAuth, Drive REST, backup/restauração

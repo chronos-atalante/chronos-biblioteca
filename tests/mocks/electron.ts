@@ -35,6 +35,8 @@ export class BrowserWindow {
   public readonly show = vi.fn<() => void>();
   public readonly focus = vi.fn<() => void>();
   public readonly restore = vi.fn<() => void>();
+  public readonly setFullScreen = vi.fn<(fullscreen: boolean) => void>();
+  public readonly isFullScreen = vi.fn<() => boolean>(() => false);
   public readonly setMenuBarVisibility = vi.fn<(visible: boolean) => void>();
   public readonly setAutoHideMenuBar = vi.fn<(autoHide: boolean) => void>();
   public readonly isMinimized = vi.fn<() => boolean>(() => false);
@@ -63,6 +65,12 @@ export const app = {
 export const Menu = {
   buildFromTemplate: vi.fn<(template: MenuTemplateItem[]) => MockMenu>(() => new MockMenu()),
   setApplicationMenu: vi.fn<(menu: MockMenu | null) => void>(),
+};
+
+export const globalShortcut = {
+  register: vi.fn<(accelerator: string, callback: () => void) => void>(),
+  unregister: vi.fn<(accelerator: string) => void>(),
+  unregisterAll: vi.fn<() => void>(),
 };
 
 export const nativeImage = {
@@ -130,5 +138,8 @@ export function resetElectronMock(): void {
   app.isPackaged.mockClear();
   Menu.buildFromTemplate.mockClear();
   Menu.setApplicationMenu.mockClear();
+  globalShortcut.register.mockClear();
+  globalShortcut.unregister.mockClear();
+  globalShortcut.unregisterAll.mockClear();
   nativeImage.createFromPath.mockClear();
 }

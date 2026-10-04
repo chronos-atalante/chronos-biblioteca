@@ -1,8 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 import { URL } from 'url';
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, protocol, shell } from 'electron';
-import { attachContextMenu, hideWindowMenuBar, installApplicationMenu } from '@zero/main/menu';
+import {
+  Menu,
+  app,
+  BrowserWindow,
+  dialog,
+  globalShortcut,
+  ipcMain,
+  nativeImage,
+  protocol,
+  shell,
+} from 'electron';
 import {
   cacheDir,
   configDir,
@@ -85,8 +94,11 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    minWidth: 860,
-    minHeight: 560,
+    // Mínimos pequenos o bastante para caber em meia/quarta tela (tiling do
+    // Cinnamon/Muffin recusa encaixar se o mínimo não couber no retângulo):
+    // metade de 1600x900 = 800x430; de 1366x768 = 683x364.
+    minWidth: 520,
+    minHeight: 360,
     title: 'Webtoons Biblioteca',
     backgroundColor: '#000000',
     icon: nativeImage.createFromPath(path.join(__dirname, '../../build/icon.png')),
@@ -99,9 +111,6 @@ function createWindow(): void {
       webSecurity: true,
     },
   });
-
-  hideWindowMenuBar(mainWindow);
-  attachContextMenu(mainWindow);
 
   mainWindow.once('ready-to-show', () => mainWindow?.show());
 
@@ -188,6 +197,36 @@ function registerIpc(): void {
   });
 }
 
+/**
+ * Sem barra de menus (sem File/Edit/View): o menu da aplicação é removido por
+ * completo em vez de escondido.
+ */
+function removeApplicationMenu(): void {
+  Menu.setApplicationMenu(null);
+}
+
+/**
+ * F11 alterna a tela cheia sem precisar de barra de menus. O atalho só vale
+ * com a janela focada, para não sequestrar a tecla de outros aplicativos.
+ */
+function toggleFullscreen(): void {
+  if (mainWindow !== null && !mainWindow.isDestroyed()) {
+    mainWindow.setFullScreen(!mainWindow.isFullScreen());
+  }
+}
+
+function registerFullscreenShortcut(): void {
+  app.on('browser-window-focus', () => {
+    globalShortcut.register('F11', toggleFullscreen);
+  });
+  app.on('browser-window-blur', () => {
+    globalShortcut.unregister('F11');
+  });
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+  });
+}
+
 const gotLock = app.requestSingleInstanceLock();
 
 if (!gotLock) {
@@ -206,7 +245,8 @@ if (!gotLock) {
       registerCoverProtocol();
       registerIpc();
       initDrive();
-      installApplicationMenu();
+      removeApplicationMenu();
+      registerFullscreenShortcut();
       createWindow();
 
       app.on('activate', () => {
