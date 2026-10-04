@@ -10,6 +10,8 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({ onClose, notify }: SettingsModalProps): JSX.Element {
+  // driveClientId/Secret seguem no estado por compatibilidade com o backend
+  // (fallback para credenciais embutidas), mas não são mais editáveis na UI.
   const [settings, setSettings] = useState<AppSettings>({
     driveClientId: '',
     driveClientSecret: '',
@@ -20,6 +22,16 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [promptRestore, setPromptRestore] = useState(false);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
 
   useEffect(() => {
     const unsubscribe = window.api.drive.onStatus((next) => setStatus(next));
@@ -103,6 +115,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
   const connected = status?.connected === true;
   const lastError = status?.lastError ?? '';
   const syncing = status?.syncing === true;
+  const working = busy !== null;
 
   return (
     <>
@@ -131,49 +144,19 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
               primeiro backup.
             </div>
 
-            <div className="field">
-              <label>
-                Google OAuth Client ID (opcional — usamos credenciais embutidas por padrão)
-              </label>
-              <input
-                type="text"
-                value={settings.driveClientId}
-                placeholder="xxxxxxxx.apps.googleusercontent.com"
-                onChange={(event) =>
-                  setSettings({ ...settings, driveClientId: event.target.value })
-                }
-              />
-            </div>
-
-            <div className="field">
-              <label>Google OAuth Client Secret (opcional)</label>
-              <input
-                type="password"
-                value={settings.driveClientSecret}
-                placeholder="GOCSPX-..."
-                onChange={(event) =>
-                  setSettings({ ...settings, driveClientSecret: event.target.value })
-                }
-              />
-            </div>
-
-            <div className="field">
-              <label>Senha de criptografia do backup</label>
-              <input
-                type="password"
-                value={settings.drivePassphrase}
-                placeholder="Usada para criptografar o backup no Drive"
-                onChange={(event) =>
-                  setSettings({ ...settings, drivePassphrase: event.target.value })
-                }
-              />
-            </div>
-
-            <div className="help">
-              O app já vem com credenciais OAuth prontas —{' '}
-              <strong>não é preciso configurar nada</strong>. Os campos acima são avançados:
-              preencha-os apenas se quiser usar um projeto Google Cloud próprio (o mesmo fluxo
-              continua funcionando).
+            <div className="form-row">
+              <div className="field">
+                <label>Senha de criptografia do backup</label>
+                <input
+                  type="password"
+                  value={settings.drivePassphrase}
+                  placeholder="Usada para criptografar o backup no Drive"
+                  disabled={working}
+                  onChange={(event) =>
+                    setSettings({ ...settings, drivePassphrase: event.target.value })
+                  }
+                />
+              </div>
             </div>
 
             <div className="drive-meta">
@@ -207,7 +190,8 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
               onClick={() => {
                 void disconnect();
               }}
-              disabled={!connected || busy !== null}
+              disabled={!connected || working}
+              title="Desconecta a conta Google deste aplicativo"
             >
               <i className="fa-solid fa-link-slash" /> Desconectar
             </button>
@@ -217,16 +201,24 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
               onClick={() => {
                 void saveSettings();
               }}
-              disabled={busy !== null}
+              disabled={working}
             >
-              <i className="fa-solid fa-floppy-disk" /> Salvar
+              {busy === 'save' ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin" /> Salvando…
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-floppy-disk" /> Salvar
+                </>
+              )}
             </button>
             <button
               className="btn"
               onClick={() => {
                 void connect();
               }}
-              disabled={busy !== null}
+              disabled={working}
             >
               <i className="fa-brands fa-google" />{' '}
               {busy === 'auth' ? 'Autorizando…' : 'Conectar ao Drive'}
@@ -234,7 +226,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
             <button
               className="btn"
               onClick={() => setPromptRestore(true)}
-              disabled={!connected || busy !== null}
+              disabled={!connected || working}
               title="Baixa o backup do Drive e substitui a biblioteca atual"
             >
               <i className="fa-solid fa-clock-rotate-left" />{' '}
@@ -245,7 +237,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
               onClick={() => {
                 void backup();
               }}
-              disabled={!connected || busy !== null}
+              disabled={!connected || working}
             >
               <i className="fa-solid fa-cloud-arrow-up" />{' '}
               {busy === 'backup' ? 'Enviando…' : 'Fazer backup agora'}

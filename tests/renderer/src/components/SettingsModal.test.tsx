@@ -40,8 +40,6 @@ function setup(options: Parameters<typeof createApiMock>[0] = {}): SetupResult {
 
 async function typeCredentials(): Promise<void> {
   const user = userEvent.setup();
-  await user.type(screen.getByPlaceholderText('xxxxxxxx.apps.googleusercontent.com'), 'meu-id');
-  await user.type(screen.getByPlaceholderText('GOCSPX-...'), 'meu-segredo');
   await user.type(
     screen.getByPlaceholderText('Usada para criptografar o backup no Drive'),
     'frase',
@@ -114,28 +112,24 @@ describe('SettingsModal — carregamento', () => {
 });
 
 describe('SettingsModal — credenciais', () => {
-  it('atualiza os campos e salva as configurações', async () => {
+  it('atualiza o campo e salva as configurações', async () => {
     const { mock, notify } = setup();
     await screen.findByText('Desconectado');
     await typeCredentials();
 
     await userEvent.setup().click(screen.getByRole('button', { name: /^Salvar$/ }));
     expect(mock.settingsSet).toHaveBeenCalledWith({
-      driveClientId: 'meu-id',
-      driveClientSecret: 'meu-segredo',
+      driveClientId: '',
+      driveClientSecret: '',
       drivePassphrase: 'frase',
     });
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Configurações salvas.'));
   });
 
-  it('mantém "Conectar" habilitado mesmo sem credenciais próprias', async () => {
+  it('mantém "Conectar" habilitado mesmo sem conexão', async () => {
     setup();
     await screen.findByText('Desconectado');
     const connect = screen.getByRole('button', { name: /Conectar ao Drive/ });
-    expect(connect).toBeEnabled();
-
-    const user = userEvent.setup();
-    await user.type(screen.getByPlaceholderText('xxxxxxxx.apps.googleusercontent.com'), 'meu-id');
     expect(connect).toBeEnabled();
   });
 });
@@ -268,7 +262,7 @@ describe('SettingsModal — ações do Drive', () => {
 });
 
 describe('SettingsModal — configurações exibidas', () => {
-  it('preenche os campos com as configurações salvas', async () => {
+  it('preenche o campo com a configuração salva', async () => {
     const saved: AppSettings = {
       driveClientId: 'id-salvo',
       driveClientSecret: 'segredo-salvo',
@@ -276,10 +270,6 @@ describe('SettingsModal — configurações exibidas', () => {
     };
     setup({ settings: saved });
     await screen.findByText('Desconectado');
-    expect(screen.getByPlaceholderText('xxxxxxxx.apps.googleusercontent.com')).toHaveValue(
-      'id-salvo',
-    );
-    expect(screen.getByPlaceholderText('GOCSPX-...')).toHaveValue('segredo-salvo');
     expect(screen.getByPlaceholderText('Usada para criptografar o backup no Drive')).toHaveValue(
       'frase-salva',
     );

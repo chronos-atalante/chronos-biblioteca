@@ -59,18 +59,17 @@ O aplicativo aparece no menu do sistema como **Webtoons Biblioteca**.
 
 ## Comandos de desenvolvimento
 
-| Comando                | O que faz                                                   |
-| ---------------------- | ----------------------------------------------------------- |
-| `npm run dev`          | Sobe o app em modo desenvolvimento (hot reload)             |
-| `npm run typecheck`    | `tsc --noEmit` nos projetos node, web e testes              |
-| `npm run lint`         | ESLint rigoroso (type-aware) em todo o repositório          |
-| `npm run lint:fix`     | ESLint com correção automática                              |
-| `npm run format`       | Formata tudo com Prettier                                   |
-| `npm run format:check` | Verifica a formatação (CI)                                  |
-| `npm run check`        | `typecheck` + `lint` + `format:check` + auditoria           |
-| `npm run diagnosticar` | Diagnóstico do projeto via CLI (`@mocoto/mahoraga`, devDep) |
-| `npm run build`        | Compila main/preload/renderer com electron-vite             |
-| `npm run dist`         | Build + gera o `.deb` com electron-builder                  |
+| Comando                | O que faz                                          |
+| ---------------------- | -------------------------------------------------- |
+| `npm run dev`          | Sobe o app em modo desenvolvimento (hot reload)    |
+| `npm run typecheck`    | `tsc --noEmit` nos projetos node, web e testes     |
+| `npm run lint`         | ESLint rigoroso (type-aware) em todo o repositório |
+| `npm run lint:fix`     | ESLint com correção automática                     |
+| `npm run format`       | Formata tudo com Prettier                          |
+| `npm run format:check` | Verifica a formatação (CI)                         |
+| `npm run check`        | `typecheck` + `lint` + `format:check` + auditoria  |
+| `npm run build`        | Compila main/preload/renderer com electron-vite    |
+| `npm run dist`         | Build + gera o `.deb` com electron-builder         |
 
 ---
 
