@@ -21,11 +21,16 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
   contextuais: **Concluir**, **Pausar**/**Retomar** e **Cancelar**; no modal de edição, campo
   numérico direto, `−10` / `+10`, **concluir** e **zerar**.
 - **Busca** por título ou descrição e **filtros** por status (Lendo, Planejados, Pausados,
-  Concluídos, Cancelados) com estatísticas no topo.
+  Concluídos, Cancelados); o contador e o progresso médio do cabeçalho acompanham o que está
+  sendo exibido, e o bloco de estatísticas continua mostrando o total da biblioteca.
 - **Backup no Google Drive**: espaço **oculto `appDataFolder`** (invisível na interface do
   Drive), OAuth direto no app com **credenciais embutidas** (sem configuração prévia), arquivos
   sempre **criptografados**, com **Fazer backup agora**, **Restaurar** (pede a senha) e
   **Desconectar**.
+- **Janela nativa com barra de menus escondida**: decorações do gerenciador de janelas (encaixe
+  em cantos, maximizar/fechar), atalhos do menu da aplicação (copiar/colar, desfazer/refazer,
+  recarregar, zoom, `F11` em tela cheia) e menu de contexto no clique direito — sem barra
+  “File / Edit / View” no topo.
 - Tema escuro com fundo preto (`#000`) e paleta sólida azul; ícones **Font Awesome**.
 
 ---
@@ -53,17 +58,18 @@ O aplicativo aparece no menu do sistema como **Webtoons Biblioteca**.
 
 ## Comandos de desenvolvimento
 
-| Comando                | O que faz                                          |
-| ---------------------- | -------------------------------------------------- |
-| `npm run dev`          | Sobe o app em modo desenvolvimento (hot reload)    |
-| `npm run typecheck`    | `tsc --noEmit` nos projetos node, web e testes     |
-| `npm run lint`         | ESLint rigoroso (type-aware) em todo o repositório |
-| `npm run lint:fix`     | ESLint com correção automática                     |
-| `npm run format`       | Formata tudo com Prettier                          |
-| `npm run format:check` | Verifica a formatação (CI)                         |
-| `npm run check`        | `typecheck` + `lint` + `format:check` + auditoria  |
-| `npm run build`        | Compila main/preload/renderer com electron-vite    |
-| `npm run dist`         | Build + gera o `.deb` com electron-builder         |
+| Comando                | O que faz                                                   |
+| ---------------------- | ----------------------------------------------------------- |
+| `npm run dev`          | Sobe o app em modo desenvolvimento (hot reload)             |
+| `npm run typecheck`    | `tsc --noEmit` nos projetos node, web e testes              |
+| `npm run lint`         | ESLint rigoroso (type-aware) em todo o repositório          |
+| `npm run lint:fix`     | ESLint com correção automática                              |
+| `npm run format`       | Formata tudo com Prettier                                   |
+| `npm run format:check` | Verifica a formatação (CI)                                  |
+| `npm run check`        | `typecheck` + `lint` + `format:check` + auditoria           |
+| `npm run diagnosticar` | Diagnóstico do projeto via CLI (`@mocoto/mahoraga`, devDep) |
+| `npm run build`        | Compila main/preload/renderer com electron-vite             |
+| `npm run dist`         | Build + gera o `.deb` com electron-builder                  |
 
 ---
 
@@ -135,9 +141,12 @@ node --import ./src/node.loader.ts caminho/para/arquivo.ts
 ```
 
 O loader só precisa dos aliases: o Node já remove as anotações de tipo dos `.ts` sozinho.
-`src/package.json` declara `"type": "module"` para que o Node interprete os arquivos de `src/`
-como ESM — a raiz continua `"type": "commonjs"`, porque o `out/main/index.js` gerado pelo
-electron-vite é CommonJS.
+`src/package.json` **e a raiz** declaram `"type": "module"`: o Node lê `src/` como ESM e o
+electron-vite emite `out/main/index.js` (ESM). O preload sai como **CommonJS**
+(`out/preload/index.cjs`), porque o Electron roda preload **sandboxed** como script simples, sem
+loader ESM — por isso `electron.vite.config.mts` fixa `format: 'cjs'` no build de `preload`.
+`preloadScript()` em `src/main/index.ts` resolve `index.cjs`, `index.mjs` ou `index.js` nessa
+ordem.
 
 ---
 
@@ -161,6 +170,7 @@ flowchart TD
 
     subgraph MAIN["Main — Electron (src/main)"]
         IDX["index.ts — janela, IPC, protocolo cover:"]
+        MENU["menu.ts — menu da aplicação, atalhos e menu de contexto"]
         LIB["library.ts — library.json + capas"]
         SET["settings.ts — credenciais e senha do backup"]
         DRV["drive/ — OAuth, REST, backup, migração"]
@@ -172,6 +182,7 @@ flowchart TD
     end
 
     BRIDGE -->|"ipcRenderer.invoke"| IDX
+    IDX --> MENU
     IDX --> LIB --> LOKAL
     IDX --> SET --> LOKAL
     IDX --> DRV
@@ -237,6 +248,7 @@ Webtoons/
 ├── src/
 │   ├── main/                 # processo main (Electron)
 │   │   ├── index.ts          # janela, IPC, protocolo cover://
+│   │   ├── menu.ts           # menu da aplicação, atalhos e menu de contexto
 │   │   ├── library.ts        # library.json + cópia/limpeza de capas
 │   │   ├── settings.ts       # credenciais OAuth
 │   │   └── drive/            # OAuth, Drive REST, backup/restauração
@@ -289,6 +301,9 @@ Detalhes da configuração (campo `build` do `package.json`):
 - `desktopName` + `syncDesktopName` para o `StartupWMClass` casar com a janela (associação
   correta no menu/ALT+TAB do Mint)
 - Ícone empacotado em `usr/share/icons/hicolor/512x512/apps/`
+- `homepage` no `package.json` é um **placeholder** (`https://example.com/webtoons-biblioteca`):
+  o alvo `deb` do electron-builder exige uma URL no campo `Homepage:` do controle do pacote e o
+  projeto não está no GitHub
 - `postinst` do electron-builder cuida do AppArmor (Ubuntu/Mint 24+) e do `chrome-sandbox`
 
 ---

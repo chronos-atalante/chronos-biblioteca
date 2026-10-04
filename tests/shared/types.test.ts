@@ -48,7 +48,7 @@ describe('tipos compartilhados', () => {
     }>();
     expectTypeOf<DriveStatus['connected']>().toEqualTypeOf<boolean>();
     expectTypeOf<DriveStatus['lastSync']>().toEqualTypeOf<string | null>();
-    expectTypeOf<BackupSummary['works']>().toEqualTypeOf<number>();
+    expectTypeOf<BackupSummary['works']>().toEqualTypeOf<number | null>();
   });
 
   it('window.api expõe a superfície usada pelo renderer', () => {

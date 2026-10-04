@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import type { RenderResult } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import App from '@zero/renderer/App';
 import type { Work } from '@zero/types';
-import { createApiMock, installApiMock } from '../../helpers/api';
-import { makeWork } from '../../helpers/fixtures';
+import { createApiMock, installApiMock } from '../../helpers/api.ts';
+import type { ApiMock } from '../../helpers/api.ts';
+import { makeWork } from '../../helpers/fixtures.ts';
 
 const WORKS: Work[] = [
   makeWork({
@@ -39,7 +41,7 @@ const WORKS: Work[] = [
   }),
 ];
 
-function setup(works: Work[] = WORKS) {
+function setup(works: Work[] = WORKS): { mock: ApiMock; view: RenderResult } {
   const mock = createApiMock({ works });
   installApiMock(mock);
   const view = render(<App />);
@@ -47,7 +49,7 @@ function setup(works: Work[] = WORKS) {
 }
 
 function statTexts(container: HTMLElement): string[] {
-  return [...container.querySelectorAll('.stat')].map((stat) => stat.textContent ?? '');
+  return [...container.querySelectorAll('.stat')].map((stat) => stat.textContent);
 }
 
 function cardOf(title: string): HTMLElement {
@@ -122,7 +124,7 @@ describe('App — busca e filtros', () => {
     const user = userEvent.setup();
     setup();
     await screen.findByText(/4 obra\(s\)/);
-    const search = () => screen.getByPlaceholderText('Buscar por título…');
+    const search = (): HTMLElement => screen.getByPlaceholderText('Buscar por título…');
 
     await user.type(search(), 'torre');
     expect(screen.getByText('Tower of God')).toBeInTheDocument();
@@ -295,7 +297,7 @@ describe('App — modais', () => {
     await user.click(screen.getByRole('button', { name: /Excluir/ }));
     await user.click(screen.getByRole('button', { name: /Confirmar exclusão/ }));
 
-    await waitFor(() => expect(mock.libraryRemove).toHaveBeenCalledWith('w-feliz'));
+    await waitFor(() => expect(mock.libraryRemove).toHaveBeenCalledWith('w-plano'));
     expect(await screen.findByText('Obra removida.')).toBeInTheDocument();
   });
 });

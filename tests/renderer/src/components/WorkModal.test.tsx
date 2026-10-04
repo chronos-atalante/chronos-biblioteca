@@ -1,13 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { userEvent } from '@testing-library/user-event';
 import WorkModal from '@zero/renderer/components/WorkModal';
-import { makeWork } from '../../../helpers/fixtures';
+import { createApiMock, installApiMock } from '../../../helpers/api.ts';
+import { makeWork } from '../../../helpers/fixtures.ts';
 
-function setup(work = makeWork(), isNew = false) {
+function setup(
+  work = makeWork(),
+  isNew = false,
+): {
+  onClose: Mock<() => void>;
+  onSave: Mock<() => Promise<void>>;
+  onDelete: Mock<() => Promise<void>>;
+} {
+  installApiMock(createApiMock());
   const onClose = vi.fn();
-  const onSave = vi.fn(async (): Promise<void> => undefined);
-  const onDelete = vi.fn(async (): Promise<void> => undefined);
+  const onSave = vi.fn((): Promise<void> => Promise.resolve());
+  const onDelete = vi.fn((): Promise<void> => Promise.resolve());
   render(
     <WorkModal work={work} isNew={isNew} onSave={onSave} onDelete={onDelete} onClose={onClose} />,
   );
@@ -17,6 +27,12 @@ function setup(work = makeWork(), isNew = false) {
 function overlay(): HTMLElement {
   const element = document.querySelector<HTMLElement>('.overlay');
   if (element === null) throw new Error('overlay não encontrado.');
+  return element;
+}
+
+function modal(): HTMLElement {
+  const element = document.querySelector<HTMLElement>('.modal');
+  if (element === null) throw new Error('modal não encontrado.');
   return element;
 }
 
@@ -54,7 +70,7 @@ describe('WorkModal — cabeçalho e fechamento', () => {
 
   it('fecha ao clicar no overlay e ignora cliques dentro do modal', () => {
     const { onClose } = setup();
-    fireEvent.mouseDown(document.querySelector('.modal') as HTMLElement);
+    fireEvent.mouseDown(modal());
     expect(onClose).not.toHaveBeenCalled();
 
     fireEvent.mouseDown(overlay());
@@ -84,16 +100,14 @@ describe('WorkModal — validação e salvamento', () => {
 
   it('mostra o erro devolvido pelo salvamento', async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn(async (): Promise<void> => {
-      throw new Error('Sem espaço na nuvem');
-    });
+    const onSave = vi.fn((): Promise<void> => Promise.reject(new Error('Sem espaço na nuvem')));
     const onClose = vi.fn();
     render(
       <WorkModal
         work={makeWork()}
         isNew
         onSave={onSave}
-        onDelete={vi.fn(async (): Promise<void> => undefined)}
+        onDelete={vi.fn((): Promise<void> => Promise.resolve())}
         onClose={onClose}
       />,
     );
@@ -114,7 +128,7 @@ describe('WorkModal — validação e salvamento', () => {
         work={makeWork()}
         isNew
         onSave={onSave}
-        onDelete={vi.fn(async (): Promise<void> => undefined)}
+        onDelete={vi.fn((): Promise<void> => Promise.resolve())}
         onClose={vi.fn()}
       />,
     );
@@ -132,6 +146,7 @@ describe('WorkModal — campos', () => {
     setup();
     await user.clear(screen.getByPlaceholderText('Ex.: Solo Leveling'));
     await user.type(screen.getByPlaceholderText('Ex.: Solo Leveling'), 'Novo Título');
+    await user.clear(screen.getByPlaceholderText('Escreva a descrição da obra...'));
     await user.type(screen.getByPlaceholderText('Escreva a descrição da obra...'), 'Sinopse');
     await user.type(screen.getByPlaceholderText('Cap. 45 / Vol. 3'), 'Vol. 2');
 
@@ -163,7 +178,7 @@ describe('WorkModal — campos', () => {
 
     await user.click(screen.getByRole('button', { name: /Romance/ }));
     await user.click(screen.getByRole('option', { name: 'Nenhuma' }));
-    expect(screen.getByRole('button', { name: /Selecione/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Nenhuma/ })).toBeInTheDocument();
   });
 
   it('normaliza o progresso digitado', () => {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { AppSettings, DriveStatus, ElectronApi } from '@zero/types';
-import { makeWork } from '../helpers/fixtures';
-import { contextBridge, ipcRenderer } from '../mocks/electron';
+import { makeWork } from '../helpers/fixtures.ts';
+import { contextBridge, ipcRenderer } from '../mocks/electron.ts';
 import '@zero/preload/index';
 
 function exposedApi(): ElectronApi {
@@ -55,7 +55,7 @@ describe('preload (contextBridge)', () => {
     await api.drive.status();
     await api.drive.auth();
     await api.drive.backup();
-    await api.drive.restore();
+    await api.drive.restore('senha-de-teste');
     await api.drive.backupInfo();
     await api.drive.disconnect();
     expect(ipcRenderer.invoke.mock.calls.map((call) => call[0])).toEqual([

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { BrowserWindow, ipcMain, app } from '../mocks/electron';
-import { resetSandbox } from '../helpers/sandbox';
+import { BrowserWindow, ipcMain, app } from '../mocks/electron.ts';
+import { resetSandbox } from '../helpers/sandbox.ts';
 
 beforeAll(async () => {
   resetSandbox();

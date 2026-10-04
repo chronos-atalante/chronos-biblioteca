@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { URL } from 'url';
-import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, protocol, shell } from 'electron';
+import { attachContextMenu, hideWindowMenuBar, installApplicationMenu } from '@zero/main/menu';
 import {
   cacheDir,
   configDir,
@@ -67,6 +68,19 @@ app.setPath('userData', cacheDir());
 
 let mainWindow: BrowserWindow | null = null;
 
+/**
+ * O preload é emitido como `.cjs` (CommonJS) porque o Electron executa preload
+ * **sandboxed** como script simples, sem loader ESM; `format: 'cjs'` está fixado
+ * em `electron.vite.config.mts`. Resolve o que existir no bundle gerado.
+ */
+function preloadScript(): string {
+  const dir = path.join(__dirname, '../preload');
+  const found = ['index.cjs', 'index.mjs', 'index.js']
+    .map((name) => path.join(dir, name))
+    .find((file) => fs.existsSync(file));
+  return found ?? path.join(dir, 'index.cjs');
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -75,15 +89,19 @@ function createWindow(): void {
     minHeight: 560,
     title: 'Webtoons Biblioteca',
     backgroundColor: '#000000',
+    icon: nativeImage.createFromPath(path.join(__dirname, '../../build/icon.png')),
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
+      preload: preloadScript(),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
     },
   });
+
+  hideWindowMenuBar(mainWindow);
+  attachContextMenu(mainWindow);
 
   mainWindow.once('ready-to-show', () => mainWindow?.show());
 
@@ -188,6 +206,7 @@ if (!gotLock) {
       registerCoverProtocol();
       registerIpc();
       initDrive();
+      installApplicationMenu();
       createWindow();
 
       app.on('activate', () => {

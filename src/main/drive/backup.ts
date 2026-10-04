@@ -146,21 +146,15 @@ export async function backupInfo(): Promise<BackupSummary | null> {
       libraryFile.size !== undefined && libraryFile.size !== ''
         ? Number(libraryFile.size)
         : buffer.byteLength;
-    let works: number | null = null;
-    try {
-      const parsed: unknown = JSON.parse(
-        decryptWith(buffer, loadSettings().drivePassphrase).toString('utf-8'),
-      );
-      if (Array.isArray(parsed)) works = parsed.length;
-    } catch {
-      works = null;
-    }
+    const parsed: unknown = JSON.parse(
+      decryptWith(buffer, loadSettings().drivePassphrase).toString('utf-8'),
+    );
     return {
       id: libraryFile.id,
       name: libraryFile.name,
       modifiedTime: libraryFile.modifiedTime,
       size,
-      works,
+      works: Array.isArray(parsed) ? parsed.length : 0,
     };
   } catch {
     return null;

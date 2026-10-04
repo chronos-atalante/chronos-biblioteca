@@ -51,50 +51,60 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
   let works: Work[] = [...(options.works ?? [])];
   const listeners = new Set<(status: DriveStatus) => void>();
 
-  const libraryGet = vi.fn(async (): Promise<Work[]> => [...works]);
+  const libraryGet = vi.fn((): Promise<Work[]> => Promise.resolve([...works]));
 
-  const librarySave = vi.fn(async (work: SaveInput): Promise<Work[]> => {
+  const librarySave = vi.fn((work: SaveInput): Promise<Work[]> => {
     const stored = work as Work;
     const index = works.findIndex((item) => item.id === stored.id);
     works =
       index === -1 ? [...works, stored] : works.map((item, i) => (i === index ? stored : item));
-    return [...works];
+    return Promise.resolve([...works]);
   });
 
-  const libraryRemove = vi.fn(async (id: string): Promise<Work[]> => {
+  const libraryRemove = vi.fn((id: string): Promise<Work[]> => {
     works = works.filter((item) => item.id !== id);
-    return [...works];
+    return Promise.resolve([...works]);
   });
 
-  const pickCover = vi.fn(async (): Promise<string | null> => 'capa-escolhida.png');
+  const pickCover = vi.fn((): Promise<string | null> => Promise.resolve('capa-escolhida.png'));
 
-  const settingsGet = vi.fn(async (): Promise<AppSettings> => ({
-    ...DEFAULT_SETTINGS,
-    ...(options.settings ?? {}),
-  }));
-
-  const settingsSet = vi.fn(async (settings: AppSettings): Promise<AppSettings> => settings);
-
-  const driveStatus = vi.fn(async (): Promise<DriveStatus> => ({ ...DEFAULT_STATUS }));
-
-  const driveAuth = vi.fn(async (): Promise<{ ok: boolean; error?: string }> => ({ ok: true }));
-
-  const driveBackup = vi.fn(
-    async (): Promise<{ ok: boolean; error?: string; summary?: BackupSummary }> => ({ ok: true }),
+  const settingsGet = vi.fn((): Promise<AppSettings> =>
+    Promise.resolve({
+      ...DEFAULT_SETTINGS,
+      ...(options.settings ?? {}),
+    }),
   );
 
-  const driveRestore = vi.fn(
-    async (): Promise<{ ok: boolean; error?: string; works?: number }> => ({ ok: true, works: 2 }),
+  const settingsSet = vi.fn((settings: AppSettings): Promise<AppSettings> =>
+    Promise.resolve(settings),
   );
 
-  const driveBackupInfo = vi.fn(
-    async (): Promise<BackupSummary | null> => options.backupInfo ?? null,
+  const driveStatus = vi.fn((): Promise<DriveStatus> =>
+    Promise.resolve({ ...DEFAULT_STATUS, ...(options.status ?? {}) }),
   );
 
-  const driveDisconnect = vi.fn(async (): Promise<DriveStatus> => ({
-    ...DEFAULT_STATUS,
-    connected: false,
-  }));
+  const driveAuth = vi.fn((): Promise<{ ok: boolean; error?: string }> =>
+    Promise.resolve({ ok: true }),
+  );
+
+  const driveBackup = vi.fn((): Promise<{ ok: boolean; error?: string; summary?: BackupSummary }> =>
+    Promise.resolve({ ok: true }),
+  );
+
+  const driveRestore = vi.fn((): Promise<{ ok: boolean; error?: string; works?: number }> =>
+    Promise.resolve({ ok: true, works: 2 }),
+  );
+
+  const driveBackupInfo = vi.fn((): Promise<BackupSummary | null> =>
+    Promise.resolve(options.backupInfo ?? null),
+  );
+
+  const driveDisconnect = vi.fn((): Promise<DriveStatus> =>
+    Promise.resolve({
+      ...DEFAULT_STATUS,
+      connected: false,
+    }),
+  );
 
   const driveOnStatus = vi.fn((callback: (status: DriveStatus) => void): (() => void) => {
     listeners.add(callback);

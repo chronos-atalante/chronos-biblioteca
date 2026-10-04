@@ -115,10 +115,11 @@ export async function uploadMultipart(
   const tail = Buffer.from(`\r\n--${boundary}--\r\n`, 'utf-8');
   const body = Buffer.concat([head, buffer, tail]);
 
-  const url =
+  const target =
     existingId === undefined
-      ? `${UPLOAD_API}/files?uploadType=multipart&fields=id,name`
-      : `${UPLOAD_API}/files/${existingId}?uploadType=multipart&fields=id,name`;
+      ? `${UPLOAD_API}/files`
+      : `${UPLOAD_API}/files/${encodeURIComponent(existingId)}`;
+  const url = `${target}?uploadType=multipart&fields=id,name`;
 
   await driveFetch(url, {
     method: existingId === undefined ? 'POST' : 'PATCH',
@@ -128,11 +129,11 @@ export async function uploadMultipart(
 }
 
 export async function downloadFile(fileId: string): Promise<Buffer> {
-  const res = await driveFetch(`${DRIVE_API}/files/${fileId}?alt=media`);
+  const res = await driveFetch(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media`);
   const data = await res.arrayBuffer();
   return Buffer.from(data);
 }
 
 export async function deleteFile(fileId: string): Promise<void> {
-  await driveFetch(`${DRIVE_API}/files/${fileId}`, { method: 'DELETE' });
+  await driveFetch(`${DRIVE_API}/files/${encodeURIComponent(fileId)}`, { method: 'DELETE' });
 }

@@ -7,10 +7,19 @@ import { vi } from 'vitest';
 
 export type IpcHandler = (event: unknown, ...args: unknown[]) => unknown;
 export type WindowEventHandler = (...args: unknown[]) => unknown;
+export type WindowOpenHandler = (details: { url: string }) => {
+  action: 'deny' | 'allow' | 'default';
+};
+export type MenuTemplateItem = Record<string, unknown>;
 
 export class MockWebContents {
-  public readonly setWindowOpenHandler = vi.fn<WindowEventHandler>();
+  public readonly setWindowOpenHandler = vi.fn<(handler: WindowOpenHandler) => void>();
   public readonly send = vi.fn<(channel: string, payload: unknown) => void>();
+  public readonly on = vi.fn<(event: string, listener: WindowEventHandler) => void>();
+}
+
+export class MockMenu {
+  public readonly popup = vi.fn<(options?: Record<string, unknown>) => void>();
 }
 
 export class BrowserWindow {
@@ -26,10 +35,12 @@ export class BrowserWindow {
   public readonly show = vi.fn<() => void>();
   public readonly focus = vi.fn<() => void>();
   public readonly restore = vi.fn<() => void>();
+  public readonly setMenuBarVisibility = vi.fn<(visible: boolean) => void>();
+  public readonly setAutoHideMenuBar = vi.fn<(autoHide: boolean) => void>();
   public readonly isMinimized = vi.fn<() => boolean>(() => false);
   public readonly isDestroyed = vi.fn<() => boolean>(() => false);
-  public readonly loadURL = vi.fn<(url: string) => Promise<void>>(async () => undefined);
-  public readonly loadFile = vi.fn<(file: string) => Promise<void>>(async () => undefined);
+  public readonly loadURL = vi.fn<(url: string) => Promise<void>>(() => Promise.resolve());
+  public readonly loadFile = vi.fn<(file: string) => Promise<void>>(() => Promise.resolve());
 
   constructor(options: Record<string, unknown>) {
     this.options = options;
@@ -43,8 +54,21 @@ export const app = {
   requestSingleInstanceLock: vi.fn<() => boolean>(() => true),
   quit: vi.fn<() => void>(),
   on: vi.fn<(event: string, listener: WindowEventHandler) => void>(),
-  whenReady: vi.fn<() => Promise<void>>(async () => undefined),
+  whenReady: vi.fn<() => Promise<void>>(() => Promise.resolve()),
   getName: vi.fn<() => string>(() => 'webtoons-biblioteca'),
+  name: 'Webtoons Biblioteca',
+  isPackaged: vi.fn<() => boolean>(() => false),
+};
+
+export const Menu = {
+  buildFromTemplate: vi.fn<(template: MenuTemplateItem[]) => MockMenu>(() => new MockMenu()),
+  setApplicationMenu: vi.fn<(menu: MockMenu | null) => void>(),
+};
+
+export const nativeImage = {
+  createFromPath: vi.fn<(file: string) => { isEmpty: () => boolean }>(() => ({
+    isEmpty: () => false,
+  })),
 };
 
 export const protocol = {
@@ -53,15 +77,14 @@ export const protocol = {
 };
 
 export const dialog = {
-  showOpenDialog: vi.fn<() => Promise<{ canceled: boolean; filePaths: string[] }>>(async () => ({
-    canceled: true,
-    filePaths: [],
-  })),
+  showOpenDialog: vi.fn<() => Promise<{ canceled: boolean; filePaths: string[] }>>(() =>
+    Promise.resolve({ canceled: true, filePaths: [] }),
+  ),
 };
 
 export const shell = {
-  openExternal: vi.fn<(url: string) => Promise<void>>(async () => undefined),
-  openPath: vi.fn<(path: string) => Promise<string>>(async () => ''),
+  openExternal: vi.fn<(url: string) => Promise<void>>(() => Promise.resolve()),
+  openPath: vi.fn<(path: string) => Promise<string>>(() => Promise.resolve('')),
 };
 
 export const ipcMain = {
@@ -71,7 +94,9 @@ export const ipcMain = {
 };
 
 export const ipcRenderer = {
-  invoke: vi.fn<(channel: string, ...args: unknown[]) => Promise<unknown>>(async () => undefined),
+  invoke: vi.fn<(channel: string, ...args: unknown[]) => Promise<unknown>>(() =>
+    Promise.resolve(undefined),
+  ),
   on: vi.fn<(channel: string, listener: WindowEventHandler) => void>(),
   removeListener: vi.fn<(channel: string, listener: WindowEventHandler) => void>(),
   send: vi.fn<(channel: string, ...args: unknown[]) => void>(),
@@ -101,4 +126,9 @@ export function resetElectronMock(): void {
   contextBridge.exposeInMainWorld.mockClear();
   BrowserWindow.getAllWindows.mockClear();
   BrowserWindow.fromWebContents.mockClear();
+  app.getName.mockClear();
+  app.isPackaged.mockClear();
+  Menu.buildFromTemplate.mockClear();
+  Menu.setApplicationMenu.mockClear();
+  nativeImage.createFromPath.mockClear();
 }

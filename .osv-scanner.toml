@@ -4,3 +4,13 @@
 id = "GHSA-ch52-4w7c-c8xp"
 reason = "Sem versão corrigida (http-cache-semantics@4.2.0 é a mais recente). Atinge apenas a cadeia de build dev (electron-builder -> @electron/get), não vai para o pacote final."
 ignoreUntil = 2026-12-31
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+reason = "Sem versão corrigida (braces@3.0.3). Só entra pela devDep @mocoto/mahoraga (CLI de diagnóstico) via micromatch, nunca em execução do app nem no pacote final."
+ignoreUntil = 2027-01-04
+
+[[IgnoredVulns]]
+id = "MAL-2025-32741"
+reason = "save-dev@0.0.1-security é o 'security holding package' oficial do npm (npm/security-holder: só package.json + README, sem scripts nem código). DevDep, não vai para o pacote final."
+ignoreUntil = 2027-01-04

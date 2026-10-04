@@ -21,8 +21,8 @@ import {
   upsertWork,
   userDataDir,
 } from '@zero/main/library';
-import { makeDraft, makeWork, flushAsync } from '../helpers/fixtures';
-import { resetSandbox, sandboxPath } from '../helpers/sandbox';
+import { makeDraft, makeWork, flushAsync } from '../helpers/fixtures.ts';
+import { resetSandbox, sandboxPath } from '../helpers/sandbox.ts';
 
 function writeCoversDirFile(name: string, content = 'img'): void {
   fs.mkdirSync(coversDir(), { recursive: true });

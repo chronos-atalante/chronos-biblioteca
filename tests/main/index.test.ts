@@ -1,13 +1,24 @@
 import fs from 'fs';
+import http from 'http';
 import os from 'os';
 import path from 'path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppSettings, Work } from '@zero/types';
 import { configDir, coversDir, dataDir } from '@zero/main/library';
-import { makeDraft, makeWork } from '../helpers/fixtures';
-import { sandboxPath } from '../helpers/sandbox';
-import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from '../mocks/electron';
-import type { IpcHandler, WindowEventHandler } from '../mocks/electron';
+import { EMBEDDED_CLIENT_ID, SCOPE_VERSION } from '@zero/main/drive/constants';
+import { makeDraft, makeWork } from '../helpers/fixtures.ts';
+import { sandboxPath } from '../helpers/sandbox.ts';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  Menu,
+  nativeImage,
+  protocol,
+  shell,
+} from '../mocks/electron.ts';
+import type { IpcHandler, MockMenu, WindowEventHandler } from '../mocks/electron.ts';
 
 const LEGACY_ROOT = path.join(os.tmpdir(), 'webtoons-tests-legacy');
 
@@ -48,7 +59,7 @@ function onceEvent(win: BrowserWindow, event: string): WindowEventHandler {
 function coverHandler(): (request: { url: string }) => Response {
   const call = protocol.handle.mock.calls.find((entry) => entry[0] === 'cover');
   if (call === undefined) throw new Error('Protocolo cover não registrado.');
-  return call[1] as (request: { url: string }) => Response;
+  return call[1];
 }
 
 const expectedChannels = [
@@ -85,6 +96,7 @@ beforeAll(async () => {
       expiresAt: Date.now() + 3_600_000,
       accountEmail: 'legado@exemplo.com',
       lastSync: '2026-01-10T12:00:00.000Z',
+      scopeVersion: SCOPE_VERSION,
     }),
     'utf-8',
   );
@@ -138,7 +150,7 @@ describe('inicialização', () => {
     expect(options.webPreferences.nodeIntegration).toBe(false);
     expect(options.webPreferences.sandbox).toBe(true);
     expect(options.webPreferences.webSecurity).toBe(true);
-    expect(String(options.webPreferences.preload)).toContain(path.join('preload', 'index.js'));
+    expect(String(options.webPreferences.preload)).toContain(path.join('preload', 'index'));
     expect(win?.loadFile.mock.calls[0]?.[0]).toContain(path.join('renderer', 'index.html'));
     expect(win?.loadURL).not.toHaveBeenCalled();
   });
@@ -146,6 +158,47 @@ describe('inicialização', () => {
   it('trava o app em uma única instância', () => {
     expect(app.requestSingleInstanceLock).toHaveBeenCalled();
     expect(app.quit).not.toHaveBeenCalled();
+  });
+
+  it('instala o menu da aplicação e esconde a barra de menus da janela', () => {
+    expect(Menu.setApplicationMenu).toHaveBeenCalledTimes(1);
+    const win = BrowserWindow.instances[0];
+    expect(win?.setMenuBarVisibility).toHaveBeenCalledWith(false);
+    expect(win?.setAutoHideMenuBar).toHaveBeenCalledWith(true);
+    expect(win?.webContents.on).toHaveBeenCalledWith('context-menu', expect.any(Function));
+  });
+
+  it('define o ícone da janela a partir do ícone do pacote', () => {
+    const win = BrowserWindow.instances[0];
+    expect(nativeImage.createFromPath).toHaveBeenCalledWith(
+      expect.stringContaining(path.join('build', 'icon.png')),
+    );
+    expect(win?.options.icon).toBeDefined();
+  });
+
+  it('abre o menu de contexto no clique direito sobre um campo', () => {
+    const win = BrowserWindow.instances[0];
+    if (win === undefined) throw new Error('Janela não criada.');
+    const listener = win.webContents.on.mock.calls.find((call) => call[0] === 'context-menu')?.[1];
+    if (listener === undefined) throw new Error('Listener de context-menu ausente.');
+
+    Menu.buildFromTemplate.mockClear();
+    listener({}, { isEditable: true, selectionText: '', linkURL: '' });
+
+    const built = Menu.buildFromTemplate.mock.results.at(-1)?.value as MockMenu | undefined;
+    expect(built?.popup).toHaveBeenCalledWith({ window: win });
+  });
+
+  it('não abre menu de contexto sem edição, seleção ou link', () => {
+    const win = BrowserWindow.instances[0];
+    if (win === undefined) throw new Error('Janela não criada.');
+    const listener = win.webContents.on.mock.calls.find((call) => call[0] === 'context-menu')?.[1];
+    if (listener === undefined) throw new Error('Listener de context-menu ausente.');
+
+    Menu.buildFromTemplate.mockClear();
+    listener({}, { isEditable: false, selectionText: '', linkURL: '' });
+
+    expect(Menu.buildFromTemplate).not.toHaveBeenCalled();
   });
 });
 
@@ -195,12 +248,21 @@ describe('handlers de configurações e Drive', () => {
     expect(status.accountEmail).toBe('legado@exemplo.com');
   });
 
-  it('drive:auth falha sem client secret', async () => {
+  it('drive:auth roda o OAuth com as credenciais embutidas e reporta a recusa', async () => {
+    shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
+      const redirect = new URL(url).searchParams.get('redirect_uri');
+      if (redirect !== null) {
+        const request = http.get(`${redirect}?error=access_denied`);
+        request.on('error', () => undefined);
+      }
+      return Promise.resolve();
+    });
+
     const result = await invokeAsync<{ ok: boolean; error?: string }>('drive:auth');
-    expect(result.ok).toBe(false);
-    expect(result.error).toBe(
-      'Configure o Client ID e o Client Secret do Google nas configurações.',
-    );
+
+    expect(result).toEqual({ ok: false, error: 'access_denied' });
+    const opened = shell.openExternal.mock.calls.at(-1)?.[0] ?? '';
+    expect(opened).toContain(`client_id=${EMBEDDED_CLIENT_ID}`);
   });
 
   it('drive:disconnect limpa a sessão e avisa a janela', () => {
@@ -322,7 +384,7 @@ describe('ciclo de vida da janela', () => {
     shell.openExternal.mockClear();
     const opener = win.webContents.setWindowOpenHandler.mock.calls[0]?.[0];
     if (opener === undefined) throw new Error('Window open handler ausente.');
-    const decision = opener({ url: 'https://exemplo.com/docs' }) as { action: string };
+    const decision = opener({ url: 'https://exemplo.com/docs' });
     expect(decision.action).toBe('deny');
     expect(shell.openExternal).toHaveBeenCalledWith('https://exemplo.com/docs');
   });

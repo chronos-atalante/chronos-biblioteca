@@ -14,11 +14,12 @@ import {
   onStatus,
   restoreNow,
 } from '@zero/main/drive';
+import { EMBEDDED_CLIENT_ID, SCOPE_VERSION } from '@zero/main/drive/constants';
 import { loadLibrary, saveLibrary } from '@zero/main/library';
 import { saveSettings } from '@zero/main/settings';
-import { shell } from '../mocks/electron';
-import { makeWork } from '../helpers/fixtures';
-import { resetSandbox, sandboxPath } from '../helpers/sandbox';
+import { shell } from '../mocks/electron.ts';
+import { makeWork } from '../helpers/fixtures.ts';
+import { resetSandbox, sandboxPath } from '../helpers/sandbox.ts';
 
 const CLIENT_ID = 'id.apps.googleusercontent.com';
 const SECRET = 'GOCSPX-segredo';
@@ -29,7 +30,7 @@ const USERINFO_ENDPOINT = 'https://www.googleapis.com/oauth2/v3/userinfo';
 const DRIVE_API_PATH = '/drive/v3/files';
 const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 
-const FOLDER_ID = 'pasta-backup';
+const LEGACY_FOLDER_ID = `id'com\\barra`;
 
 interface FetchCall {
   url: string;
@@ -45,13 +46,26 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
+/** Normaliza o primeiro argumento de `fetch` sem passar por `String()` em objetos. */
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
+/** Corpo textual de uma chamada (o app envia string ou URLSearchParams). */
+function bodyText(call: FetchCall | undefined): string {
+  const body = call?.init.body;
+  return typeof body === 'string' ? body : '';
+}
+
 function stubFetch(handler: FetchHandler): FetchCall[] {
   const calls: FetchCall[] = [];
   const mock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
-    async (input, init) => {
-      const call: FetchCall = { url: String(input), init: init ?? {} };
+    (input, init) => {
+      const call: FetchCall = { url: requestUrl(input), init: init ?? {} };
       calls.push(call);
-      return handler(call);
+      return Promise.resolve(handler(call));
     },
   );
   vi.stubGlobal('fetch', mock);
@@ -129,11 +143,8 @@ class FakeDrive {
       return this.upload(call, method);
     }
 
-    if (url.pathname === DRIVE_API_PATH) {
-      if (method === 'POST') {
-        this.folderId = FOLDER_ID;
-        return json({ id: FOLDER_ID });
-      }
+    if (url.pathname === DRIVE_API_PATH && method === 'GET') {
+      // pageSize=1 é a busca da pasta legada ".webtoons-backup" (migração).
       if (url.searchParams.get('pageSize') === '1') {
         return json({
           files: this.folderId === null ? [] : [{ id: this.folderId, name: '.webtoons-backup' }],
@@ -151,7 +162,11 @@ class FakeDrive {
 
     const idMatch = /^\/drive\/v3\/files\/([^/]+)$/.exec(url.pathname);
     if (idMatch?.[1] !== undefined) {
-      const id = idMatch[1];
+      const id = decodeURIComponent(idMatch[1]);
+      if (method === 'DELETE' && id === this.folderId) {
+        this.folderId = null;
+        return new Response(null, { status: 204 });
+      }
       const file = this.files.get(id);
       if (file === undefined) return json({ error: { message: 'Arquivo não encontrado.' } }, 404);
       if (method === 'DELETE') {
@@ -169,7 +184,7 @@ class FakeDrive {
 
   private upload(call: FetchCall, method: string): Response {
     const idMatch = /\/files\/([^?]+)\?/.exec(call.url);
-    const id = idMatch?.[1] ?? '';
+    const id = idMatch?.[1] === undefined ? '' : decodeURIComponent(idMatch[1]);
     const content = toBuffer(call.init.body);
     if (method === 'PATCH' && id !== '') {
       const existing = this.files.get(id);
@@ -208,11 +223,13 @@ async function connect(passphrase = PASSPHRASE): Promise<void> {
     driveClientSecret: SECRET,
     drivePassphrase: passphrase,
   });
-  shell.openExternal.mockImplementationOnce(async (url: string) => {
+  shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
     const redirect = new URL(url).searchParams.get('redirect_uri');
-    if (redirect === null) return;
-    const request = http.get(`${redirect}?code=codigo-valido`);
-    request.on('error', () => undefined);
+    if (redirect !== null) {
+      const request = http.get(`${redirect}?code=codigo-valido`);
+      request.on('error', () => undefined);
+    }
+    return Promise.resolve();
   });
   stubFetch((call) => {
     if (call.url === TOKEN_ENDPOINT) {
@@ -270,6 +287,7 @@ describe('estado do Drive', () => {
         expiresAt: Date.now() + 3_600_000,
         accountEmail: 'outra@x.com',
         lastSync: '2026-01-05T00:00:00.000Z',
+        scopeVersion: SCOPE_VERSION,
       }),
       'utf-8',
     );
@@ -294,14 +312,24 @@ describe('authorize', () => {
     resetDrive();
   });
 
-  it('falha quando as credenciais OAuth não estão configuradas', async () => {
+  it('usa as credenciais embutidas quando não há configuração própria', async () => {
+    shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
+      const redirect = new URL(url).searchParams.get('redirect_uri');
+      if (redirect !== null) {
+        const request = http.get(`${redirect}?error=access_denied`);
+        request.on('error', () => undefined);
+      }
+      return Promise.resolve();
+    });
+
     const result = await authorize();
+
     expect(result.ok).toBe(false);
-    expect(result.error).toBe(
-      'Configure o Client ID e o Client Secret do Google nas configurações.',
-    );
-    expect(getStatus().lastError).toBeNull();
-    expect(shell.openExternal).not.toHaveBeenCalled();
+    expect(result.error).toBe('access_denied');
+    expect(getStatus().lastError).toBe('access_denied');
+    expect(shell.openExternal).toHaveBeenCalledTimes(1);
+    const opened = shell.openExternal.mock.calls[0]?.[0] ?? '';
+    expect(opened).toContain(`client_id=${EMBEDDED_CLIENT_ID}`);
   });
 
   it('conclui o OAuth pelo callback local e grava o e-mail da conta', async () => {
@@ -315,11 +343,13 @@ describe('authorize', () => {
 
   it('propaga o erro quando o usuário recusa a autorização', async () => {
     saveSettings({ driveClientId: CLIENT_ID, driveClientSecret: SECRET, drivePassphrase: '' });
-    shell.openExternal.mockImplementationOnce(async (url: string) => {
+    shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
       const redirect = new URL(url).searchParams.get('redirect_uri');
-      if (redirect === null) return;
-      const request = http.get(`${redirect}?error=access_denied`);
-      request.on('error', () => undefined);
+      if (redirect !== null) {
+        const request = http.get(`${redirect}?error=access_denied`);
+        request.on('error', () => undefined);
+      }
+      return Promise.resolve();
     });
     const result = await authorize();
     expect(result.ok).toBe(false);
@@ -329,11 +359,13 @@ describe('authorize', () => {
 
   it('reporta falha na troca do código por tokens', async () => {
     saveSettings({ driveClientId: CLIENT_ID, driveClientSecret: SECRET, drivePassphrase: '' });
-    shell.openExternal.mockImplementationOnce(async (url: string) => {
+    shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
       const redirect = new URL(url).searchParams.get('redirect_uri');
-      if (redirect === null) return;
-      const request = http.get(`${redirect}?code=codigo-valido`);
-      request.on('error', () => undefined);
+      if (redirect !== null) {
+        const request = http.get(`${redirect}?code=codigo-valido`);
+        request.on('error', () => undefined);
+      }
+      return Promise.resolve();
     });
     stubFetch(() => json({ error: 'invalid_grant' }, 400));
     const result = await authorize();
@@ -401,7 +433,7 @@ describe('backupNow', () => {
     expect(getStatus().syncing).toBe(false);
   });
 
-  it('cria a pasta oculta, envia cifrado e registra o resumo', async () => {
+  it('envia cifrado para o espaço oculto e registra o resumo', async () => {
     await connect();
     saveLibrary([makeWork({ id: 'obra-3', title: 'Título Sigiloso' })]);
     const drive = new FakeDrive();
@@ -414,7 +446,7 @@ describe('backupNow', () => {
     expect(result.summary?.works).toBe(1);
     expect(result.summary?.size ?? 0).toBeGreaterThan(0);
     expect(getStatus().lastSync).not.toBeNull();
-    expect(drive.folderId).toBe(FOLDER_ID);
+    expect(drive.folderId).toBeNull();
 
     const uploads = [...drive.files.values()].map((file) => file.content);
     expect(uploads.length).toBeGreaterThan(0);
@@ -426,7 +458,6 @@ describe('backupNow', () => {
     await connect();
     saveLibrary([makeWork({ id: 'obra-4' })]);
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     drive.seed('library.json', Buffer.from('[]'));
     drive.seed('capa-antiga.png', Buffer.from('png'));
     const deleted: string[] = [];
@@ -451,7 +482,7 @@ describe('backupNow', () => {
     await connect();
     saveLibrary([makeWork({ id: 'obra-7' })]);
     const drive = new FakeDrive();
-    drive.folderId = `id'com\\barra`;
+    drive.folderId = LEGACY_FOLDER_ID;
     drive.seed('library.json', Buffer.from('[]'));
     const calls = stubFetch((call) => drive.handle(call));
 
@@ -459,9 +490,10 @@ describe('backupNow', () => {
     expect(result.ok).toBe(true);
     const listCall = calls.find((call) => call.url.includes('pageSize=1000'));
     expect(listCall).toBeDefined();
-    const decoded = decodeURIComponent(String(listCall?.url ?? ''));
+    const decoded = decodeURIComponent(listCall?.url ?? '');
     expect(decoded).toContain("\\'");
     expect(decoded).toContain('\\\\barra');
+    expect(drive.folderId).toBeNull();
   });
 
   it('reporta erro vindo da API do Drive', async () => {
@@ -489,7 +521,7 @@ describe('restoreNow', () => {
   });
 
   it('exige conta conectada', async () => {
-    expect(await restoreNow()).toEqual({
+    expect(await restoreNow(PASSPHRASE)).toEqual({
       ok: false,
       error: 'Conecte a conta Google primeiro.',
     });
@@ -498,13 +530,12 @@ describe('restoreNow', () => {
   it('restaura biblioteca e capas a partir do backup', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     const works = [makeWork({ id: 'restaurada', coverFile: 'capa.png' })];
     drive.seed('library.json', Buffer.from(JSON.stringify(works)));
     drive.seed('capa.png', Buffer.from('bytes-da-capa'));
     stubFetch((call) => drive.handle(call));
 
-    const result = await restoreNow();
+    const result = await restoreNow(PASSPHRASE);
     expect(result).toEqual({ ok: true, works: 1 });
     expect(loadLibrary().map((work) => work.id)).toEqual(['restaurada']);
     expect(fs.readFileSync(coversPath('capa.png')).toString('utf-8')).toBe('bytes-da-capa');
@@ -513,12 +544,11 @@ describe('restoreNow', () => {
   it('descriptografa o backup com a senha configurada', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     const payload = [makeWork({ id: 'cifrada' })];
     drive.seed('library.json', encryptForTest(Buffer.from(JSON.stringify(payload)), PASSPHRASE));
     stubFetch((call) => drive.handle(call));
 
-    const result = await restoreNow();
+    const result = await restoreNow(PASSPHRASE);
     expect(result).toEqual({ ok: true, works: 1 });
     expect(loadLibrary()[0]?.id).toBe('cifrada');
   });
@@ -526,12 +556,11 @@ describe('restoreNow', () => {
   it('recusa senha de criptografia errada', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     const payload = [makeWork({ id: 'cifrada' })];
     drive.seed('library.json', encryptForTest(Buffer.from(JSON.stringify(payload)), 'outra-senha'));
     stubFetch((call) => drive.handle(call));
 
-    const result = await restoreNow();
+    const result = await restoreNow(PASSPHRASE);
     expect(result).toEqual({
       ok: false,
       error: 'Senha de criptografia incorreta ou backup corrompido.',
@@ -541,21 +570,19 @@ describe('restoreNow', () => {
   it('falha quando não há library.json no Drive', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     stubFetch((call) => drive.handle(call));
-    expect(await restoreNow()).toEqual({
+    expect(await restoreNow(PASSPHRASE)).toEqual({
       ok: false,
-      error: 'Nenhum backup encontrado na pasta oculta do Drive.',
+      error: 'Nenhum backup encontrado no espaço oculto do Drive.',
     });
   });
 
   it('falha quando o backup não é uma lista de obras válida', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     drive.seed('library.json', Buffer.from(JSON.stringify([{ id: 42 }])));
     stubFetch((call) => drive.handle(call));
-    expect(await restoreNow()).toEqual({
+    expect(await restoreNow(PASSPHRASE)).toEqual({
       ok: false,
       error: 'Backup inválido (library.json corrompido).',
     });
@@ -564,10 +591,9 @@ describe('restoreNow', () => {
   it('falha quando o conteúdo nem é uma lista', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     drive.seed('library.json', Buffer.from(JSON.stringify({ obras: [] })));
     stubFetch((call) => drive.handle(call));
-    expect(await restoreNow()).toEqual({
+    expect(await restoreNow(PASSPHRASE)).toEqual({
       ok: false,
       error: 'Backup inválido (library.json corrompido).',
     });
@@ -576,7 +602,7 @@ describe('restoreNow', () => {
   it('reporta erro da API durante a restauração', async () => {
     await connect();
     stubFetch(() => json({ error: { message: 'Sem permissão.' } }, 403));
-    const result = await restoreNow();
+    const result = await restoreNow(PASSPHRASE);
     expect(result).toEqual({ ok: false, error: 'Sem permissão.' });
     expect(getStatus().lastError).toBe('Sem permissão.');
   });
@@ -600,7 +626,6 @@ describe('backupInfo', () => {
   it('devolve null quando não há library.json remoto', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     stubFetch((call) => drive.handle(call));
     expect(await backupInfo()).toBeNull();
   });
@@ -608,7 +633,6 @@ describe('backupInfo', () => {
   it('resume o backup remoto com o tamanho informado pelo Drive', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     drive.seed(
       'library.json',
       Buffer.from(JSON.stringify([makeWork(), makeWork({ id: 'b' })])),
@@ -629,7 +653,6 @@ describe('backupInfo', () => {
   it('usa o tamanho do buffer quando o Drive não informa', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     drive.seed('library.json', Buffer.from('[]'));
     stubFetch((call) => drive.handle(call));
 
@@ -641,7 +664,6 @@ describe('backupInfo', () => {
   it('conta zero obras quando o backup remoto não é uma lista', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     drive.seed('library.json', Buffer.from('{"x":1}'), '9');
     stubFetch((call) => drive.handle(call));
 
@@ -653,7 +675,6 @@ describe('backupInfo', () => {
   it('devolve null quando o backup remoto é inválido', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     drive.seed('library.json', Buffer.from('não é json'));
     stubFetch((call) => drive.handle(call));
     expect(await backupInfo()).toBeNull();
@@ -665,7 +686,7 @@ describe('renovação de sessão', () => {
     resetDrive();
   });
 
-  async function seedExpiredTokens(refreshToken: string | undefined): Promise<void> {
+  function seedExpiredTokens(refreshToken: string | undefined): void {
     fs.mkdirSync(path.dirname(tokensPath()), { recursive: true });
     fs.writeFileSync(
       tokensPath(),
@@ -675,6 +696,7 @@ describe('renovação de sessão', () => {
         expiresAt: Date.now() - 1000,
         accountEmail: 'leitor@example.com',
         lastSync: null,
+        scopeVersion: SCOPE_VERSION,
       }),
       'utf-8',
     );
@@ -687,9 +709,8 @@ describe('renovação de sessão', () => {
   }
 
   it('renova o access token expirado antes de chamar a API', async () => {
-    await seedExpiredTokens('refresh-legal');
+    seedExpiredTokens('refresh-legal');
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     drive.seed('library.json', Buffer.from('[]'));
     const calls = stubFetch((call) =>
       call.url === TOKEN_ENDPOINT
@@ -700,14 +721,14 @@ describe('renovação de sessão', () => {
     expect(await backupInfo()).not.toBeNull();
     const refresh = calls.find((call) => call.url === TOKEN_ENDPOINT);
     expect(refresh).toBeDefined();
-    const body = String(refresh?.init.body ?? '');
+    const body = bodyText(refresh);
     expect(body).toContain('grant_type=refresh_token');
     expect(body).toContain('refresh_token=refresh-legal');
     expect(getStatus().connected).toBe(true);
   });
 
   it('sem refresh token, orienta reconectar a conta', async () => {
-    await seedExpiredTokens(undefined);
+    seedExpiredTokens(undefined);
     saveLibrary([makeWork({ id: 'obra-8' })]);
     stubFetch(() => json({}));
     expect(await backupNow()).toEqual({
@@ -717,19 +738,28 @@ describe('renovação de sessão', () => {
     expect(getStatus().lastError).toBe('Sessão expirada. Conecte a conta Google novamente.');
   });
 
-  it('sem credenciais OAuth, orienta reconectar a conta', async () => {
-    await seedExpiredTokens('refresh-legal');
+  it('renova com as credenciais embutidas sem configuração própria', async () => {
+    seedExpiredTokens('refresh-legal');
     saveSettings({ driveClientId: '', driveClientSecret: '', drivePassphrase: PASSPHRASE });
     saveLibrary([makeWork({ id: 'obra-9' })]);
-    stubFetch(() => json({}));
-    expect(await backupNow()).toEqual({
-      ok: false,
-      error: 'Sessão expirada. Conecte a conta Google novamente.',
-    });
+    const drive = new FakeDrive();
+    drive.seed('library.json', Buffer.from('[]'));
+    const calls = stubFetch((call) =>
+      call.url === TOKEN_ENDPOINT
+        ? json({ access_token: 'renovado', expires_in: 3600 })
+        : drive.handle(call),
+    );
+
+    const result = await backupNow();
+    expect(result.ok).toBe(true);
+    const refresh = calls.find((call) => call.url === TOKEN_ENDPOINT);
+    expect(refresh).toBeDefined();
+    expect(bodyText(refresh)).toContain(`client_id=${EMBEDDED_CLIENT_ID}`);
+    expect(getStatus().connected).toBe(true);
   });
 
   it('reporta falha quando a renovação é recusada', async () => {
-    await seedExpiredTokens('refresh-legal');
+    seedExpiredTokens('refresh-legal');
     saveLibrary([makeWork({ id: 'obra-10' })]);
     stubFetch(() => json({ error: 'invalid_grant' }, 400));
     expect(await backupNow()).toEqual({
@@ -748,7 +778,6 @@ describe('retry após 401', () => {
   it('renova o token e repete a chamada', async () => {
     await connect();
     const drive = new FakeDrive();
-    drive.folderId = FOLDER_ID;
     drive.seed('library.json', Buffer.from('[]'));
     let unauthorized = true;
     const calls = stubFetch((call) => {

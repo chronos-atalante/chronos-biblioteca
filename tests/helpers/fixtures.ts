@@ -15,7 +15,7 @@ export function makeWork(overrides: Partial<Work> = {}): Work {
 }
 
 export function makeDraft(
-  overrides: Partial<Omit<Work, 'createdAt' | 'updatedAt'>> = {},
+  overrides: Partial<Work> = {},
 ): Omit<Work, 'createdAt' | 'updatedAt'> & Partial<Pick<Work, 'createdAt' | 'updatedAt'>> {
   const base = makeWork();
   return {

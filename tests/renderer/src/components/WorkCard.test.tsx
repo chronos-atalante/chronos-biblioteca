@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { userEvent } from '@testing-library/user-event';
 import WorkCard from '@zero/renderer/components/WorkCard';
-import { makeWork } from '../../../helpers/fixtures';
+import { makeWork } from '../../../helpers/fixtures.ts';
 
-function setup(overrides: Partial<Parameters<typeof WorkCard>[0]> = {}) {
-  const props = {
+function setup(
+  overrides: Partial<Parameters<typeof WorkCard>[0]> = {},
+): Parameters<typeof WorkCard>[0] & { container: HTMLElement } {
+  const props: Parameters<typeof WorkCard>[0] = {
     work: makeWork(),
     onOpen: vi.fn(),
     onProgress: vi.fn(),

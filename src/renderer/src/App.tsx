@@ -36,6 +36,17 @@ function blankWork(): Work {
   };
 }
 
+function summarize(list: Work[]): Stats {
+  const total = list.length;
+  const reading = list.filter((w) => w.status === 'lendo').length;
+  const done = list.filter((w) => w.status === 'concluido').length;
+  const planned = list.filter((w) => w.status === 'planejado').length;
+  const paused = list.filter((w) => w.status === 'pausado').length;
+  const cancelled = list.filter((w) => w.status === 'cancelado').length;
+  const average = total !== 0 ? Math.round((done / total) * 100) : 0;
+  return { total, reading, done, planned, paused, cancelled, average };
+}
+
 export default function App(): JSX.Element {
   const [works, setWorks] = useState<Work[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,16 +167,8 @@ export default function App(): JSX.Element {
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [works, query, filter]);
 
-  const stats: Stats = useMemo(() => {
-    const total = works.length;
-    const reading = works.filter((w) => w.status === 'lendo').length;
-    const done = works.filter((w) => w.status === 'concluido').length;
-    const planned = works.filter((w) => w.status === 'planejado').length;
-    const paused = works.filter((w) => w.status === 'pausado').length;
-    const cancelled = works.filter((w) => w.status === 'cancelado').length;
-    const average = total !== 0 ? Math.round((done / total) * 100) : 0;
-    return { total, reading, done, planned, paused, cancelled, average };
-  }, [works]);
+  const stats: Stats = useMemo(() => summarize(works), [works]);
+  const visibleStats: Stats = useMemo(() => summarize(visible), [visible]);
 
   const driveSyncing = drive?.syncing === true;
   const driveConnected = drive?.connected === true;
@@ -187,7 +190,7 @@ export default function App(): JSX.Element {
           <div>
             <h1>Webtoons Biblioteca</h1>
             <small>
-              {stats.total} obra(s) · progresso médio {stats.average}%
+              {visibleStats.total} obra(s) · progresso médio {visibleStats.average}%
             </small>
           </div>
         </div>

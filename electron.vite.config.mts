@@ -31,6 +31,13 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: resolve(root, 'src/preload/index.ts'),
+        output: {
+          // Preload sandboxed não tem loader ESM no Electron: precisa sair como
+          // CommonJS (`.cjs`), mesmo com `package.json` em `"type": "module"`.
+          format: 'cjs',
+          entryFileNames: '[name].cjs',
+          chunkFileNames: '[name]-[hash].cjs',
+        },
       },
     },
   },

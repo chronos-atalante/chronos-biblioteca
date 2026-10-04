@@ -1,5 +1,4 @@
 import fs from 'fs';
-import path from 'path';
 import { cacheDir, configDir, dataDir } from '@zero/main/library';
 
 const SANDBOX_VARS = ['XDG_DATA_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME'] as const;

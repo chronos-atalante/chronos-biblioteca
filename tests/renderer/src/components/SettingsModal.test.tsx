@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import type { Mock } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import SettingsModal from '@zero/renderer/components/SettingsModal';
 import type { AppSettings, BackupSummary, DriveStatus } from '@zero/types';
-import { createApiMock, installApiMock } from '../../../helpers/api';
+import { createApiMock, installApiMock } from '../../../helpers/api.ts';
+import type { ApiMock } from '../../../helpers/api.ts';
 
 const CONNECTED: DriveStatus = {
   connected: true,
@@ -21,7 +23,13 @@ const SUMMARY: BackupSummary = {
   works: 7,
 };
 
-function setup(options: Parameters<typeof createApiMock>[0] = {}) {
+interface SetupResult {
+  mock: ApiMock;
+  onClose: Mock<() => void>;
+  notify: Mock<(message: string, kind?: 'info' | 'error') => void>;
+}
+
+function setup(options: Parameters<typeof createApiMock>[0] = {}): SetupResult {
   const mock = createApiMock(options);
   installApiMock(mock);
   const onClose = vi.fn();
@@ -38,6 +46,16 @@ async function typeCredentials(): Promise<void> {
     screen.getByPlaceholderText('Usada para criptografar o backup no Drive'),
     'frase',
   );
+}
+
+/** Abre o modal, informa a senha do backup e confirma a restauração. */
+async function confirmRestore(passphrase: string): Promise<void> {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('button', { name: /^Restaurar$/ }));
+  const modal = screen.getByText('Senha do backup').closest<HTMLElement>('.modal');
+  if (modal === null) throw new Error('Modal de senha do backup ausente.');
+  await user.type(within(modal).getByPlaceholderText('Senha usada no backup'), passphrase);
+  await user.click(within(modal).getByRole('button', { name: /^Restaurar$/ }));
 }
 
 describe('SettingsModal — carregamento', () => {
@@ -75,7 +93,9 @@ describe('SettingsModal — carregamento', () => {
   it('fecha ao clicar fora do modal', async () => {
     const { onClose } = setup();
     await screen.findByText('Desconectado');
-    fireEvent.mouseDown(document.querySelector('.overlay') as HTMLElement);
+    const overlay = document.querySelector<HTMLElement>('.overlay');
+    if (overlay === null) throw new Error('overlay não encontrado.');
+    fireEvent.mouseDown(overlay);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -99,7 +119,7 @@ describe('SettingsModal — credenciais', () => {
     await screen.findByText('Desconectado');
     await typeCredentials();
 
-    await userEvent.setup().click(screen.getByRole('button', { name: /Salvar credenciais/ }));
+    await userEvent.setup().click(screen.getByRole('button', { name: /^Salvar$/ }));
     expect(mock.settingsSet).toHaveBeenCalledWith({
       driveClientId: 'meu-id',
       driveClientSecret: 'meu-segredo',
@@ -108,16 +128,14 @@ describe('SettingsModal — credenciais', () => {
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Configurações salvas.'));
   });
 
-  it('mantém "Conectar" desabilitado sem credenciais completas', async () => {
+  it('mantém "Conectar" habilitado mesmo sem credenciais próprias', async () => {
     setup();
     await screen.findByText('Desconectado');
     const connect = screen.getByRole('button', { name: /Conectar ao Drive/ });
-    expect(connect).toBeDisabled();
+    expect(connect).toBeEnabled();
 
     const user = userEvent.setup();
     await user.type(screen.getByPlaceholderText('xxxxxxxx.apps.googleusercontent.com'), 'meu-id');
-    expect(connect).toBeDisabled();
-    await user.type(screen.getByPlaceholderText('GOCSPX-...'), 'meu-segredo');
     expect(connect).toBeEnabled();
   });
 });
@@ -203,6 +221,7 @@ describe('SettingsModal — ações do Drive', () => {
 
   it('restaura o backup e recarrega a página', async () => {
     const { mock, notify } = setup({ status: CONNECTED, backupInfo: SUMMARY });
+    mock.driveRestore.mockResolvedValueOnce({ ok: true, works: 7 });
     await screen.findByText('Conectado');
     const reload = vi.fn();
     let spied = false;
@@ -213,9 +232,9 @@ describe('SettingsModal — ações do Drive', () => {
       // jsdom pode bloquear o espio de location.reload
     }
 
-    await userEvent.setup().click(screen.getByRole('button', { name: /Restaurar/ }));
+    await confirmRestore('frase-secreta');
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Backup restaurado com 7 obra(s).'));
-    expect(mock.driveRestore).toHaveBeenCalledTimes(1);
+    expect(mock.driveRestore).toHaveBeenCalledWith('frase-secreta');
     if (spied) expect(reload).toHaveBeenCalledTimes(1);
   });
 
@@ -224,7 +243,7 @@ describe('SettingsModal — ações do Drive', () => {
     mock.driveRestore.mockResolvedValueOnce({ ok: false, error: 'Backup corrompido.' });
     await screen.findByText('Conectado');
 
-    await userEvent.setup().click(screen.getByRole('button', { name: /Restaurar/ }));
+    await confirmRestore('frase-secreta');
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Backup corrompido.', 'error'));
   });
 
@@ -268,6 +287,6 @@ describe('SettingsModal — configurações exibidas', () => {
 
   it('mostra a data do último backup formatada', async () => {
     setup({ status: CONNECTED });
-    expect(await screen.findByText(/03\/02\/26/)).toBeInTheDocument();
+    expect(await screen.findByText(/03\/02\/2026/)).toBeInTheDocument();
   });
 });

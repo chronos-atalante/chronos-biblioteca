@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { loadSettings, saveSettings } from '@zero/main/settings';
-import { resetSandbox, sandboxPath } from '../helpers/sandbox';
+import { resetSandbox, sandboxPath } from '../helpers/sandbox.ts';
 
 function settingsFile(): string {
   return path.join(sandboxPath('XDG_CONFIG_HOME'), 'webtoons-biblioteca', 'settings.json');
