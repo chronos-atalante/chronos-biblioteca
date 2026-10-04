@@ -24,7 +24,7 @@ describe('rótulos e cores', () => {
   });
 
   it('cobre todos os status', () => {
-    expect(STATUS_OPTIONS).toEqual(['planejado', 'lendo', 'pausado', 'concluido']);
+    expect(STATUS_OPTIONS).toEqual(['planejado', 'lendo', 'pausado', 'concluido', 'cancelado']);
     for (const status of STATUS_OPTIONS) {
       expect(STATUS_LABELS[status]).not.toBe('');
       expect(STATUS_COLORS[status]).toMatch(/^#[0-9a-f]{6}$/);
@@ -33,7 +33,7 @@ describe('rótulos e cores', () => {
 
   it('expõe os filtros da barra superior', () => {
     const values: StatusFilter[] = FILTERS.map((filter) => filter.value);
-    expect(values).toEqual(['todos', 'lendo', 'planejado', 'pausado', 'concluido']);
+    expect(values).toEqual(['todos', 'lendo', 'planejado', 'pausado', 'concluido', 'cancelado']);
     expect(FILTERS.every((filter) => filter.label !== '')).toBe(true);
   });
 

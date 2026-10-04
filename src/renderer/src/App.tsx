@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { DriveStatus, Work } from '@zero/types';
+import type { DriveStatus, Work, WorkStatus } from '@zero/types';
 import { FILTERS, STATUS_COLORS, clampProgress, type StatusFilter } from '@zero/renderer/constants';
 import WorkCard from '@zero/renderer/components/WorkCard';
 import WorkModal from '@zero/renderer/components/WorkModal';
@@ -17,6 +17,7 @@ interface Stats {
   done: number;
   planned: number;
   paused: number;
+  cancelled: number;
   average: number;
 }
 
@@ -114,18 +115,9 @@ export default function App(): JSX.Element {
     [scheduleSave],
   );
 
-  const complete = useCallback(
-    (work: Work): void => {
-      const next: Work = { ...work, status: 'concluido', updatedAt: new Date().toISOString() };
-      setWorks((current) => current.map((item) => (item.id === next.id ? next : item)));
-      scheduleSave(next);
-    },
-    [scheduleSave],
-  );
-
-  const reopen = useCallback(
-    (work: Work): void => {
-      const next: Work = { ...work, status: 'lendo', updatedAt: new Date().toISOString() };
+  const changeStatus = useCallback(
+    (work: Work, status: WorkStatus): void => {
+      const next: Work = { ...work, status, updatedAt: new Date().toISOString() };
       setWorks((current) => current.map((item) => (item.id === next.id ? next : item)));
       scheduleSave(next);
     },
@@ -170,8 +162,9 @@ export default function App(): JSX.Element {
     const done = works.filter((w) => w.status === 'concluido').length;
     const planned = works.filter((w) => w.status === 'planejado').length;
     const paused = works.filter((w) => w.status === 'pausado').length;
+    const cancelled = works.filter((w) => w.status === 'cancelado').length;
     const average = total !== 0 ? Math.round((done / total) * 100) : 0;
-    return { total, reading, done, planned, paused, average };
+    return { total, reading, done, planned, paused, cancelled, average };
   }, [works]);
 
   const driveSyncing = drive?.syncing === true;
@@ -271,6 +264,10 @@ export default function App(): JSX.Element {
             <span>Pausadas</span>
           </div>
           <div className="stat">
+            <b style={{ color: STATUS_COLORS.cancelado }}>{stats.cancelled}</b>
+            <span>Canceladas</span>
+          </div>
+          <div className="stat">
             <b>{stats.average}%</b>
             <span>Progresso médio</span>
           </div>
@@ -308,8 +305,7 @@ export default function App(): JSX.Element {
                 work={work}
                 onOpen={(item) => setEditing({ work: item, isNew: false })}
                 onProgress={updateProgress}
-                onComplete={complete}
-                onReopen={reopen}
+                onStatus={changeStatus}
               />
             ))}
           </div>

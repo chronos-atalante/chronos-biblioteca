@@ -14,6 +14,7 @@ export const STATUS_LABELS: Record<WorkStatus, string> = {
   lendo: 'Lendo',
   pausado: 'Pausado',
   concluido: 'Concluído',
+  cancelado: 'Cancelado',
 };
 
 export const TYPE_COLORS: Record<WorkType, string> = {
@@ -30,6 +31,7 @@ export const STATUS_COLORS: Record<WorkStatus, string> = {
   lendo: '#5b9dff',
   pausado: '#e0a94f',
   concluido: '#4ecf8b',
+  cancelado: '#e06c75',
 };
 
 export const TYPE_OPTIONS = Object.keys(TYPE_LABELS) as WorkType[];
@@ -62,6 +64,7 @@ export const FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'planejado', label: 'Planejados' },
   { value: 'pausado', label: 'Pausados' },
   { value: 'concluido', label: 'Concluídos' },
+  { value: 'cancelado', label: 'Cancelados' },
 ];
 
 export function coverUrl(coverFile?: string): string | null {

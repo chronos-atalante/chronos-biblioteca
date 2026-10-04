@@ -9,12 +9,11 @@ function setup(overrides: Partial<Parameters<typeof WorkCard>[0]> = {}) {
     work: makeWork(),
     onOpen: vi.fn(),
     onProgress: vi.fn(),
-    onComplete: vi.fn(),
-    onReopen: vi.fn(),
+    onStatus: vi.fn(),
     ...overrides,
   };
-  render(<WorkCard {...props} />);
-  return props;
+  const view = render(<WorkCard {...props} />);
+  return { ...props, container: view.container };
 }
 
 describe('WorkCard', () => {
@@ -65,22 +64,58 @@ describe('WorkCard', () => {
     expect(props.onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }));
   });
 
-  it('ajusta o progresso em ±10 sem abrir o card', async () => {
+  it('ajusta o progresso em ±1 sem abrir o card', async () => {
     const user = userEvent.setup();
     const props = setup({ work: makeWork({ progress: 50 }) });
-    await user.click(screen.getByTitle('Aumentar 10%'));
-    expect(props.onProgress).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }), 60);
-    await user.click(screen.getByTitle('Diminuir 10%'));
-    expect(props.onProgress).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }), 40);
+    await user.click(screen.getByTitle('Aumentar 1'));
+    expect(props.onProgress).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }), 51);
+    await user.click(screen.getByTitle('Diminuir 1'));
+    expect(props.onProgress).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }), 49);
     expect(props.onOpen).not.toHaveBeenCalled();
   });
 
-  it('oferece "Concluir" para obras em andamento', async () => {
+  it('oferece "Concluir", "Pausar" e "Cancelar" para obras em andamento', async () => {
     const user = userEvent.setup();
     const props = setup({ work: makeWork({ status: 'lendo' }) });
     await user.click(screen.getByRole('button', { name: /Concluir/ }));
-    expect(props.onComplete).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }));
+    expect(props.onStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'work-1' }),
+      'concluido',
+    );
+    await user.click(screen.getByRole('button', { name: /Pausar/ }));
+    expect(props.onStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'work-1' }),
+      'pausado',
+    );
+    await user.click(screen.getByRole('button', { name: /Cancelar/ }));
+    expect(props.onStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'work-1' }),
+      'cancelado',
+    );
     expect(props.onOpen).not.toHaveBeenCalled();
+  });
+
+  it('troca "Pausar" por "Retomar" quando a obra está pausada', async () => {
+    const user = userEvent.setup();
+    const props = setup({ work: makeWork({ status: 'pausado' }) });
+    expect(screen.queryByRole('button', { name: /Pausar/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Retomar/ }));
+    expect(props.onStatus).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }), 'lendo');
+    await user.click(screen.getByRole('button', { name: /Concluir/ }));
+    expect(props.onStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'work-1' }),
+      'concluido',
+    );
+  });
+
+  it('cancelada só oferece "Retomar"', async () => {
+    const user = userEvent.setup();
+    const props = setup({ work: makeWork({ status: 'cancelado' }) });
+    expect(screen.getByText('Cancelado')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Concluir/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Cancelar/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Retomar/ }));
+    expect(props.onStatus).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }), 'lendo');
   });
 
   it('marca 100% e oferece reabrir para obras concluídas', async () => {
@@ -88,7 +123,7 @@ describe('WorkCard', () => {
     const props = setup({ work: makeWork({ status: 'concluido', progress: 100 }) });
     expect(screen.getByText('100%')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Reabrir/ }));
-    expect(props.onReopen).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }));
-    expect(props.onComplete).not.toHaveBeenCalled();
+    expect(props.onStatus).toHaveBeenCalledWith(expect.objectContaining({ id: 'work-1' }), 'lendo');
+    expect(screen.queryByRole('button', { name: /Concluir/ })).not.toBeInTheDocument();
   });
 });

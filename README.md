@@ -12,15 +12,16 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 
 ## Recursos
 
-- **Biblioteca em grade** com capa, título, tipo (webtoon/manhwa/manhua/mangá/livro), status e
-  progresso.
+- **Biblioteca em grade** com capa, título, tipo (webtoon/manhwa/manhua/mangá/livro), status
+  (planejado, lendo, pausado, concluído, cancelado) e progresso.
 - **Capa da obra**: escolha uma imagem JPG/PNG/WebP do disco — ela é copiada para a biblioteca
   local e servida pelo protocolo interno `cover://`.
 - **Título e descrição** livres, além de uma marcação opcional (`Cap. 45`, `Vol. 3`).
-- **Barra de progresso** com botões rápidos `−10` / `+10`, campo numérico direto e **concluir**
-  (100%) / **zerar**.
+- **Barra de progresso** no card com setas `↑` / `↓` (ajuste de 1 em 1) e botões de status
+  contextuais: **Concluir**, **Pausar**/**Retomar** e **Cancelar**; no modal de edição, campo
+  numérico direto, `−10` / `+10`, **concluir** e **zerar**.
 - **Busca** por título ou descrição e **filtros** por status (Lendo, Planejados, Pausados,
-  Concluídos) com estatísticas no topo.
+  Concluídos, Cancelados) com estatísticas no topo.
 - **Backup no Google Drive**: espaço **oculto `appDataFolder`** (invisível na interface do
   Drive), OAuth direto no app com **credenciais embutidas** (sem configuração prévia), arquivos
   sempre **criptografados**, com **Fazer backup agora**, **Restaurar** (pede a senha) e
@@ -146,7 +147,7 @@ electron-vite é CommonJS.
 flowchart TD
     subgraph RENDERER["Renderer — React + Vite (src/renderer)"]
         UI1["App.tsx — busca, filtros, estatísticas"]
-        UI2["WorkCard — capa, progresso, concluir/reabrir"]
+        UI2["WorkCard — capa, progresso, concluir/pausar/cancelar"]
         UI3["WorkModal — formulário da obra"]
         UI4["SettingsModal — credenciais e backup"]
         BRIDGE["window.api (contextBridge)"]
@@ -183,16 +184,26 @@ flowchart TD
 ```mermaid
 stateDiagram-v2
     [*] --> planejado
-    planejado --> lendo: progresso > 0
-    lendo --> pausado: pausar
-    pausado --> lendo: retomar
-    lendo --> concluido: chegar a 100% ou "Concluir"
-    pausado --> concluido: chegar a 100%
+    planejado --> concluido: "Concluir"
+    planejado --> pausado: "Pausar"
+    planejado --> cancelado: "Cancelar"
+    lendo --> concluido: "Concluir"
+    lendo --> pausado: "Pausar"
+    lendo --> cancelado: "Cancelar"
+    pausado --> lendo: "Retomar"
+    pausado --> concluido: "Concluir"
+    pausado --> cancelado: "Cancelar"
+    cancelado --> lendo: "Retomar"
     concluido --> lendo: "Reabrir"
 ```
 
-Regra única e simples no salvamento: **status `concluido` força progresso 100%** (e o slider em
-100% marca a obra como concluída).
+Os botões do card mostram as transições válidas para o status atual (uma obra `cancelada` só
+oferece **Retomar**; uma `concluída`, só **Reabrir**). No modal de edição, o Select de **Status**
+permite ir de qualquer estado para qualquer outro, e **Zerar** volta o progresso para 0 e o status
+para `planejado`. Mexer no progresso de uma obra `concluída` a devolve para `lendo`.
+
+Progresso e status são independentes: marcar `concluido` **não** altera o número salvo — o card
+apenas passa a exibir `100%` (use **Zerar** no modal para voltar a 0).
 
 ### Fluxo do progresso (anotação contínua)
 
@@ -204,9 +215,9 @@ sequenceDiagram
     participant M as Main (library.ts)
     participant D as library.json
 
-    U->>C: arrasta o slider / +10% / −10%
+    U->>C: setas ↑/↓ (+1/−1) no card · −10/+10 no modal
     C->>A: onProgress(obra, valor)
-    A->>A: clamp 0–100 + atualiza a UI na hora
+    A->>A: clamp >= 0 (sem limite superior) + atualiza a UI na hora
     A->>M: save (debounce de 450 ms)
     M->>D: escrita atômica (.tmp → rename)
     M-->>A: lista atualizada de obras

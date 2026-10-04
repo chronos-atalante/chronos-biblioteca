@@ -83,7 +83,8 @@ describe('App — carregamento e estatísticas', () => {
     expect(stats[2]).toBe('1Concluídas');
     expect(stats[3]).toBe('1Planejadas');
     expect(stats[4]).toBe('1Pausadas');
-    expect(stats[5]).toBe('25%Progresso médio');
+    expect(stats[5]).toBe('0Canceladas');
+    expect(stats[6]).toBe('25%Progresso médio');
   });
 
   it('mostra a mensagem de biblioteca vazia com atalho para a primeira obra', async () => {
@@ -146,6 +147,9 @@ describe('App — busca e filtros', () => {
     expect(screen.getByText('Naruto')).toBeInTheDocument();
     expect(screen.queryByText('Tower of God')).not.toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: 'Cancelados' }));
+    expect(screen.queryAllByRole('article')).toHaveLength(0);
+
     await user.click(screen.getByRole('button', { name: 'Todos' }));
     expect(screen.getAllByRole('article')).toHaveLength(4);
   });
@@ -170,12 +174,12 @@ describe('App — ações nas obras', () => {
     const { mock } = setup();
     await screen.findByText(/4 obra\(s\)/);
 
-    await user.click(within(cardOf('Solo Leveling')).getByTitle('Aumentar 10%'));
-    expect(within(cardOf('Solo Leveling')).getByText('Cap. 30')).toBeInTheDocument();
+    await user.click(within(cardOf('Solo Leveling')).getByTitle('Aumentar 1'));
+    expect(within(cardOf('Solo Leveling')).getByText('Cap. 21')).toBeInTheDocument();
 
     await waitFor(() => expect(mock.librarySave).toHaveBeenCalledTimes(1), { timeout: 2000 });
     expect(mock.librarySave).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'w-lendo', progress: 30 }),
+      expect.objectContaining({ id: 'w-lendo', progress: 21 }),
     );
   });
 
@@ -184,12 +188,12 @@ describe('App — ações nas obras', () => {
     const { mock } = setup();
     await screen.findByText(/4 obra\(s\)/);
 
-    await user.click(within(cardOf('Naruto')).getByTitle('Diminuir 10%'));
-    expect(within(cardOf('Naruto')).getByText('Cap. 40')).toBeInTheDocument();
+    await user.click(within(cardOf('Naruto')).getByTitle('Diminuir 1'));
+    expect(within(cardOf('Naruto')).getByText('Cap. 49')).toBeInTheDocument();
 
     await waitFor(() => expect(mock.librarySave).toHaveBeenCalledTimes(1), { timeout: 2000 });
     expect(mock.librarySave).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'w-pausa', progress: 40 }),
+      expect.objectContaining({ id: 'w-pausa', progress: 49 }),
     );
   });
 
@@ -199,7 +203,7 @@ describe('App — ações nas obras', () => {
     mock.librarySave.mockRejectedValueOnce(new Error('disco cheio'));
     await screen.findByText(/4 obra\(s\)/);
 
-    await user.click(within(cardOf('Solo Leveling')).getByTitle('Aumentar 10%'));
+    await user.click(within(cardOf('Solo Leveling')).getByTitle('Aumentar 1'));
     expect(await screen.findByText('Não foi possível salvar a obra.')).toBeInTheDocument();
   });
 
@@ -212,6 +216,30 @@ describe('App — ações nas obras', () => {
     await waitFor(() => expect(mock.librarySave).toHaveBeenCalledTimes(1), { timeout: 2000 });
     expect(mock.librarySave).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'w-lendo', status: 'concluido' }),
+    );
+  });
+
+  it('pausa uma obra pelo card', async () => {
+    const user = userEvent.setup();
+    const { mock } = setup();
+    await screen.findByText(/4 obra\(s\)/);
+
+    await user.click(within(cardOf('Solo Leveling')).getByRole('button', { name: /Pausar/ }));
+    await waitFor(() => expect(mock.librarySave).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    expect(mock.librarySave).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'w-lendo', status: 'pausado' }),
+    );
+  });
+
+  it('cancela uma obra pelo card', async () => {
+    const user = userEvent.setup();
+    const { mock } = setup();
+    await screen.findByText(/4 obra\(s\)/);
+
+    await user.click(within(cardOf('Solo Leveling')).getByRole('button', { name: /Cancelar/ }));
+    await waitFor(() => expect(mock.librarySave).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    expect(mock.librarySave).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'w-lendo', status: 'cancelado' }),
     );
   });
 

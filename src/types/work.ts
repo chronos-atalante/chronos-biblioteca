@@ -1,6 +1,6 @@
 export type WorkType = 'webtoon' | 'manhwa' | 'manhua' | 'manga' | 'livro' | 'outro';
 
-export type WorkStatus = 'planejado' | 'lendo' | 'pausado' | 'concluido';
+export type WorkStatus = 'planejado' | 'lendo' | 'pausado' | 'concluido' | 'cancelado';
 
 export interface Work {
   id: string;
@@ -8,7 +8,7 @@ export interface Work {
   synopsis: string;
   type: WorkType;
   status: WorkStatus;
-  /** Progresso de leitura em porcentagem, de 0 a 100 */
+  /** Progresso de leitura em porcentagem, apenas valores >= 0 (sem limite superior) */
   progress: number;
   /** Indicação livre, ex.: "Cap. 45", "Vol. 3" */
   marker?: string | undefined;

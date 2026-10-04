@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import type { Work } from '@zero/types';
+import type { Work, WorkStatus } from '@zero/types';
 import {
   STATUS_COLORS,
   STATUS_LABELS,
@@ -12,19 +12,19 @@ interface WorkCardProps {
   work: Work;
   onOpen: (work: Work) => void;
   onProgress: (work: Work, progress: number) => void;
-  onComplete: (work: Work) => void;
-  onReopen: (work: Work) => void;
+  onStatus: (work: Work, status: WorkStatus) => void;
 }
 
 export default function WorkCard({
   work,
   onOpen,
   onProgress,
-  onComplete,
-  onReopen,
+  onStatus,
 }: WorkCardProps): JSX.Element {
   const url = coverUrl(work.coverFile);
   const done = work.status === 'concluido';
+  const paused = work.status === 'pausado';
+  const cancelled = work.status === 'cancelado';
   const marker = work.marker;
 
   return (
@@ -64,28 +64,48 @@ export default function WorkCard({
         </div>
 
         <div className="card-actions" onClick={(event) => event.stopPropagation()}>
-          <button
-            className="btn small"
-            title="Diminuir 10%"
-            onClick={() => onProgress(work, work.progress - 10)}
-          >
-            <i className="fa-solid fa-minus" /> 10
-          </button>
-          <button
-            className="btn small"
-            title="Aumentar 10%"
-            onClick={() => onProgress(work, work.progress + 10)}
-          >
-            <i className="fa-solid fa-plus" /> 10
-          </button>
+          <div className="step-buttons">
+            <button
+              className="btn small icon-only"
+              title="Aumentar 1"
+              onClick={() => onProgress(work, work.progress + 1)}
+            >
+              <i className="fa-solid fa-arrow-up" />
+            </button>
+            <button
+              className="btn small icon-only"
+              title="Diminuir 1"
+              onClick={() => onProgress(work, work.progress - 1)}
+            >
+              <i className="fa-solid fa-arrow-down" />
+            </button>
+          </div>
           {done ? (
-            <button className="btn small ghost" onClick={() => onReopen(work)}>
+            <button className="btn small ghost" onClick={() => onStatus(work, 'lendo')}>
               <i className="fa-solid fa-rotate-left" /> Reabrir
             </button>
-          ) : (
-            <button className="btn small success" onClick={() => onComplete(work)}>
-              <i className="fa-solid fa-check" /> Concluir
+          ) : cancelled ? (
+            <button className="btn small ghost" onClick={() => onStatus(work, 'lendo')}>
+              <i className="fa-solid fa-play" /> Retomar
             </button>
+          ) : (
+            <>
+              <button className="btn small success" onClick={() => onStatus(work, 'concluido')}>
+                <i className="fa-solid fa-check" /> Concluir
+              </button>
+              {paused ? (
+                <button className="btn small" onClick={() => onStatus(work, 'lendo')}>
+                  <i className="fa-solid fa-play" /> Retomar
+                </button>
+              ) : (
+                <button className="btn small" onClick={() => onStatus(work, 'pausado')}>
+                  <i className="fa-solid fa-pause" /> Pausar
+                </button>
+              )}
+              <button className="btn small danger" onClick={() => onStatus(work, 'cancelado')}>
+                <i className="fa-solid fa-ban" /> Cancelar
+              </button>
+            </>
           )}
         </div>
       </div>
