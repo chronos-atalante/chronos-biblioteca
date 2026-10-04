@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { safeStorage } from 'electron';
 import { configDir } from '@zero/main/library';
 import type { AppSettings } from '@zero/types';
 
@@ -24,6 +25,37 @@ function field(record: object, key: keyof AppSettings): string {
   return typeof value === 'string' ? value : DEFAULTS[key];
 }
 
+const ENC_PREFIX = 'enc:';
+
+/**
+ * Guarda a senha no keyring do SO (libsecret/KWallet/Keychain/DPAPI).
+ * Sem keyring disponível, mantém em claro com permissão 0600 (fallback) —
+ * instalações antigas em claro continuam lendo normalmente e migram
+ * sozinhas para o keyring no próximo salvamento.
+ */
+function protect(passphrase: string): string {
+  if (passphrase === '' || !safeStorage.isEncryptionAvailable()) return passphrase;
+  try {
+    return `${ENC_PREFIX}${safeStorage.encryptString(passphrase).toString('base64')}`;
+  } catch {
+    return passphrase;
+  }
+}
+
+/**
+ * Reverte `protect`. Sem keyring ou com blob adulterado, a senha vira ''
+ * (falha fechada: o backup passa a exigir a senha em vez de usar lixo).
+ */
+function unprotect(stored: string): string {
+  if (!stored.startsWith(ENC_PREFIX)) return stored;
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return '';
+    return safeStorage.decryptString(Buffer.from(stored.slice(ENC_PREFIX.length), 'base64'));
+  } catch {
+    return '';
+  }
+}
+
 export function loadSettings(): AppSettings {
   try {
     const file = settingsPath();
@@ -33,7 +65,7 @@ export function loadSettings(): AppSettings {
     return {
       driveClientId: field(parsed, 'driveClientId'),
       driveClientSecret: field(parsed, 'driveClientSecret'),
-      drivePassphrase: field(parsed, 'drivePassphrase'),
+      drivePassphrase: unprotect(field(parsed, 'drivePassphrase')),
     };
   } catch {
     return { ...DEFAULTS };
@@ -46,7 +78,10 @@ export function saveSettings(settings: AppSettings): AppSettings {
     driveClientSecret: settings.driveClientSecret.trim(),
     drivePassphrase: settings.drivePassphrase,
   };
-  fs.writeFileSync(settingsPath(), JSON.stringify(next, null, 2), {
+  // Em disco a senha vai protegida (keyring) ou em claro (fallback); o
+  // retorno é sempre a forma utilizável, que o renderer exibe no formulário.
+  const onDisk: AppSettings = { ...next, drivePassphrase: protect(next.drivePassphrase) };
+  fs.writeFileSync(settingsPath(), JSON.stringify(onDisk, null, 2), {
     encoding: 'utf-8',
     mode: 0o600,
   });

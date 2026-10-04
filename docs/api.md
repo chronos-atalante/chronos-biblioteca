@@ -99,6 +99,12 @@ interface AppSettings {
 
 Campos ausentes ou com tipo errado no disco caem para `''` (padrão seguro).
 
+A senha (`drivePassphrase`) é guardada no keyring do SO via `safeStorage`
+quando disponível (`enc:<base64>` em `settings.json`); sem keyring, em claro
+com permissão `0600` (fallback), e instalações antigas migram sozinhas no
+próximo salvamento. `settings.set` sempre devolve a forma utilizável (o
+formulário nunca exibe o blob `enc:`).
+
 ### `settings.set(cfg: AppSettings) → Promise<AppSettings>`
 
 Normaliza (`trim` em ID/secret; senha preservada como digitada), grava
@@ -142,6 +148,15 @@ derivada por **scrypt explícito** (`N=2¹⁶`, `r=8`, `p=1`), salt de 16 e IV d
 Formato atual `WTENC2`; backups antigos `WTENC1` (scrypt padrão) continuam
 restauráveis. A migração da pasta legada recifra arquivos em claro quando há
 senha configurada (nunca há dupla criptografia).
+
+Nomes remotos opacos: nada com `library.json` ou nome de capa viaja em claro.
+Cada upload usa `HMAC-SHA256(chaveDeNomes, nomeLocal)` como nome remoto (chave
+determinística derivada da senha por scrypt, só para nomes — o conteúdo usa
+outra chave), mais um **manifesto cifrado** (`manifest.json` → HMAC)
+`{ nomeRemoto: nomeLocal }` gravado por último como "commit" do backup. A
+restauração e o `backupInfo` resolvem os nomes pelo manifesto, com fallback
+para backups legados em claro; manifesto ausente sem legado = "nenhum
+backup"; manifesto corrompido/senha errada = falha fechada.
 
 ```ts
 interface BackupSummary {

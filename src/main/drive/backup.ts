@@ -2,9 +2,19 @@ import fs from 'fs';
 import path from 'path';
 import type { BackupSummary, DriveStatus, Work } from '@zero/types';
 import { APP_DATA_SPACE } from '@zero/main/drive/constants';
-import { decryptWith, maybeEncrypt } from '@zero/main/drive/crypto';
+import {
+  MANIFEST_FILE,
+  buildManifest,
+  decryptWith,
+  encryptWith,
+  maybeEncrypt,
+  nameKeyFor,
+  parseManifest,
+  remoteName,
+} from '@zero/main/drive/crypto';
 import { ensureLegacyMigration } from '@zero/main/drive/migrate';
 import { deleteFile, downloadFile, listAppDataFiles, uploadMultipart } from '@zero/main/drive/rest';
+import type { RemoteFile } from '@zero/main/drive/rest';
 import {
   emit,
   getStatus,
@@ -45,6 +55,35 @@ function isWorkArray(value: unknown): value is Work[] {
   return Array.isArray(value) && value.every(isWorkRecord);
 }
 
+/**
+ * Resolve cada arquivo remoto para seu nome local.
+ *
+ * Esquema novo: nomes opacos (HMAC) + manifesto cifrado. Esquema legado
+ * (nomes em claro, sem manifesto): cada nome vale por si. Um manifesto
+ * corrompido ou com senha errada falha de forma fechada — nunca se restaura
+ * mapeamento adivinhado.
+ */
+async function resolveLocalNames(
+  remote: RemoteFile[],
+  passphrase: string,
+): Promise<{ localOf: Map<string, string>; manifestRemote: string }> {
+  const manifestRemote = remoteName(MANIFEST_FILE, nameKeyFor(passphrase));
+  const localOf = new Map<string, string>();
+  const manifestFile = remote.find((file) => file.name === manifestRemote);
+  if (manifestFile !== undefined) {
+    const mapping = parseManifest(decryptWith(await downloadFile(manifestFile.id), passphrase));
+    for (const [remoteName_, localName] of Object.entries(mapping)) {
+      localOf.set(remoteName_, localName);
+    }
+  }
+  for (const file of remote) {
+    if (!localOf.has(file.name) && file.name !== manifestRemote) {
+      localOf.set(file.name, file.name);
+    }
+  }
+  return { localOf, manifestRemote };
+}
+
 export async function backupNow(): Promise<{
   ok: boolean;
   error?: string;
@@ -52,6 +91,12 @@ export async function backupNow(): Promise<{
 }> {
   if (state.syncing) return { ok: false, error: 'Sincronização já em andamento.' };
   if (state.tokens === null) return { ok: false, error: 'Conecte a conta Google primeiro.' };
+  const passphrase = loadSettings().drivePassphrase;
+  if (passphrase === '') {
+    const error = 'Defina uma senha de criptografia do backup nas configurações.';
+    setError(error);
+    return { ok: false, error };
+  }
   state.syncing = true;
   setError(null);
   emit();
@@ -62,29 +107,46 @@ export async function backupNow(): Promise<{
     }
 
     await ensureLegacyMigration();
+    const key = nameKeyFor(passphrase);
+    const toRemote = (local: string): string => remoteName(local, key);
+    const manifestRemote = toRemote(MANIFEST_FILE);
+
     const remote = await listAppDataFiles();
     const remoteByName = new Map(remote.map((file) => [file.name, file]));
 
     for (const file of files) {
       await uploadMultipart(
         APP_DATA_SPACE,
-        file.name,
+        toRemote(file.name),
         maybeEncrypt(file.buffer),
         file.mime,
-        remoteByName.get(file.name)?.id,
+        remoteByName.get(toRemote(file.name))?.id,
       );
     }
 
-    const localNames = new Set(files.map((file) => file.name));
+    // Manifesto por último: ele é o "commit" que descreve o backup.
+    const manifest: Record<string, string> = {};
+    for (const file of files) manifest[toRemote(file.name)] = file.name;
+    await uploadMultipart(
+      APP_DATA_SPACE,
+      manifestRemote,
+      encryptWith(buildManifest(manifest), passphrase),
+      'application/json',
+      remoteByName.get(manifestRemote)?.id,
+    );
+
+    // Tudo que não é esperado some — órfãos e nomes legados em claro, que o
+    // próximo backup renomeia sozinho para opacos.
+    const expected = new Set([...files.map((file) => toRemote(file.name)), manifestRemote]);
     for (const file of remote) {
-      if (!localNames.has(file.name)) {
+      if (!expected.has(file.name)) {
         await deleteFile(file.id);
       }
     }
 
-    const libraryFile = remoteByName.get('library.json');
+    const previousLibrary = remoteByName.get(toRemote('library.json'));
     const summary: BackupSummary = {
-      id: libraryFile?.id ?? 'novo',
+      id: previousLibrary?.id ?? 'novo',
       name: 'library.json',
       modifiedTime: new Date().toISOString(),
       size: files.reduce((total, file) => total + file.buffer.byteLength, 0),
@@ -117,7 +179,10 @@ export async function restoreNow(passphrase: string): Promise<{
   try {
     await ensureLegacyMigration();
     const remote = await listAppDataFiles();
-    const libraryFile = remote.find((file) => file.name === 'library.json');
+    const { localOf, manifestRemote } = await resolveLocalNames(remote, passphrase);
+    const libraryRemote = [...localOf.entries()].find(([, local]) => local === 'library.json')?.[0];
+    const libraryFile =
+      libraryRemote === undefined ? undefined : remote.find((file) => file.name === libraryRemote);
     if (libraryFile === undefined) {
       throw new Error('Nenhum backup encontrado no espaço oculto do Drive.');
     }
@@ -129,12 +194,15 @@ export async function restoreNow(passphrase: string): Promise<{
     }
     const works: Work[] = parsed;
 
-    const covers = remote.filter((file) => file.name !== 'library.json');
     const coversPath = coversDir();
     fs.mkdirSync(coversPath, { recursive: true });
-    for (const cover of covers) {
-      const buffer = decryptWith(await downloadFile(cover.id), passphrase);
-      fs.writeFileSync(path.join(coversPath, path.basename(cover.name)), buffer);
+    for (const file of remote) {
+      const local = localOf.get(file.name);
+      if (local === undefined || local === 'library.json' || file.name === manifestRemote) {
+        continue;
+      }
+      const buffer = decryptWith(await downloadFile(file.id), passphrase);
+      fs.writeFileSync(path.join(coversPath, path.basename(local)), buffer);
     }
 
     const restored = restoreLibrary(works);
@@ -153,7 +221,11 @@ export async function backupInfo(): Promise<BackupSummary | null> {
   try {
     if (state.tokens === null) return null;
     const remote = await listAppDataFiles();
-    const libraryFile = remote.find((file) => file.name === 'library.json');
+    const passphrase = loadSettings().drivePassphrase;
+    const { localOf } = await resolveLocalNames(remote, passphrase);
+    const libraryRemote = [...localOf.entries()].find(([, local]) => local === 'library.json')?.[0];
+    const libraryFile =
+      libraryRemote === undefined ? undefined : remote.find((file) => file.name === libraryRemote);
     if (libraryFile === undefined) return null;
     const buffer = await downloadFile(libraryFile.id);
     const size =
@@ -165,7 +237,7 @@ export async function backupInfo(): Promise<BackupSummary | null> {
     );
     return {
       id: libraryFile.id,
-      name: libraryFile.name,
+      name: 'library.json',
       modifiedTime: libraryFile.modifiedTime,
       size,
       works: Array.isArray(parsed) ? parsed.length : 0,

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { loadSettings, saveSettings } from '@zero/main/settings';
+import { safeStorage } from '../mocks/electron.ts';
 import { resetSandbox, sandboxPath } from '../helpers/sandbox.ts';
 
 function settingsFile(): string {
@@ -63,5 +64,59 @@ describe('settings', () => {
     });
     const mode = fs.statSync(settingsFile()).mode & 0o777;
     expect(mode).toBe(0o600);
+  });
+
+  it('mantém a senha em claro sem keyring (fallback)', () => {
+    const saved = saveSettings({
+      driveClientId: 'id',
+      driveClientSecret: 'segredo',
+      drivePassphrase: 'frase-secreta',
+    });
+    expect(saved.drivePassphrase).toBe('frase-secreta');
+    expect(fs.readFileSync(settingsFile(), 'utf-8')).toContain('frase-secreta');
+    expect(loadSettings().drivePassphrase).toBe('frase-secreta');
+  });
+
+  it('cifra a senha no keyring quando disponível', () => {
+    safeStorage.isEncryptionAvailable.mockReturnValue(true);
+    try {
+      const saved = saveSettings({
+        driveClientId: 'id',
+        driveClientSecret: 'segredo',
+        drivePassphrase: 'frase-secreta',
+      });
+      expect(saved.drivePassphrase).toBe('frase-secreta');
+      const raw = fs.readFileSync(settingsFile(), 'utf-8');
+      expect(raw).toContain('enc:');
+      expect(raw).not.toContain('frase-secreta');
+      expect(loadSettings().drivePassphrase).toBe('frase-secreta');
+    } finally {
+      safeStorage.isEncryptionAvailable.mockReturnValue(false);
+    }
+  });
+
+  it('lê instalações antigas em claro mesmo com keyring', () => {
+    fs.mkdirSync(path.dirname(settingsFile()), { recursive: true });
+    fs.writeFileSync(
+      settingsFile(),
+      JSON.stringify({ driveClientId: '', driveClientSecret: '', drivePassphrase: 'antiga' }),
+      'utf-8',
+    );
+    safeStorage.isEncryptionAvailable.mockReturnValue(true);
+    try {
+      expect(loadSettings().drivePassphrase).toBe('antiga');
+    } finally {
+      safeStorage.isEncryptionAvailable.mockReturnValue(false);
+    }
+  });
+
+  it('falha fechada quando o keyring some depois de cifrar', () => {
+    safeStorage.isEncryptionAvailable.mockReturnValue(true);
+    try {
+      saveSettings({ driveClientId: '', driveClientSecret: '', drivePassphrase: 'frase-secreta' });
+    } finally {
+      safeStorage.isEncryptionAvailable.mockReturnValue(false);
+    }
+    expect(loadSettings().drivePassphrase).toBe('');
   });
 });

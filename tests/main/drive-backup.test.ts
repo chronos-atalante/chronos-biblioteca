@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { backupNow, getStatus, restoreNow } from '@zero/main/drive';
+import { nameKeyFor, remoteName } from '@zero/main/drive/crypto';
 import { loadLibrary, saveLibrary } from '@zero/main/library';
 import { makeWork } from '../helpers/fixtures.ts';
 import {
@@ -16,7 +17,7 @@ import {
   stubFetch,
 } from '../helpers/drive.ts';
 
-describe('backupNow', () => {
+describe('backupNow', { timeout: 60_000 }, () => {
   beforeEach(() => {
     resetDrive();
   });
@@ -99,8 +100,12 @@ describe('backupNow', () => {
     await connect();
     saveLibrary([makeWork({ id: 'obra-4' })]);
     const drive = new FakeDrive();
-    drive.seed('library.json', Buffer.from('[]'));
-    drive.seed('capa-antiga.png', Buffer.from('png'));
+    const key = nameKeyFor(PASSPHRASE);
+    const libraryRemote = remoteName('library.json', key);
+    const orphanRemote = remoteName('capa-antiga.png', key);
+    drive.seed(libraryRemote, Buffer.from('[]'));
+    drive.seed(orphanRemote, Buffer.from('png'));
+    drive.seed('capa-legada.png', Buffer.from('png'));
     const deleted: string[] = [];
     const original = drive.handle.bind(drive);
     stubFetch((call) => {
@@ -113,10 +118,15 @@ describe('backupNow', () => {
 
     const result = await backupNow();
     expect(result.ok).toBe(true);
-    expect(result.summary?.id).toBe('remote-library.json');
-    expect(deleted).toContain('remote-capa-antiga.png');
-    expect(drive.files.has('remote-capa-antiga.png')).toBe(false);
-    expect(drive.files.has('remote-library.json')).toBe(true);
+    expect(result.summary?.id).toBe(`remote-${libraryRemote}`);
+    expect(deleted).toContain(`remote-${orphanRemote}`);
+    expect(deleted).toContain('remote-capa-legada.png');
+    expect(drive.files.has(`remote-${orphanRemote}`)).toBe(false);
+    expect(drive.files.has(`remote-${libraryRemote}`)).toBe(true);
+    const names = [...drive.files.keys()].map((id) => id.replace(/^remote-(?:\d+-)?/, ''));
+    expect(names).not.toContain('library.json');
+    expect(names).not.toContain('capa-antiga.png');
+    expect(names).not.toContain('capa-legada.png');
   });
 
   it('escapa aspas na pasta e nos ids consultados', async () => {

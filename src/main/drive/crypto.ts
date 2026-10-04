@@ -65,6 +65,11 @@ function decryptBuffer(data: Buffer, passphrase: string): Buffer {
 
 export function maybeEncrypt(data: Buffer): Buffer {
   const passphrase = loadSettings().drivePassphrase;
+  return encryptWith(data, passphrase);
+}
+
+/** Cifra com senha explícita (a senha vazia é recusada em vez de ignorada). */
+export function encryptWith(data: Buffer, passphrase: string): Buffer {
   if (passphrase === '') {
     throw new Error('Defina uma senha de criptografia do backup nas configurações.');
   }
@@ -94,4 +99,56 @@ export function decryptWith(data: Buffer, passphrase: string): Buffer {
     // para não dar oráculo a quem manipula o blob remoto.
     throw new Error('Senha de criptografia incorreta ou backup corrompido.');
   }
+}
+
+/**
+ * Nomes remotos opacos (ver `backup.ts`).
+ *
+ * O `appDataFolder` já é privado por app, mas nomes como `library.json`
+ * dizem o que cada arquivo é. Por isso o upload usa nomes opacos e um
+ * manifesto cifrado `{ nomeRemoto: nomeLocal }`.
+ */
+
+/** Nome local do manifesto dentro do backup. */
+export const MANIFEST_FILE = 'manifest.json';
+
+/**
+ * Chave que opacifica nomes remotos. Determinística (mesma senha, mesmos
+ * nomes — necessário para atualizar no lugar e para restaurar em outra
+ * máquina) e com domínio separado da chave de conteúdo dos arquivos.
+ */
+export function nameKeyFor(passphrase: string): Buffer {
+  return crypto.scryptSync(passphrase, 'webtoons-remote-names-v1', 32, {
+    N: 65536,
+    r: 8,
+    p: 1,
+    maxmem: 256 * 1024 * 1024,
+  });
+}
+
+/** Nome remoto opaco e estável para um arquivo local (HMAC-SHA256 em hexa). */
+export function remoteName(localName: string, key: Buffer): string {
+  return crypto.createHmac('sha256', key).update(localName, 'utf-8').digest('hex');
+}
+
+/** Serializa o manifesto `{ nomeRemoto: nomeLocal }` (cifrar antes de subir). */
+export function buildManifest(mapping: Record<string, string>): Buffer {
+  return Buffer.from(JSON.stringify(mapping), 'utf-8');
+}
+
+/** Valida o manifesto decifrado; qualquer forma estranha é rejeitada. */
+export function parseManifest(data: Buffer): Record<string, string> {
+  const parsed: unknown = JSON.parse(data.toString('utf-8'));
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error('Manifesto do backup inválido.');
+  }
+  const mapping: Record<string, string> = {};
+  for (const remote of Object.keys(parsed)) {
+    const local: unknown = Reflect.get(parsed, remote);
+    if (remote === '' || typeof local !== 'string' || local === '') {
+      throw new Error('Manifesto do backup inválido.');
+    }
+    mapping[remote] = local;
+  }
+  return mapping;
 }

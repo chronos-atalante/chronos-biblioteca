@@ -14,6 +14,8 @@ em português do Brasil.
   configurada (sem dupla criptografia).
 - OAuth: e-mail da conta via header `Authorization` (fora da URL) e validação
   da resposta de tokens antes de usar (falha fechada).
+- Senha de backup no keyring do SO (`safeStorage`, com fallback `0600`) e
+  nomes remotos opacos (HMAC-SHA256 + manifesto cifrado).
 
 ## [1.0.0] - 2026-10-04
 

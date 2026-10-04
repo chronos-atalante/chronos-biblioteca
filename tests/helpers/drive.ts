@@ -171,16 +171,18 @@ export class FakeDrive {
   private upload(call: FetchCall, method: string): Response {
     const idMatch = /\/files\/([^?]+)\?/.exec(call.url);
     const id = idMatch?.[1] === undefined ? '' : decodeURIComponent(idMatch[1]);
-    const content = toBuffer(call.init.body);
+    const raw = toBuffer(call.init.body);
+    const content = extractMedia(raw);
     if (method === 'PATCH' && id !== '') {
       const existing = this.files.get(id);
       if (existing === undefined) return json({ error: { message: 'inexistente' } }, 404);
       existing.content = content;
       return json({ id: existing.id, name: nameOf(id) });
     }
-    const newId = `remote-${++this.seq}-${extractName(content)}`;
+    const metaName = extractName(raw);
+    const newId = `remote-${++this.seq}-${metaName}`;
     this.files.set(newId, { id: newId, content, modifiedTime: new Date().toISOString() });
-    return json({ id: newId, name: extractName(content) });
+    return json({ id: newId, name: metaName });
   }
 }
 
@@ -192,6 +194,23 @@ function nameOf(id: string): string {
 function extractName(content: Buffer): string {
   const match = /"name":"([^"]+)"/.exec(content.toString('utf-8'));
   return match?.[1] ?? 'desconhecido';
+}
+
+/**
+ * O Drive real guarda só a parte de mídia do `multipart/related`; o falso
+ * faz o mesmo (antes guardava o envelope inteiro, e o conteúdo baixado não
+ * correspondia ao que foi cifrado).
+ */
+function extractMedia(body: Buffer): Buffer {
+  const sep = Buffer.from('\r\n\r\n');
+  const first = body.indexOf(sep);
+  if (first === -1) return body;
+  const second = body.indexOf(sep, first + sep.length);
+  if (second === -1) return body;
+  const start = second + sep.length;
+  const end = body.lastIndexOf(Buffer.from('\r\n--'));
+  if (end === -1 || end < start) return body;
+  return body.subarray(start, end);
 }
 
 /** Zera o estado em memória e em disco entre os testes. */

@@ -95,6 +95,12 @@ export const shell = {
   openPath: vi.fn<(path: string) => Promise<string>>(() => Promise.resolve('')),
 };
 
+export const safeStorage = {
+  isEncryptionAvailable: vi.fn<() => boolean>(() => false),
+  encryptString: vi.fn<(plain: string) => Buffer>((plain) => Buffer.from(plain, 'utf-8')),
+  decryptString: vi.fn<(encrypted: Buffer) => string>((encrypted) => encrypted.toString('utf-8')),
+};
+
 export const ipcMain = {
   handle: vi.fn<(channel: string, listener: IpcHandler) => void>(),
   on: vi.fn<(channel: string, listener: IpcHandler) => void>(),
@@ -126,6 +132,9 @@ export function resetElectronMock(): void {
   protocol.handle.mockClear();
   dialog.showOpenDialog.mockClear();
   shell.openExternal.mockClear();
+  safeStorage.isEncryptionAvailable.mockClear();
+  safeStorage.encryptString.mockClear();
+  safeStorage.decryptString.mockClear();
   ipcMain.handle.mockClear();
   ipcMain.on.mockClear();
   ipcRenderer.invoke.mockClear();

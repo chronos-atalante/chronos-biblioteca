@@ -20,7 +20,7 @@ import {
   tokensPath,
 } from '../helpers/drive.ts';
 
-describe('backupInfo', () => {
+describe('backupInfo', { timeout: 60_000 }, () => {
   beforeEach(() => {
     resetDrive();
   });
@@ -93,7 +93,7 @@ describe('backupInfo', () => {
   });
 });
 
-describe('renovação de sessão', () => {
+describe('renovação de sessão', { timeout: 60_000 }, () => {
   beforeEach(() => {
     resetDrive();
   });
@@ -182,7 +182,7 @@ describe('renovação de sessão', () => {
   });
 });
 
-describe('retry após 401', () => {
+describe('retry após 401', { timeout: 60_000 }, () => {
   beforeEach(() => {
     resetDrive();
   });

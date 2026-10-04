@@ -133,9 +133,12 @@ sequenceDiagram
 - **Criptografia é obrigatória**: sem senha de criptografia definida nas Configurações, o
   backup é recusado com a mensagem “Defina uma senha de criptografia do backup nas
   configurações.”.
-- **Arquivos no Drive**: `library.json` + `covers/<nome>.png|jpg`, sempre cifrados
-  (AES-256-GCM com chave derivada por scrypt), dentro do **`appDataFolder`** — que não aparece
-  na interface do Drive e só este app acessa.
+- **Arquivos no Drive**: nomes **opacos** (HMAC-SHA256 da chave de nomes
+  derivada da senha — nem `library.json` aparece em claro) + um **manifesto
+  cifrado** que mapeia nome remoto → nome local; conteúdos sempre cifrados
+  (AES-256-GCM com chave derivada por scrypt), dentro do `appDataFolder`
+  — que não aparece na interface do Drive e só este app acessa. Visíveis ao
+  Google restam só a quantidade aproximada e o tamanho dos blobs.
 - **Conflitos**: o backup é sempre _sobrescrever por completo_ — o último backup vence.
 - **Restaurar sem senha**: se o backup não estiver cifrado (criado por versões antigas), o
   modal aceita confirmação em branco; se estiver, a senha errada mostra “Senha de criptografia
