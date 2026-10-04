@@ -38,14 +38,21 @@ function statePath(): string {
   return path.join(configDir(), 'drive-tokens.json');
 }
 
+/** Valida a forma mínima dos tokens persistidos em disco. */
+function isTokens(value: unknown): value is Tokens {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('accessToken' in value && 'scopeVersion' in value)) return false;
+  return typeof value.accessToken === 'string' && typeof value.scopeVersion === 'number';
+}
+
 export function loadState(): void {
   ensureConfig();
   try {
     const file = statePath();
     if (fs.existsSync(file)) {
-      const tokens = JSON.parse(fs.readFileSync(file, 'utf-8')) as Tokens;
-      if (tokens.scopeVersion === SCOPE_VERSION) {
-        state.tokens = tokens;
+      const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf-8'));
+      if (isTokens(parsed) && parsed.scopeVersion === SCOPE_VERSION) {
+        state.tokens = parsed;
       } else {
         state.lastError = 'Permissões do Google atualizadas. Reconecte a conta Google.';
       }

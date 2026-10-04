@@ -59,17 +59,19 @@ O aplicativo aparece no menu do sistema como **Webtoons Biblioteca**.
 
 ## Comandos de desenvolvimento
 
-| Comando                | O que faz                                          |
-| ---------------------- | -------------------------------------------------- |
-| `npm run dev`          | Sobe o app em modo desenvolvimento (hot reload)    |
-| `npm run typecheck`    | `tsc --noEmit` nos projetos node, web e testes     |
-| `npm run lint`         | ESLint rigoroso (type-aware) em todo o repositório |
-| `npm run lint:fix`     | ESLint com correção automática                     |
-| `npm run format`       | Formata tudo com Prettier                          |
-| `npm run format:check` | Verifica a formatação (CI)                         |
-| `npm run check`        | `typecheck` + `lint` + `format:check` + auditoria  |
-| `npm run build`        | Compila main/preload/renderer com electron-vite    |
-| `npm run dist`         | Build + gera o `.deb` com electron-builder         |
+| Comando                  | O que faz                                          |
+| ------------------------ | -------------------------------------------------- |
+| `npm run dev`            | Sobe o app em modo desenvolvimento (hot reload)    |
+| `npm run typecheck`      | `tsc --noEmit` nos projetos node, web e testes     |
+| `npm run lint`           | ESLint rigoroso (type-aware) em todo o repositório |
+| `npm run lint:fix`       | ESLint com correção automática                     |
+| `npm run format`         | Formata tudo com Prettier                          |
+| `npm run format:check`   | Verifica a formatação (CI)                         |
+| `npm test`               | Roda a suíte Vitest (`tests/**/*.test.{ts,tsx}`)   |
+| `npm run security:audit` | Auditoria de vulnerabilidades via OSV Scanner      |
+| `npm run check`          | `typecheck` + `lint` + `format:check` + auditoria  |
+| `npm run build`          | Compila main/preload/renderer com electron-vite    |
+| `npm run dist`           | Build + gera o `.deb` com electron-builder         |
 
 ---
 
@@ -257,13 +259,14 @@ Webtoons/
 │   │       ├── state.ts      # tokens, status e listener
 │   │       ├── oauth.ts      # autorização (PKCE) + refresh do token
 │   │       ├── rest.ts       # chamadas REST do Drive (appDataFolder)
+│   │       ├── json.ts       # leitura tipada de corpos JSON (`parseJson`)
 │   │       ├── migrate.ts    # migração da pasta legada .webtoons-backup
 │   │       ├── crypto.ts     # AES-256-GCM do backup
 │   │       └── backup.ts     # backup, restauração e desconexão
 │   ├── preload/index.ts      # contextBridge (window.api)
 │   ├── renderer/             # React + Vite
 │   │   ├── index.html        # CSP com scheme cover:
-│   │   └── src/              # App, componentes, styles.css
+│   │   └── src/              # App, componentes, style/styles.css
 │   ├── types/                # tipos compartilhados main ↔ renderer (@zero/types)
 │   │   ├── index.ts          # barrel (arquivo index só como barrel)
 │   │   ├── work.ts           # Work, WorkType, WorkStatus
@@ -272,6 +275,10 @@ Webtoons/
 │   │   └── api.ts            # ElectronApi (contrato do preload)
 │   ├── node.loader.ts        # hooks module.registerHooks() dos aliases @zero/*
 │   └── package.json          # "type": "module" (Node executa src/ direto)
+├── tests/
+│   ├── main/                 # drive-auth, drive-backup, drive-info (<500 linhas cada)
+│   ├── helpers/              # fixtures, sandbox, drive (FakeDrive + stubFetch)
+│   └── mocks/                # mock do electron para o Vitest
 ├── eslint.config.mjs
 ├── .prettierrc.json
 ├── tsconfig*.json

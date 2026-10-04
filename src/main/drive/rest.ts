@@ -6,6 +6,7 @@ import {
   UPLOAD_API,
 } from '@zero/main/drive/constants';
 import { accessToken, refreshAccessToken } from '@zero/main/drive/oauth';
+import { parseJson } from '@zero/main/drive/json';
 
 export interface RemoteFile {
   id: string;
@@ -16,13 +17,11 @@ export interface RemoteFile {
 
 export async function driveFetch(url: string, init: RequestInit = {}): Promise<Response> {
   let token = await accessToken();
-  const withAuth = (): RequestInit => ({
-    ...init,
-    headers: {
-      ...(init.headers as Record<string, string> | undefined),
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const withAuth = (): RequestInit => {
+    const headers = new Headers(init.headers);
+    headers.set('Authorization', `Bearer ${token}`);
+    return { ...init, headers };
+  };
   let res = await fetch(url, withAuth());
   if (res.status === 401) {
     token = await refreshAccessToken();
@@ -31,7 +30,7 @@ export async function driveFetch(url: string, init: RequestInit = {}): Promise<R
   if (!res.ok) {
     let detail = '';
     try {
-      const data = (await res.json()) as { error?: { message?: string | undefined } | undefined };
+      const data = await parseJson<{ error?: { message?: string | undefined } | undefined }>(res);
       detail = data.error?.message ?? '';
     } catch {
       // resposta sem corpo JSON aproveitável
@@ -50,10 +49,10 @@ async function listPages(buildUrl: (pageToken: string) => string): Promise<Remot
   let pageToken = '';
   do {
     const res = await driveFetch(buildUrl(pageToken));
-    const data = (await res.json()) as {
+    const data = await parseJson<{
       files?: RemoteFile[] | undefined;
       nextPageToken?: string | undefined;
-    };
+    }>(res);
     files.push(...(data.files ?? []));
     pageToken = data.nextPageToken ?? '';
   } while (pageToken !== '');
@@ -81,7 +80,7 @@ export async function findLegacyFolder(): Promise<string | null> {
   const q = `name='${escapeQuery(LEGACY_FOLDER_NAME)}' and mimeType='${FOLDER_MIME}' and trashed=false`;
   const url = `${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&pageSize=1`;
   const res = await driveFetch(url);
-  const data = (await res.json()) as { files?: { id: string }[] | undefined };
+  const data = await parseJson<{ files?: { id: string }[] | undefined }>(res);
   return data.files?.[0]?.id ?? null;
 }
 

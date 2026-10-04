@@ -11,6 +11,7 @@ import {
   USERINFO_ENDPOINT,
 } from '@zero/main/drive/constants';
 import { ensureLegacyMigration } from '@zero/main/drive/migrate';
+import { parseJson } from '@zero/main/drive/json';
 import {
   credentials,
   emit,
@@ -92,11 +93,11 @@ async function exchangeCode(
     body: body.toString(),
   });
   if (!res.ok) throw new Error(`Falha ao obter tokens (${res.status}).`);
-  const data = (await res.json()) as {
+  const data = await parseJson<{
     access_token: string;
     refresh_token?: string | undefined;
     expires_in: number;
-  };
+  }>(res);
   return {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
@@ -111,7 +112,7 @@ async function fetchAccountEmail(token: string): Promise<string | null> {
   try {
     const res = await fetch(`${USERINFO_ENDPOINT}?access_token=${encodeURIComponent(token)}`);
     if (!res.ok) return null;
-    const data = (await res.json()) as { email?: string | undefined };
+    const data = await parseJson<{ email?: string | undefined }>(res);
     return data.email ?? null;
   } catch {
     return null;
@@ -192,7 +193,7 @@ export async function refreshAccessToken(): Promise<string> {
     body: body.toString(),
   });
   if (!res.ok) throw new Error('Não foi possível renovar a sessão do Google Drive.');
-  const data = (await res.json()) as { access_token: string; expires_in: number };
+  const data = await parseJson<{ access_token: string; expires_in: number }>(res);
   const tokens = state.tokens;
   if (tokens === null) throw new Error('Nenhuma conta Google conectada.');
   tokens.accessToken = data.access_token;

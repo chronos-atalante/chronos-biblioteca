@@ -1,6 +1,5 @@
-# Ignora vulnerabilidades sem correção upstream.
-# Revisar periodicamente e remover quando houver fix disponível.
-[[IgnoredVulns]]
-id = "GHSA-ch52-4w7c-c8xp"
-reason = "Sem versão corrigida (http-cache-semantics@4.2.0 é a mais recente). Atinge apenas a cadeia de build dev (electron-builder -> @electron/get), não vai para o pacote final."
-ignoreUntil = 2026-12-31
+# Sem vulnerabilidades ignoradas no momento.
+# GHSA-ch52-4w7c-c8xp foi removido em 2026-10-04: o `security:audit` sem config
+# já retorna "No issues found" (http-cache-semantics atualizado na cadeia de build).
+# Novas vulnerabilidades sem fix upstream só podem ser ignoradas aqui com
+# justificativa e data de revisão (`ignoreUntil`).

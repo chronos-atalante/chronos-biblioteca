@@ -18,17 +18,31 @@ import { backupFiles, coversDir, loadLibrary, restoreLibrary } from '@zero/main/
 import { loadSettings } from '@zero/main/settings';
 
 /** Valida a forma mínima de uma obra vinda do backup. */
-function isWorkRecord(value: unknown): boolean {
+function isWorkRecord(value: unknown): value is Work {
   if (typeof value !== 'object' || value === null) return false;
-  const record = value as Record<string, unknown>;
+  if (!(
+    'id' in value &&
+    'title' in value &&
+    'synopsis' in value &&
+    'type' in value &&
+    'status' in value &&
+    'progress' in value
+  )) {
+    return false;
+  }
   return (
-    typeof record.id === 'string' &&
-    typeof record.title === 'string' &&
-    typeof record.synopsis === 'string' &&
-    typeof record.type === 'string' &&
-    typeof record.status === 'string' &&
-    typeof record.progress === 'number'
+    typeof value.id === 'string' &&
+    typeof value.title === 'string' &&
+    typeof value.synopsis === 'string' &&
+    typeof value.type === 'string' &&
+    typeof value.status === 'string' &&
+    typeof value.progress === 'number'
   );
+}
+
+/** Valida que o backup decifrado é uma lista de obras. */
+function isWorkArray(value: unknown): value is Work[] {
+  return Array.isArray(value) && value.every(isWorkRecord);
 }
 
 export async function backupNow(): Promise<{
@@ -110,10 +124,10 @@ export async function restoreNow(passphrase: string): Promise<{
 
     const libraryBuffer = decryptWith(await downloadFile(libraryFile.id), passphrase);
     const parsed: unknown = JSON.parse(libraryBuffer.toString('utf-8'));
-    if (!Array.isArray(parsed) || !parsed.every(isWorkRecord)) {
+    if (!isWorkArray(parsed)) {
       throw new Error('Backup inválido (library.json corrompido).');
     }
-    const works = parsed as Work[];
+    const works: Work[] = parsed;
 
     const covers = remote.filter((file) => file.name !== 'library.json');
     const coversPath = coversDir();
