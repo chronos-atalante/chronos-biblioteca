@@ -1,6 +1,9 @@
-build
 node_modules
 out
 release
+# bin/ guarda o binário vendored do osv-scanner (57 MB, só uso local).
+# Não versionar; o CI não precisa dele.
 bin
 coverage
+# build/ CONTÉM recursos de empacotamento versionados (icon.png, postrm).
+# Nunca ignorar: o electron-builder/fpm precisa deles no CI.

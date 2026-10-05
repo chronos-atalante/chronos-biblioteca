@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+if [ "$1" = "purge" ]; then
+  for home in /home/* /root; do
+    [ -d "$home" ] || continue
+    rm -rf \
+      "$home/.config/webtoons-biblioteca" \
+      "$home/.local/share/webtoons-biblioteca" \
+      "$home/.cache/webtoons-biblioteca" \
+      "$home/.local/state/webtoons-biblioteca" \
+      "$home/.config/Webtoons Biblioteca"
+  done
+fi
+exit 0
