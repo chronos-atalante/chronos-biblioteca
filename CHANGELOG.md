@@ -4,6 +4,18 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.0.2] - 2026-10-05
+
+### Adicionado
+
+- Página **Atribuições**: botão ao lado da pílula do Drive abre os créditos
+  das dependências em rolagem lenta e contínua (estilo pós-créditos de
+  cinema), com pausar/continuar e respeito a `prefers-reduced-motion`
+  (detalhes em `docs/atribuicoes.md`).
+- Página **Doações**: botão **Doar** no cabeçalho abre a página de apoio ao
+  projeto, com link do Mercado Pago (abre no navegador do sistema) e botão
+  de copiar (detalhes em `docs/doacoes.md`).
+
 ## [1.0.1] - 2026-10-04
 
 ### Segurança
