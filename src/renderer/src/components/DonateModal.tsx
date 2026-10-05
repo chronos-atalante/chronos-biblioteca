@@ -55,17 +55,18 @@ export default function DonateModal({ onClose }: DonateModalProps): JSX.Element 
 
         <div className="modal-body">
           <div className="banner info">
-            <i className="fa-solid fa-mug-saucer" /> Se cada leitor pagasse um cafezinho, o domínio
-            verificado do Google saía antes do próximo capítulo.
+            <i className="fa-solid fa-mug-saucer" /> Se cada leitor pagasse um cafezinho, a revisão
+            de produção do app no Dropbox saía antes do próximo capítulo.
           </div>
           <p className="donate-text">
             Esse projeto nasceu para a comunidade otaku: um lugar para salvarmos nossas leituras e
             não ficarmos perdidos caso percamos acesso às nossas plataformas de leitura favoritas.
           </p>
           <p className="donate-text">
-            Querendo ou não, eu tô mais quebrado que arroz de quinta e o Cloud Console do Google
-            vive reclamando de domínio verificado para liberar o app para o público, o que limita os
-            backups a 100 usuários.
+            Querendo ou não, eu tô mais quebrado que arroz de quinta e o backup em nuvem depende do
+            Dropbox: enquanto o app não passar pela revisão de produção, depois das primeiras 50
+            contas conectadas ele ganha um relógio de 2 semanas para ser aprovado — senão para de
+            aceitar gente nova. Sua doação ajuda a manter o app (e a paciência) no ar.
           </p>
           <p className="donate-text">
             A verdade é que esse projeto é pessoal, para eu acompanhar minhas leituras. Porque você,

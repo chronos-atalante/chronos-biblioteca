@@ -3,8 +3,8 @@
 Aplicativo desktop (Electron + TypeScript + React) para anotar o progresso das suas leituras de
 **webtoons, manhwas, manhuas, mangás e livros**: capa da obra, título, descrição, barra de
 progresso
-em porcentagem e marcação de conclusão — com **backup manual no Google Drive** em um espaço
-oculto.
+em porcentagem e marcação de conclusão — com **backup manual no Dropbox** na pasta
+do app.
 
 Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 
@@ -24,10 +24,10 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 - **Busca** por título ou descrição e **filtros** por status (Lendo, Planejados, Pausados,
   Concluídos, Cancelados); o contador e o progresso médio do cabeçalho acompanham o que está
   sendo exibido, e o bloco de estatísticas continua mostrando o total da biblioteca.
-- **Backup no Google Drive**: espaço **oculto `appDataFolder`** (invisível na interface do
-  Drive), OAuth direto no app com **credenciais embutidas** (sem configuração prévia), arquivos
-  sempre **criptografados**, com **Fazer backup agora**, **Restaurar** (pede a senha) e
-  **Desconectar**.
+- **Backup no Dropbox**: grava na **pasta do app** (`/Apps/Chronos Biblioteca`, um espaço
+  que só este app acessa via API), com login **OAuth + PKCE direto no app** (sem segredo
+  embutido e sem servidor intermediário). Arquivos sempre **criptografados** (nomes opacos +
+  AES-256-GCM), com **Fazer backup agora**, **Restaurar** (pede a senha) e **Desconectar**.
 - **Janela nativa sem barra de menus**: sem botões File/Edit/View no topo (menu da
   aplicação removido por completo); decorações do gerenciador de janelas (encaixe em cantos
   para dividir a tela, maximizar/fechar) e `F11` alterna tela cheia.
@@ -58,7 +58,7 @@ O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
   `/usr/bin/chronos-biblioteca`)
 - Ícone instalado em `/usr/share/icons/hicolor/512x512/apps/chronos-biblioteca.png`
 - Dados: `~/.config/chronos-biblioteca/` (`library.json`, `covers/`, `settings.json`,
-  `drive-tokens.json`)
+  `dropbox-tokens.json`)
 
 ---
 
@@ -183,20 +183,20 @@ flowchart TD
     subgraph MAIN["Main — Electron (src/main)"]
         IDX["index.ts — janela, IPC, protocolo cover:, F11"]
         LIB["library.ts — library.json + capas"]
-        SET["settings.ts — credenciais e senha do backup"]
-        DRV["drive/ — OAuth, REST, backup, migração"]
+        SET["settings.ts — App key e senha do backup"]
+        DRV["drive/ — OAuth PKCE, REST do Dropbox, backup"]
     end
 
     subgraph STORAGE["Persistência"]
-        LOKAL[("~/.config/chronos-biblioteca/<br/>library.json · covers/ · settings.json · drive-tokens.json")]
-        DRIVE[("Google Drive · espaço oculto appDataFolder")]
+        LOKAL[("~/.config/chronos-biblioteca/<br/>library.json · covers/ · settings.json · dropbox-tokens.json")]
+        DRIVE[("Dropbox · pasta do app /Apps/Chronos Biblioteca")]
     end
 
     BRIDGE -->|"ipcRenderer.invoke"| IDX
     IDX --> LIB --> LOKAL
     IDX --> SET --> LOKAL
     IDX --> DRV
-    DRV <-->|"HTTPS (fetch) · scopes drive.appdata + drive.file"| DRIVE
+    DRV <-->|"HTTPS (fetch) · App folder + PKCE, sem secret"| DRIVE
     IDX -.->|"cover://imagens-da-capa"| UI1
 ```
 
@@ -254,7 +254,7 @@ Webtoons/
 │   ├── icon.png              # ícone 512×512 usado no .deb
 │   └── make-icon.py          # gerador do ícone (PIL)
 ├── docs/
-│   ├── google-drive.md       # guia do backup + diagramas
+│   ├── dropbox.md              # guia do backup + diagramas
 │   ├── atribuicoes.md        # página de Atribuições (créditos em loop)
 │   ├── doacoes.md            # página de Doações (link do Mercado Pago)
 │   └── api.md                # referência da API interna
@@ -262,15 +262,14 @@ Webtoons/
 │   ├── main/                 # processo main (Electron)
 │   │   ├── index.ts          # janela, IPC, protocolo cover://, F11 em tela cheia
 │   │   ├── library.ts        # library.json + cópia/limpeza de capas
-│   │   ├── settings.ts       # credenciais OAuth
-│   │   └── drive/            # OAuth, Drive REST, backup/restauração
+│   │   ├── settings.ts       # App key + senha do backup
+│   │   └── drive/            # OAuth PKCE, REST do Dropbox, backup/restauração
 │   │       ├── index.ts      # barrel da API pública (authorize, backupNow…)
-│   │       ├── constants.ts  # escopos, credenciais embutidas, appDataFolder
-│   │       ├── state.ts      # tokens, status e listener
-│   │       ├── oauth.ts      # autorização (PKCE) + refresh do token
-│   │       ├── rest.ts       # chamadas REST do Drive (appDataFolder)
+│   │       ├── constants.ts  # escopos, App key, loopback fixo
+│   │       ├── state.ts      # sessão, App key e listener de status
+│   │       ├── oauth.ts      # autorização (PKCE sem secret) + refresh
+│   │       ├── rest.ts       # chamadas REST do Dropbox (pasta do app)
 │   │       ├── json.ts       # leitura tipada de corpos JSON (`parseJson`)
-│   │       ├── migrate.ts    # migração da pasta legada .webtoons-backup
 │   │       ├── crypto.ts     # AES-256-GCM do backup
 │   │       └── backup.ts     # backup, restauração e desconexão
 │   ├── preload/index.ts      # contextBridge (window.api)
@@ -287,7 +286,7 @@ Webtoons/
 │   └── package.json          # "type": "module" (Node executa src/ direto)
 ├── tests/
 │   ├── main/                 # drive-auth, drive-backup, drive-info (<500 linhas cada)
-│   ├── helpers/              # fixtures, sandbox, drive (FakeDrive + stubFetch)
+│   ├── helpers/              # fixtures, sandbox, drive (FakeDropbox + stubFetch)
 │   └── mocks/                # mock do electron para o Vitest
 ├── eslint.config.mjs
 ├── .prettierrc.json
@@ -325,43 +324,43 @@ Detalhes da configuração (campo `build` do `package.json`):
 
 ---
 
-## Backup no Google Drive
+## Backup no Dropbox
 
-Fluxo resumido (passo a passo completo em [`docs/google-drive.md`](docs/google-drive.md)):
+Fluxo resumido (passo a passo completo em [`docs/dropbox.md`](docs/dropbox.md)):
 
-1. ⚙ → defina a **senha de criptografia do backup** (obrigatória). As credenciais OAuth já vêm
-   **embutidas** no app — não é preciso criar nada no Google Cloud Console (os campos de
-   Client ID/Secret são opcionais, para quem tem projeto próprio).
-2. **Conectar ao Drive** → janela do navegador → consentimento → tokens guardados localmente em
-   `drive-tokens.json` (PKCE + loopback em `127.0.0.1`).
-3. **Fazer backup agora** → `library.json` + capas, **sempre criptografadas** (AES-256-GCM), no
-   espaço **oculto `appDataFolder`** — invisível na interface do Drive e acessível só por este
-   app (escopos `drive.appdata` + `drive.file`).
+1. ⚙ → defina a **senha de criptografia do backup** (obrigatória) e, se o app ainda não
+   tem chave embutida, informe a **App key** do Dropbox (cadastro único de 5 minutos no
+   App Console — ver `docs/dropbox.md`). Com PKCE não existe segredo: só a chave identifica
+   o app, e o acesso real fica no `refresh_token` guardado na sua máquina.
+2. **Conectar ao Dropbox** → janela do navegador → consentimento → tokens guardados
+   localmente em `dropbox-tokens.json` (PKCE + callback fixo em `localhost:17431`, a URI
+   que o Dropbox exige pré-cadastrada).
+3. **Fazer backup agora** → `library.json` + capas sobem **sempre criptografados**
+   (AES-256-GCM, nomes de arquivo opacos via HMAC) para a **pasta do app**
+   (`/Apps/Chronos Biblioteca`). A pasta aparece na sua conta, mas só este app a acessa
+   via API — e mesmo bisbilhotando, só há blobs sem nome legível.
 4. **Restaurar** → pede a **senha de criptografia**, baixa o backup e substitui a biblioteca
    local.
-5. **Migração automática**: backups antigos na pasta `.webtoons-backup` são movidos para o
-   `appDataFolder` e a pasta antiga é apagada após a primeira conexão.
 
 ```mermaid
 sequenceDiagram
     actor U as Usuário
     participant App as App Electron
-    participant G as accounts.google.com
-    participant D as Google Drive
+    participant G as Dropbox OAuth
+    participant D as Pasta do app (/Apps/)
 
-    U->>App: Configurações → Conectar ao Drive
-    App->>G: abre o navegador (PKCE + scopes drive.appdata + drive.file)
-    G->>U: tela de consentimento
+    U->>App: Configurações → Conectar ao Dropbox
+    App->>G: abre o navegador (PKCE + acesso offline)
+    G->>U: tela de consentimento (só a pasta do app)
     U->>G: aprova
-    G-->>App: redirect http://127.0.0.1:port/callback?code=...
-    App->>G: POST /oauth2/token (code + code_verifier)
-    G-->>App: access_token + refresh_token
-    App->>App: grava drive-tokens.json
-    App->>D: migração: pasta legada .webtoons-backup → appDataFolder
+    G-->>App: redirect http://localhost:17431/callback?code=...
+    App->>G: POST /oauth2/token (code + code_verifier, sem secret)
+    G-->>App: access_token (curto) + refresh_token (duradouro)
+    App->>App: grava dropbox-tokens.json
 
     U->>App: Fazer backup agora
-    App->>App: criptografa library.json + capas (AES-256-GCM)
-    App->>D: upload para o espaço oculto appDataFolder
+    App->>App: criptografa library.json + capas (nomes opacos + AES-256-GCM)
+    App->>D: upload com overwrite
     App->>D: apaga arquivos remotos órfãos
     D-->>App: ok
     App-->>U: "Backup concluído"
@@ -390,17 +389,17 @@ python3 build/make-icon.py
 
 Guias e referências (tudo em pt-BR):
 
-| Documento                                      | Conteúdo                                              |
-| ---------------------------------------------- | ----------------------------------------------------- |
-| [`docs/google-drive.md`](docs/google-drive.md) | Guia do backup: OAuth, criptografia, troubleshooting  |
-| [`docs/atribuicoes.md`](docs/atribuicoes.md)   | Página de Atribuições: créditos em loop e licenças    |
-| [`docs/doacoes.md`](docs/doacoes.md)           | Página de Doações: link do Mercado Pago               |
-| [`docs/api.md`](docs/api.md)                   | Referência da API interna (`window.api` + canais IPC) |
-| [`docs/openapi.yaml`](docs/openapi.yaml)       | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)   |
-| [`CHANGELOG.md`](CHANGELOG.md)                 | Histórico de mudanças por versão                      |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md)           | Como contribuir (ambiente, scripts, convenções)       |
-| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)     | Código de conduta da comunidade                       |
-| [`SECURITY.md`](SECURITY.md)                   | Política de segurança e como reportar falhas          |
+| Documento                                    | Conteúdo                                                |
+| -------------------------------------------- | ------------------------------------------------------- |
+| [`docs/dropbox.md`](docs/dropbox.md)         | Guia do backup: OAuth PKCE, App folder, troubleshooting |
+| [`docs/atribuicoes.md`](docs/atribuicoes.md) | Página de Atribuições: créditos em loop e licenças      |
+| [`docs/doacoes.md`](docs/doacoes.md)         | Página de Doações: link do Mercado Pago                 |
+| [`docs/api.md`](docs/api.md)                 | Referência da API interna (`window.api` + canais IPC)   |
+| [`docs/openapi.yaml`](docs/openapi.yaml)     | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)     |
+| [`CHANGELOG.md`](CHANGELOG.md)               | Histórico de mudanças por versão                        |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md)         | Como contribuir (ambiente, scripts, convenções)         |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)   | Código de conduta da comunidade                         |
+| [`SECURITY.md`](SECURITY.md)                 | Política de segurança e como reportar falhas            |
 
 ---
 

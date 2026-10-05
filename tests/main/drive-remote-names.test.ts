@@ -5,23 +5,23 @@ import { backupInfo, backupNow, restoreNow } from '@zero/main/drive';
 import { MANIFEST_FILE, decryptWith, nameKeyFor, remoteName } from '@zero/main/drive/crypto';
 import { coversDir, dataDir, loadLibrary, saveLibrary } from '@zero/main/library';
 import { makeWork } from '../helpers/fixtures.ts';
-import { FakeDrive, PASSPHRASE, connect, resetDrive, stubFetch } from '../helpers/drive.ts';
+import { FakeDropbox, PASSPHRASE, connect, resetDrive, stubFetch } from '../helpers/drive.ts';
 
-function remoteIdFor(drive: FakeDrive, hmac: string): string {
-  const found = [...drive.files.keys()].find((id) => id.replace(/^remote-(?:\d+-)?/, '') === hmac);
+function remoteIdFor(drive: FakeDropbox, hmac: string): string {
+  const found = drive.findByName(hmac);
   if (found === undefined) throw new Error(`Arquivo remoto ausente no teste: ${hmac}`);
-  return found;
+  return found.id;
 }
 
-function remoteNames(drive: FakeDrive): string[] {
-  return [...drive.files.keys()].map((id) => id.replace(/^remote-(?:\d+-)?/, ''));
+function remoteNames(drive: FakeDropbox): string[] {
+  return [...drive.files.values()].map((file) => file.name);
 }
 
-async function backupWithCover(): Promise<FakeDrive> {
+async function backupWithCover(): Promise<FakeDropbox> {
   await connect();
   fs.writeFileSync(path.join(coversDir(), 'capa.png'), 'bytes-da-capa');
   saveLibrary([makeWork({ id: 'obra-1', coverFile: 'capa.png' })]);
-  const drive = new FakeDrive();
+  const drive = new FakeDropbox();
   stubFetch((call) => drive.handle(call));
   const result = await backupNow();
   expect(result.ok).toBe(true);

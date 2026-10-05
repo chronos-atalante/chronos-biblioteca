@@ -180,8 +180,8 @@ export default function App(): JSX.Element {
   const driveLabel = driveSyncing
     ? 'Sincronizando…'
     : driveConnected
-      ? 'Drive conectado'
-      : 'Drive off';
+      ? 'Dropbox conectado'
+      : 'Dropbox off';
   const hasWorks = works.length !== 0;
 
   return (
@@ -227,7 +227,7 @@ export default function App(): JSX.Element {
           <button
             className="drive-pill"
             onClick={() => setShowSettings(true)}
-            title="Configurações do backup no Google Drive"
+            title="Configurações do backup no Dropbox"
           >
             <span className={driveDotClass} />
             {driveLabel}

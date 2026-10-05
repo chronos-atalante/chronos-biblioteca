@@ -1,5 +1,5 @@
 /**
- * Leitura tipada de corpos JSON das APIs do Google.
+ * Leitura tipada de corpos JSON das APIs de nuvem (Dropbox).
  *
  * `Response.json()` devolve `Promise<any>`; este é o único ponto do módulo
  * `drive/` que converte esse `any` em um tipo declarado. Os chamadores passam

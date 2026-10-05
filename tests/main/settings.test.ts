@@ -44,13 +44,13 @@ describe('settings', () => {
 
   it('saveSettings remove espaços das credenciais e persiste', () => {
     const saved = saveSettings({
-      driveClientId: '  meuid.apps.googleusercontent.com ',
-      driveClientSecret: '  GOCSPX-segredo  ',
+      driveClientId: '  minha-app-key-123  ',
+      driveClientSecret: '  segredo-legado  ',
       drivePassphrase: '  segredo de backup  ',
     });
     expect(saved).toEqual({
-      driveClientId: 'meuid.apps.googleusercontent.com',
-      driveClientSecret: 'GOCSPX-segredo',
+      driveClientId: 'minha-app-key-123',
+      driveClientSecret: 'segredo-legado',
       drivePassphrase: '  segredo de backup  ',
     });
     expect(loadSettings()).toEqual(saved);

@@ -10,8 +10,8 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({ onClose, notify }: SettingsModalProps): JSX.Element {
-  // driveClientId/Secret seguem no estado por compatibilidade com o backend
-  // (fallback para credenciais embutidas), mas não são mais editáveis na UI.
+  // driveClientId guarda a App key do Dropbox (nome mantido por compatibilidade
+  // com o settings.json); driveClientSecret é legado e ignorado pelo backend.
   const [settings, setSettings] = useState<AppSettings>({
     driveClientId: '',
     driveClientSecret: '',
@@ -84,7 +84,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
     run('auth', async () => {
       const result = await window.api.drive.auth();
       if (!result.ok) notify(result.error ?? 'Falha na autorização.', 'error');
-      else notify('Conta Google conectada com sucesso.');
+      else notify('Conta Dropbox conectada com sucesso.');
       await refreshDriveStatus();
     });
 
@@ -92,7 +92,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
     run('backup', async () => {
       const result = await window.api.drive.backup();
       if (!result.ok) notify(result.error ?? 'Falha no backup.', 'error');
-      else notify('Backup concluído na pasta oculta do Drive.');
+      else notify('Backup concluído na pasta do app no Dropbox.');
       await refreshDriveStatus();
     });
 
@@ -109,7 +109,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
     run('disconnect', async () => {
       setStatus(await window.api.drive.disconnect());
       setInfo(null);
-      notify('Conta Google desconectada.');
+      notify('Conta Dropbox desconectada.');
     });
 
   const connected = status?.connected === true;
@@ -137,11 +137,11 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
 
           <div className="modal-body">
             <div className="banner info">
-              <strong>Backup no Google Drive.</strong> Sua biblioteca é gravada no espaço{' '}
-              <strong>oculto</strong> do Drive (<code>appDataFolder</code>): ele não aparece na
-              interface do Google Drive e só é acessível por este aplicativo. Todos os arquivos
-              sobem criptografados (AES-256-GCM) — defina a senha de criptografia abaixo antes do
-              primeiro backup.
+              <strong>Backup no Dropbox.</strong> Sua biblioteca é gravada na pasta reservada do app
+              (dentro de <code>/Apps/</code> na sua conta): pela API, só este aplicativo enxerga
+              essa pasta — o resto do seu Dropbox nem aparece para ele. Como a pasta é visível para
+              você, todo arquivo sobe com nome ilegível e conteúdo criptografado (AES-256-GCM) —
+              defina a senha de criptografia abaixo antes do primeiro backup.
             </div>
 
             <div className="form-row">
@@ -150,7 +150,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
                 <input
                   type="password"
                   value={settings.drivePassphrase}
-                  placeholder="Usada para criptografar o backup no Drive"
+                  placeholder="Usada para criptografar o backup no Dropbox"
                   disabled={working}
                   onChange={(event) =>
                     setSettings({ ...settings, drivePassphrase: event.target.value })
@@ -159,10 +159,30 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
               </div>
             </div>
 
+            <div className="form-row">
+              <div className="field">
+                <label>Chave do aplicativo Dropbox (App key)</label>
+                <input
+                  type="text"
+                  value={settings.driveClientId}
+                  placeholder="Opcional: só precisa se o app ainda não tem chave embutida"
+                  disabled={working}
+                  onChange={(event) =>
+                    setSettings({ ...settings, driveClientId: event.target.value })
+                  }
+                />
+                <div className="help">
+                  Criada em <code>dropbox.com/developers/apps</code> como app do tipo App folder
+                  (ver <code>docs/dropbox.md</code>). Com PKCE não existe segredo: só a chave
+                  identifica o app, e o acesso real fica no token guardado nesta máquina.
+                </div>
+              </div>
+            </div>
+
             <div className="drive-meta">
               <div className="stat">
                 <b>{connected ? 'Conectado' : 'Desconectado'}</b>
-                <span>{status?.accountEmail ?? 'Conta Google'}</span>
+                <span>{status?.accountEmail ?? 'Conta Dropbox'}</span>
               </div>
               <div className="stat">
                 <b>{formatDate(status?.lastSync ?? null)}</b>
@@ -170,14 +190,14 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
               </div>
               <div className="stat">
                 <b>{info?.works != null ? `${info.works} obra(s)` : '—'}</b>
-                <span>No backup do Drive</span>
+                <span>No backup do Dropbox</span>
               </div>
             </div>
 
             {lastError !== '' ? <div className="banner error">{lastError}</div> : null}
             {syncing ? (
               <div className="banner info">
-                <i className="fa-solid fa-spinner fa-spin" /> Sincronizando com o Google Drive…
+                <i className="fa-solid fa-spinner fa-spin" /> Sincronizando com o Dropbox…
               </div>
             ) : null}
 
@@ -191,7 +211,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
                 void disconnect();
               }}
               disabled={!connected || working}
-              title="Desconecta a conta Google deste aplicativo"
+              title="Desconecta a conta Dropbox deste aplicativo"
             >
               <i className="fa-solid fa-link-slash" /> Desconectar
             </button>
@@ -220,14 +240,14 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
               }}
               disabled={working}
             >
-              <i className="fa-brands fa-google" />{' '}
-              {busy === 'auth' ? 'Autorizando…' : 'Conectar ao Drive'}
+              <i className="fa-brands fa-dropbox" />{' '}
+              {busy === 'auth' ? 'Autorizando…' : 'Conectar ao Dropbox'}
             </button>
             <button
               className="btn"
               onClick={() => setPromptRestore(true)}
               disabled={!connected || working}
-              title="Baixa o backup do Drive e substitui a biblioteca atual"
+              title="Baixa o backup do Dropbox e substitui a biblioteca atual"
             >
               <i className="fa-solid fa-clock-rotate-left" />{' '}
               {busy === 'restore' ? 'Restaurando…' : 'Restaurar'}

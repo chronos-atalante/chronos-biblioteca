@@ -2,15 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { backupInfo, backupNow, getStatus, initDrive } from '@zero/main/drive';
-import { EMBEDDED_CLIENT_ID, SCOPE_VERSION } from '@zero/main/drive/constants';
+import { SCOPE_VERSION } from '@zero/main/drive/constants';
 import { saveLibrary } from '@zero/main/library';
 import { saveSettings } from '@zero/main/settings';
 import { makeWork } from '../helpers/fixtures.ts';
 import {
-  CLIENT_ID,
-  FakeDrive,
+  APP_KEY,
+  FakeDropbox,
+  LIST_FOLDER_ENDPOINT,
   PASSPHRASE,
-  SECRET,
   TOKEN_ENDPOINT,
   bodyText,
   connect,
@@ -29,32 +29,34 @@ describe('backupInfo', { timeout: 60_000 }, () => {
     expect(await backupInfo()).toBeNull();
   });
 
-  it('devolve null quando ainda não existe pasta de backup', async () => {
+  it('devolve null quando ainda não existe backup', async () => {
     await connect();
-    stubFetch(() => json({ files: [] }));
+    const drive = new FakeDropbox();
+    stubFetch((call) => drive.handle(call));
     expect(await backupInfo()).toBeNull();
   });
 
   it('devolve null quando não há library.json remoto', async () => {
     await connect();
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
+    drive.seed('outro-arquivo.bin', Buffer.from('x'));
     stubFetch((call) => drive.handle(call));
     expect(await backupInfo()).toBeNull();
   });
 
-  it('resume o backup remoto com o tamanho informado pelo Drive', async () => {
+  it('resume o backup remoto com o tamanho informado pelo Dropbox', async () => {
     await connect();
-    const drive = new FakeDrive();
-    drive.seed(
+    const drive = new FakeDropbox();
+    const id = drive.seed(
       'library.json',
       Buffer.from(JSON.stringify([makeWork(), makeWork({ id: 'b' })])),
-      '2048',
+      2048,
     );
     stubFetch((call) => drive.handle(call));
 
     const info = await backupInfo();
     expect(info).toEqual({
-      id: 'remote-library.json',
+      id,
       name: 'library.json',
       modifiedTime: '2026-02-03T04:05:06.000Z',
       size: 2048,
@@ -62,10 +64,10 @@ describe('backupInfo', { timeout: 60_000 }, () => {
     });
   });
 
-  it('usa o tamanho do buffer quando o Drive não informa', async () => {
+  it('usa o tamanho do buffer quando o Dropbox não informa', async () => {
     await connect();
-    const drive = new FakeDrive();
-    drive.seed('library.json', Buffer.from('[]'));
+    const drive = new FakeDropbox();
+    drive.seedWithoutSize('library.json', Buffer.from('[]'));
     stubFetch((call) => drive.handle(call));
 
     const info = await backupInfo();
@@ -75,8 +77,8 @@ describe('backupInfo', { timeout: 60_000 }, () => {
 
   it('conta zero obras quando o backup remoto não é uma lista', async () => {
     await connect();
-    const drive = new FakeDrive();
-    drive.seed('library.json', Buffer.from('{"x":1}'), '9');
+    const drive = new FakeDropbox();
+    drive.seed('library.json', Buffer.from('{"x":1}'), 9);
     stubFetch((call) => drive.handle(call));
 
     const info = await backupInfo();
@@ -86,7 +88,7 @@ describe('backupInfo', { timeout: 60_000 }, () => {
 
   it('devolve null quando o backup remoto é inválido', async () => {
     await connect();
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     drive.seed('library.json', Buffer.from('não é json'));
     stubFetch((call) => drive.handle(call));
     expect(await backupInfo()).toBeNull();
@@ -113,8 +115,8 @@ describe('renovação de sessão', { timeout: 60_000 }, () => {
       'utf-8',
     );
     saveSettings({
-      driveClientId: CLIENT_ID,
-      driveClientSecret: SECRET,
+      driveClientId: APP_KEY,
+      driveClientSecret: '',
       drivePassphrase: PASSPHRASE,
     });
     initDrive();
@@ -122,7 +124,7 @@ describe('renovação de sessão', { timeout: 60_000 }, () => {
 
   it('renova o access token expirado antes de chamar a API', async () => {
     seedExpiredTokens('refresh-legal');
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     drive.seed('library.json', Buffer.from('[]'));
     const calls = stubFetch((call) =>
       call.url === TOKEN_ENDPOINT
@@ -136,6 +138,8 @@ describe('renovação de sessão', { timeout: 60_000 }, () => {
     const body = bodyText(refresh);
     expect(body).toContain('grant_type=refresh_token');
     expect(body).toContain('refresh_token=refresh-legal');
+    expect(body).toContain(`client_id=${APP_KEY}`);
+    expect(body).not.toContain('client_secret');
     expect(getStatus().connected).toBe(true);
   });
 
@@ -145,40 +149,33 @@ describe('renovação de sessão', { timeout: 60_000 }, () => {
     stubFetch(() => json({}));
     expect(await backupNow()).toEqual({
       ok: false,
-      error: 'Sessão expirada. Conecte a conta Google novamente.',
+      error: 'Sessão expirada. Conecte a conta Dropbox novamente.',
     });
-    expect(getStatus().lastError).toBe('Sessão expirada. Conecte a conta Google novamente.');
+    expect(getStatus().lastError).toBe('Sessão expirada. Conecte a conta Dropbox novamente.');
   });
 
-  it('renova com as credenciais embutidas sem configuração própria', async () => {
+  it('sem chave do aplicativo, orienta configurar a chave', async () => {
     seedExpiredTokens('refresh-legal');
     saveSettings({ driveClientId: '', driveClientSecret: '', drivePassphrase: PASSPHRASE });
     saveLibrary([makeWork({ id: 'obra-9' })]);
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     drive.seed('library.json', Buffer.from('[]'));
-    const calls = stubFetch((call) =>
-      call.url === TOKEN_ENDPOINT
-        ? json({ access_token: 'renovado', expires_in: 3600 })
-        : drive.handle(call),
-    );
+    stubFetch((call) => drive.handle(call));
 
     const result = await backupNow();
-    expect(result.ok).toBe(true);
-    const refresh = calls.find((call) => call.url === TOKEN_ENDPOINT);
-    expect(refresh).toBeDefined();
-    expect(bodyText(refresh)).toContain(`client_id=${EMBEDDED_CLIENT_ID}`);
-    expect(getStatus().connected).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('chave do aplicativo Dropbox');
   });
 
   it('reporta falha quando a renovação é recusada', async () => {
     seedExpiredTokens('refresh-legal');
     saveLibrary([makeWork({ id: 'obra-10' })]);
-    stubFetch(() => json({ error: 'invalid_grant' }, 400));
+    stubFetch(() => json({ error_summary: 'invalid_grant/' }, 400));
     expect(await backupNow()).toEqual({
       ok: false,
-      error: 'Não foi possível renovar a sessão do Google Drive.',
+      error: 'Não foi possível renovar a sessão do Dropbox.',
     });
-    expect(getStatus().lastError).toBe('Não foi possível renovar a sessão do Google Drive.');
+    expect(getStatus().lastError).toBe('Não foi possível renovar a sessão do Dropbox.');
   });
 });
 
@@ -189,14 +186,14 @@ describe('retry após 401', { timeout: 60_000 }, () => {
 
   it('renova o token e repete a chamada', async () => {
     await connect();
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     drive.seed('library.json', Buffer.from('[]'));
     let unauthorized = true;
     const calls = stubFetch((call) => {
       if (call.url === TOKEN_ENDPOINT) {
         return json({ access_token: 'renovado', expires_in: 3600 });
       }
-      if (unauthorized && call.url.includes('pageSize=1000')) {
+      if (unauthorized && call.url === LIST_FOLDER_ENDPOINT) {
         unauthorized = false;
         return json({}, 401);
       }
@@ -204,6 +201,6 @@ describe('retry após 401', { timeout: 60_000 }, () => {
     });
 
     expect(await backupInfo()).not.toBeNull();
-    expect(calls.filter((call) => call.url.includes('pageSize=1000'))).toHaveLength(2);
+    expect(calls.filter((call) => call.url === LIST_FOLDER_ENDPOINT)).toHaveLength(2);
   });
 });

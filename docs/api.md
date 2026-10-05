@@ -32,12 +32,12 @@ níveis (método → canal → origem dos dados):
 | `pickCover()`          | `cover:pick`        | diálogo do SO → copia para `covers/`          |
 | `settings.get()`       | `settings:get`      | `settings.json` local                         |
 | `settings.set(cfg)`    | `settings:set`      | normaliza e grava `settings.json` (modo 0600) |
-| `drive.status()`       | `drive:status`      | estado em memória (+ `drive-tokens.json`)     |
-| `drive.auth()`         | `drive:auth`        | OAuth PKCE + loopback `127.0.0.1`             |
-| `drive.backup()`       | `drive:backup`      | criptografa e envia ao `appDataFolder`        |
+| `drive.status()`       | `drive:status`      | estado em memória (+ `dropbox-tokens.json`)   |
+| `drive.auth()`         | `drive:auth`        | OAuth PKCE + loopback `localhost:17431`       |
+| `drive.backup()`       | `drive:backup`      | criptografa e envia à pasta do app            |
 | `drive.restore(senha)` | `drive:restore`     | baixa, decifra e substitui a biblioteca       |
 | `drive.backupInfo()`   | `drive:backup-info` | metadados do `library.json` remoto            |
-| `drive.disconnect()`   | `drive:disconnect`  | apaga `drive-tokens.json` local               |
+| `drive.disconnect()`   | `drive:disconnect`  | apaga `dropbox-tokens.json` local             |
 | `drive.onStatus(cb)`   | evento (sem invoke) | assina `drive:status-changed`                 |
 
 ---
@@ -91,8 +91,8 @@ usuário cancelar. A imagem é servida pelo protocolo interno (§6).
 
 ```ts
 interface AppSettings {
-  driveClientId: string; // '' = usa as credenciais embutidas
-  driveClientSecret: string; // '' = usa as credenciais embutidas
+  driveClientId: string; // App key do Dropbox ('' = usa a chave embutida)
+  driveClientSecret: string; // legado do provedor anterior, ignorado
   drivePassphrase: string; // senha de criptografia do backup (obrigatória p/ backup)
 }
 ```
@@ -112,9 +112,9 @@ Normaliza (`trim` em ID/secret; senha preservada como digitada), grava
 
 ---
 
-## 5. Google Drive
+## 5. Backup no Dropbox
 
-Fluxo completo em [`google-drive.md`](google-drive.md). Resumo dos métodos:
+Fluxo completo em [`dropbox.md`](dropbox.md). Resumo dos métodos:
 
 ### `drive.status() → Promise<DriveStatus>`
 
@@ -130,32 +130,37 @@ interface DriveStatus {
 
 ### `drive.auth() → Promise<{ ok: boolean; error?: string }>`
 
-Abre o navegador (PKCE + loopback em `127.0.0.1`), troca o código por tokens e
-grava `drive-tokens.json` (modo `0600`). Falhas típicas: `access_denied`
-(usuário recusou), `Tempo esgotado aguardando autorização.`,
-`Falha ao obter tokens (HTTP).`.
+Abre o navegador (PKCE, sem `app secret`, com `token_access_type=offline`) e escuta o
+callback num servidor loopback de **porta fixa** (`localhost:17431` — o Dropbox exige a
+URI de redirect pré-cadastrada no App Console, então a porta não pode ser sorteada;
+se estiver ocupada, cai para uma livre e o Dropbox recusa com `redirect_uri_mismatch`).
+Troca o código por tokens e grava `dropbox-tokens.json` (modo `0600`). Falhas típicas:
+`access_denied` (usuário recusou), `Tempo esgotado aguardando autorização.`,
+`Falha ao obter tokens (HTTP).`. Sem App key (nem embutida, nem nas Configurações), recusa
+antes de abrir o navegador.
 
 ### `drive.backup() → Promise<{ ok: boolean; error?: string; summary?: BackupSummary }>`
 
 Pré-condições, nesta ordem: conta conectada, biblioteca local não vazia,
 senha de criptografia definida, nenhuma sincronização em andamento. Envia
-`library.json` + capas **sempre criptografados** ao espaço oculto
-`appDataFolder` e apaga arquivos remotos órfãos.
+`library.json` + capas **sempre criptografados** à pasta do app
+(`/Apps/Chronos Biblioteca`, o `path` raiz da API com permissão App folder) e apaga
+arquivos remotos órfãos. Cada upload usa `mode: overwrite` direto no
+`content.dropboxapi.com` — não há multipart nem id prévio.
 
 Cifra (ver `src/main/drive/crypto.ts`): AES-256-GCM com chave de 32 bytes
 derivada por **scrypt explícito** (`N=2¹⁶`, `r=8`, `p=1`), salt de 16 e IV de
 12 bytes aleatórios por arquivo, tag de 16 bytes verificada na leitura.
 Formato atual `WTENC2`; backups antigos `WTENC1` (scrypt padrão) continuam
-restauráveis. A migração da pasta legada recifra arquivos em claro quando há
-senha configurada (nunca há dupla criptografia).
+restauráveis.
 
-Nomes remotos opacos: nada com `library.json` ou nome de capa viaja em claro.
-Cada upload usa `HMAC-SHA256(chaveDeNomes, nomeLocal)` como nome remoto (chave
-determinística derivada da senha por scrypt, só para nomes — o conteúdo usa
+Nomes remotos opacos: a pasta do app é visível na conta do usuário, então nada nela
+pode entregar o conteúdo. Cada upload usa `HMAC-SHA256(chaveDeNomes, nomeLocal)` como
+nome remoto (chave determinística derivada da senha por scrypt, só para nomes — o conteúdo usa
 outra chave), mais um **manifesto cifrado** (`manifest.json` → HMAC)
 `{ nomeRemoto: nomeLocal }` gravado por último como "commit" do backup. A
 restauração e o `backupInfo` resolvem os nomes pelo manifesto, com fallback
-para backups legados em claro; manifesto ausente sem legado = "nenhum
+para arquivos em claro; manifesto ausente sem arquivos = "nenhum
 backup"; manifesto corrompido/senha errada = falha fechada.
 
 ```ts
@@ -170,21 +175,24 @@ interface BackupSummary {
 
 ### `drive.restore(passphrase: string) → Promise<{ ok: boolean; error?: string; works?: number }>`
 
-Baixa o backup, decifra com a senha, valida item a item e **substitui** a
+Baixa cada arquivo da pasta do app pelos ids listados, resolve os nomes locais pelo
+manifesto cifrado, decifra com a senha, valida obra por obra e **substitui** a
 biblioteca local (incluindo capas). Senha errada ou arquivo corrompido:
 `Senha de criptografia incorreta ou backup corrompido.` Sem backup remoto:
-`Nenhum backup encontrado no espaço oculto do Drive.`
+`Nenhum backup encontrado na pasta do app no Dropbox.`
 
 ### `drive.backupInfo() → Promise<BackupSummary | null>`
 
 Metadados do backup remoto (`null` se desconectado, sem backup ou ilegível).
-`size` usa o tamanho informado pelo Drive, com fallback para os bytes
-baixados; `works` é `0` se o conteúdo não for uma lista.
+A listagem é paginada (`list_folder` + `list_folder/continue`). `size` usa o tamanho
+informado pelo Dropbox, com fallback para os bytes baixados; `works` é `0` se o conteúdo
+não for uma lista.
 
 ### `drive.disconnect() → Promise<DriveStatus>`
 
-Apaga `drive-tokens.json` local e devolve o status desconectado. O backup na
-nuvem **permanece** (apague-o pelo Drive Web, se quiser).
+Apaga `dropbox-tokens.json` local e devolve o status desconectado. O backup na
+nuvem **permanece** (apague a pasta `/Apps/Chronos Biblioteca` pelo Dropbox Web, se quiser;
+para cortar o acesso do app, remova-o em `dropbox.com/account/security`).
 
 ### `drive.onStatus(cb) → () => void`
 
@@ -196,17 +204,17 @@ ao desmontar o componente.
 
 | Mensagem                                                | Quando                                        |
 | ------------------------------------------------------- | --------------------------------------------- |
-| `Conecte a conta Google primeiro.`                      | backup/restauração sem sessão                 |
+| `Conecte a conta Dropbox primeiro.`                     | backup/restauração sem sessão                 |
 | `Nenhuma biblioteca local para backup. …`               | backup com biblioteca vazia                   |
 | `Defina uma senha de criptografia do backup…`           | backup sem senha configurada                  |
 | `Sincronização já em andamento.`                        | backup/restauração paralelos                  |
-| `Sessão expirada. Conecte a conta Google novamente.`    | refresh token ausente                         |
-| `Não foi possível renovar a sessão do Google Drive.`    | refresh recusado pelo Google                  |
+| `Sessão expirada. Conecte a conta Dropbox novamente.`   | refresh token ausente                         |
+| `Não foi possível renovar a sessão do Dropbox.`         | refresh recusado pelo Dropbox                 |
 | `Senha de criptografia incorreta ou backup corrompido.` | restauração com senha errada                  |
-| `Nenhum backup encontrado no espaço oculto do Drive.`   | restauração sem backup remoto                 |
+| `Nenhum backup encontrado na pasta do app no Dropbox.`  | restauração sem backup remoto                 |
 | `Backup inválido (library.json corrompido).`            | backup remoto não é uma lista de obras        |
-| `Permissões do Google atualizadas. Reconecte…`          | escopos do app mudaram desde a sessão salva   |
-| `Erro do Google Drive (HTTP 500).`                      | falha de rede/API sem corpo JSON aproveitável |
+| `Permissões do Dropbox atualizadas. Reconecte…`         | escopos do app mudaram desde a sessão salva   |
+| `Erro do Dropbox (HTTP 500).`                           | falha de rede/API sem corpo JSON aproveitável |
 
 ---
 

@@ -1,13 +1,14 @@
 import fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { backupNow, getStatus, restoreNow } from '@zero/main/drive';
+import { backupInfo, backupNow, getStatus, restoreNow } from '@zero/main/drive';
 import { nameKeyFor, remoteName } from '@zero/main/drive/crypto';
 import { loadLibrary, saveLibrary } from '@zero/main/library';
 import { makeWork } from '../helpers/fixtures.ts';
 import {
-  FakeDrive,
-  LEGACY_FOLDER_ID,
+  FakeDropbox,
+  LIST_FOLDER_ENDPOINT,
   PASSPHRASE,
+  bodyField,
   connect,
   coversPath,
   defer,
@@ -17,6 +18,10 @@ import {
   stubFetch,
 } from '../helpers/drive.ts';
 
+function uploadedNames(drive: FakeDropbox): string[] {
+  return [...drive.files.values()].map((file) => file.name);
+}
+
 describe('backupNow', { timeout: 60_000 }, () => {
   beforeEach(() => {
     resetDrive();
@@ -25,13 +30,14 @@ describe('backupNow', { timeout: 60_000 }, () => {
   it('exige conta conectada', async () => {
     expect(await backupNow()).toEqual({
       ok: false,
-      error: 'Conecte a conta Google primeiro.',
+      error: 'Conecte a conta Dropbox primeiro.',
     });
   });
 
   it('exige uma biblioteca local', async () => {
     await connect();
-    stubFetch(() => json({ files: [] }));
+    const drive = new FakeDropbox();
+    stubFetch((call) => drive.handle(call));
     expect(await backupNow()).toEqual({
       ok: false,
       error: 'Nenhuma biblioteca local para backup. Adicione ao menos uma obra.',
@@ -44,7 +50,7 @@ describe('backupNow', { timeout: 60_000 }, () => {
     saveLibrary([makeWork({ id: 'obra-1' })]);
     const gate = defer();
     stubFetch((call) => {
-      if (call.url.includes('pageSize=1')) return gate.promise;
+      if (call.url === LIST_FOLDER_ENDPOINT) return gate.promise;
       return json({});
     });
     const first = backupNow();
@@ -53,7 +59,7 @@ describe('backupNow', { timeout: 60_000 }, () => {
       ok: false,
       error: 'Sincronização já em andamento.',
     });
-    gate.resolve(json({ error: { message: 'cancelado' } }, 500));
+    gate.resolve(json({ error_summary: 'cancelado' }, 500));
     const outcome = await first;
     expect(outcome.ok).toBe(false);
     expect(outcome.error).toBe('cancelado');
@@ -63,7 +69,7 @@ describe('backupNow', { timeout: 60_000 }, () => {
   it('exige senha de criptografia antes de enviar', async () => {
     await connect('');
     saveLibrary([makeWork({ id: 'obra-2' })]);
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     stubFetch((call) => drive.handle(call));
 
     const result = await backupNow();
@@ -75,10 +81,10 @@ describe('backupNow', { timeout: 60_000 }, () => {
     expect(getStatus().syncing).toBe(false);
   });
 
-  it('envia cifrado para o espaço oculto e registra o resumo', async () => {
+  it('envia cifrado para a pasta do app e registra o resumo', async () => {
     await connect();
     saveLibrary([makeWork({ id: 'obra-3', title: 'Título Sigiloso' })]);
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     stubFetch((call) => drive.handle(call));
 
     const result = await backupNow();
@@ -88,7 +94,6 @@ describe('backupNow', { timeout: 60_000 }, () => {
     expect(result.summary?.works).toBe(1);
     expect(result.summary?.size ?? 0).toBeGreaterThan(0);
     expect(getStatus().lastSync).not.toBeNull();
-    expect(drive.folderId).toBeNull();
 
     const uploads = [...drive.files.values()].map((file) => file.content);
     expect(uploads.length).toBeGreaterThan(0);
@@ -99,61 +104,57 @@ describe('backupNow', { timeout: 60_000 }, () => {
   it('atualiza arquivos existentes e apaga remotos órfãos', async () => {
     await connect();
     saveLibrary([makeWork({ id: 'obra-4' })]);
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     const key = nameKeyFor(PASSPHRASE);
     const libraryRemote = remoteName('library.json', key);
     const orphanRemote = remoteName('capa-antiga.png', key);
-    drive.seed(libraryRemote, Buffer.from('[]'));
-    drive.seed(orphanRemote, Buffer.from('png'));
-    drive.seed('capa-legada.png', Buffer.from('png'));
+    const libraryId = drive.seed(libraryRemote, Buffer.from('[]'));
+    const orphanId = drive.seed(orphanRemote, Buffer.from('png'));
+    const legacyId = drive.seed('capa-legada.png', Buffer.from('png'));
     const deleted: string[] = [];
     const original = drive.handle.bind(drive);
     stubFetch((call) => {
-      if ((call.init.method ?? 'GET').toUpperCase() === 'DELETE') {
-        const id = /\/files\/([^/]+)$/.exec(new URL(call.url).pathname)?.[1] ?? '';
-        deleted.push(id);
+      if (call.url.endsWith('/files/delete_v2')) {
+        const target = bodyField(call, 'path');
+        if (target !== '') deleted.push(target);
       }
       return original(call);
     });
 
     const result = await backupNow();
     expect(result.ok).toBe(true);
-    expect(result.summary?.id).toBe(`remote-${libraryRemote}`);
-    expect(deleted).toContain(`remote-${orphanRemote}`);
-    expect(deleted).toContain('remote-capa-legada.png');
-    expect(drive.files.has(`remote-${orphanRemote}`)).toBe(false);
-    expect(drive.files.has(`remote-${libraryRemote}`)).toBe(true);
-    const names = [...drive.files.keys()].map((id) => id.replace(/^remote-(?:\d+-)?/, ''));
+    expect(result.summary?.id).toBe(libraryId);
+    expect(deleted).toContain(orphanId);
+    expect(deleted).toContain(legacyId);
+    expect(drive.files.has(orphanId)).toBe(false);
+    expect(drive.findByName(libraryRemote)).toBeDefined();
+    const names = uploadedNames(drive);
     expect(names).not.toContain('library.json');
     expect(names).not.toContain('capa-antiga.png');
     expect(names).not.toContain('capa-legada.png');
   });
 
-  it('escapa aspas na pasta e nos ids consultados', async () => {
+  it('pagina a listagem quando há mais arquivos que o limite', async () => {
     await connect();
-    saveLibrary([makeWork({ id: 'obra-7' })]);
-    const drive = new FakeDrive();
-    drive.folderId = LEGACY_FOLDER_ID;
-    drive.seed('library.json', Buffer.from('[]'));
+    const drive = new FakeDropbox();
+    drive.pageSize = 2;
+    for (let i = 0; i < 5; i += 1) {
+      drive.seed(`arquivo-${i}.bin`, Buffer.from([i]));
+    }
     const calls = stubFetch((call) => drive.handle(call));
 
-    const result = await backupNow();
-    expect(result.ok).toBe(true);
-    const listCall = calls.find((call) => call.url.includes('pageSize=1000'));
-    expect(listCall).toBeDefined();
-    const decoded = decodeURIComponent(listCall?.url ?? '');
-    expect(decoded).toContain("\\'");
-    expect(decoded).toContain('\\\\barra');
-    expect(drive.folderId).toBeNull();
+    expect(await backupInfo()).toBeNull();
+    const continued = calls.filter((call) => call.url.endsWith('/list_folder/continue'));
+    expect(continued.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('reporta erro vindo da API do Drive', async () => {
+  it('reporta erro vindo da API do Dropbox', async () => {
     await connect();
     saveLibrary([makeWork({ id: 'obra-5' })]);
-    stubFetch(() => json({ error: { message: 'Cota excedida.' } }, 403));
+    stubFetch(() => json({ error_summary: 'insufficient_space' }, 409));
     const result = await backupNow();
-    expect(result).toEqual({ ok: false, error: 'Cota excedida.' });
-    expect(getStatus().lastError).toBe('Cota excedida.');
+    expect(result).toEqual({ ok: false, error: 'insufficient_space' });
+    expect(getStatus().lastError).toBe('insufficient_space');
     expect(getStatus().syncing).toBe(false);
   });
 
@@ -162,11 +163,11 @@ describe('backupNow', { timeout: 60_000 }, () => {
     saveLibrary([makeWork({ id: 'obra-6' })]);
     stubFetch(() => new Response('erro interno', { status: 500 }));
     const result = await backupNow();
-    expect(result).toEqual({ ok: false, error: 'Erro do Google Drive (HTTP 500).' });
+    expect(result).toEqual({ ok: false, error: 'Erro do Dropbox (HTTP 500).' });
   });
 });
 
-describe('restoreNow', () => {
+describe('restoreNow', { timeout: 60_000 }, () => {
   beforeEach(() => {
     resetDrive();
   });
@@ -174,13 +175,13 @@ describe('restoreNow', () => {
   it('exige conta conectada', async () => {
     expect(await restoreNow(PASSPHRASE)).toEqual({
       ok: false,
-      error: 'Conecte a conta Google primeiro.',
+      error: 'Conecte a conta Dropbox primeiro.',
     });
   });
 
   it('restaura biblioteca e capas a partir do backup', async () => {
     await connect();
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     const works = [makeWork({ id: 'restaurada', coverFile: 'capa.png' })];
     drive.seed('library.json', Buffer.from(JSON.stringify(works)));
     drive.seed('capa.png', Buffer.from('bytes-da-capa'));
@@ -194,7 +195,7 @@ describe('restoreNow', () => {
 
   it('descriptografa o backup com a senha configurada', async () => {
     await connect();
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     const payload = [makeWork({ id: 'cifrada' })];
     drive.seed('library.json', encryptForTest(Buffer.from(JSON.stringify(payload)), PASSPHRASE));
     stubFetch((call) => drive.handle(call));
@@ -206,7 +207,7 @@ describe('restoreNow', () => {
 
   it('recusa senha de criptografia errada', async () => {
     await connect();
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     const payload = [makeWork({ id: 'cifrada' })];
     drive.seed('library.json', encryptForTest(Buffer.from(JSON.stringify(payload)), 'outra-senha'));
     stubFetch((call) => drive.handle(call));
@@ -218,19 +219,19 @@ describe('restoreNow', () => {
     });
   });
 
-  it('falha quando não há library.json no Drive', async () => {
+  it('falha quando não há library.json no Dropbox', async () => {
     await connect();
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     stubFetch((call) => drive.handle(call));
     expect(await restoreNow(PASSPHRASE)).toEqual({
       ok: false,
-      error: 'Nenhum backup encontrado no espaço oculto do Drive.',
+      error: 'Nenhum backup encontrado na pasta do app no Dropbox.',
     });
   });
 
   it('falha quando o backup não é uma lista de obras válida', async () => {
     await connect();
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     drive.seed('library.json', Buffer.from(JSON.stringify([{ id: 42 }])));
     stubFetch((call) => drive.handle(call));
     expect(await restoreNow(PASSPHRASE)).toEqual({
@@ -241,7 +242,7 @@ describe('restoreNow', () => {
 
   it('falha quando o conteúdo nem é uma lista', async () => {
     await connect();
-    const drive = new FakeDrive();
+    const drive = new FakeDropbox();
     drive.seed('library.json', Buffer.from(JSON.stringify({ obras: [] })));
     stubFetch((call) => drive.handle(call));
     expect(await restoreNow(PASSPHRASE)).toEqual({
@@ -252,9 +253,9 @@ describe('restoreNow', () => {
 
   it('reporta erro da API durante a restauração', async () => {
     await connect();
-    stubFetch(() => json({ error: { message: 'Sem permissão.' } }, 403));
+    stubFetch(() => json({ error_summary: 'no_permission' }, 403));
     const result = await restoreNow(PASSPHRASE);
-    expect(result).toEqual({ ok: false, error: 'Sem permissão.' });
-    expect(getStatus().lastError).toBe('Sem permissão.');
+    expect(result).toEqual({ ok: false, error: 'no_permission' });
+    expect(getStatus().lastError).toBe('no_permission');
   });
 });

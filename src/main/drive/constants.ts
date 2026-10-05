@@ -1,27 +1,36 @@
 export const SCOPES = [
-  'https://www.googleapis.com/auth/drive.appdata',
-  'https://www.googleapis.com/auth/drive.file',
-  'openid',
-  'email',
+  'account_info.read',
+  'files.metadata.read',
+  'files.metadata.write',
+  'files.content.read',
+  'files.content.write',
 ].join(' ');
 
-/** Versão dos escopos pedidos; mudança invalidam a sessão salva (reconexão obrigatória). */
-export const SCOPE_VERSION = 2;
+/** Versão dos escopos pedidos; mudança invalida a sessão salva (reconexão obrigatória). */
+export const SCOPE_VERSION = 3;
 
-/** Espaço oculta do Drive (appDataFolder), invisível na interface do usuário. */
-export const APP_DATA_SPACE = 'appDataFolder';
+/**
+ * Chave do aplicativo Dropbox (App key) embutida.
+ *
+ * Com PKCE o Dropbox dispensa o `app secret` em clientes públicos: só a chave
+ * identifica o app e o segredo real é o `refresh_token` guardado no keyring.
+ * Enquanto nenhum app existir, fica vazia e cada instalação usa a própria
+ * chave informada nas Configurações (ver `docs/dropbox.md`).
+ */
+export const EMBEDDED_APP_KEY = '';
 
-/** Pasta legada em "Meu Drive", usada antes da migração para appDataFolder. */
-export const LEGACY_FOLDER_NAME = '.webtoons-backup';
-export const FOLDER_MIME = 'application/vnd.google-apps.folder';
-
-export const EMBEDDED_CLIENT_ID =
-  '565185989671-giruq2vbmjakauomsn6s902cufkfqn9f.apps.googleusercontent.com';
-export const EMBEDDED_CLIENT_SECRET = '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';
-
-export const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
-export const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
-export const USERINFO_ENDPOINT = 'https://www.googleapis.com/oauth2/v3/userinfo';
-export const DRIVE_API = 'https://www.googleapis.com/drive/v3';
-export const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
+export const AUTH_ENDPOINT = 'https://www.dropbox.com/oauth2/authorize';
+export const TOKEN_ENDPOINT = 'https://api.dropboxapi.com/oauth2/token';
+export const API_ENDPOINT = 'https://api.dropboxapi.com/2';
+export const CONTENT_ENDPOINT = 'https://content.dropboxapi.com/2';
 export const AUTH_TIMEOUT_MS = 5 * 60 * 1000;
+
+/**
+ * Porta fixa do callback loopback (`http://localhost:17431/callback`).
+ *
+ * Diferente do Google, o Dropbox exige a URI de redirecionamento pré-cadastrada
+ * no App Console — por isso a porta não pode ser sorteada. Cadastre exatamente
+ * essa URI no app (ver `docs/dropbox.md`).
+ */
+export const LOOPBACK_PORT = 17431;
+export const REDIRECT_URI = `http://localhost:${LOOPBACK_PORT}/callback`;
