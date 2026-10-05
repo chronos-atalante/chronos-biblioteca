@@ -320,12 +320,12 @@ describe('App — modais', () => {
   });
 });
 
-describe('App — status do Drive', () => {
+describe('App — status do Dropbox', () => {
   it('reflete conexão, sincronização e desconexão no cabeçalho', async () => {
     const { mock } = setup();
     await screen.findByText(/4 obra\(s\)/);
-    expect(screen.getByTitle('Configurações do backup no Google Drive')).toHaveTextContent(
-      'Drive off',
+    expect(screen.getByTitle('Configurações do backup no Dropbox')).toHaveTextContent(
+      'Dropbox off',
     );
 
     mock.emitStatus({
@@ -335,7 +335,7 @@ describe('App — status do Drive', () => {
       lastError: null,
       accountEmail: 'leitor@exemplo.com',
     });
-    expect(await screen.findByText('Drive conectado')).toBeInTheDocument();
+    expect(await screen.findByText('Dropbox conectado')).toBeInTheDocument();
 
     mock.emitStatus({
       connected: true,

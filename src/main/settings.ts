@@ -4,6 +4,13 @@ import { safeStorage } from 'electron';
 import { configDir } from '@zero/main/library';
 import type { AppSettings } from '@zero/types';
 
+/**
+ * Forma persistida das configurações (nomes de campos mantidos por
+ * compatibilidade com o `settings.json` existente):
+ * - `driveClientId`: chave do aplicativo Dropbox (App key);
+ * - `driveClientSecret`: legado do provedor anterior, ignorado;
+ * - `drivePassphrase`: senha de criptografia do backup.
+ */
 const DEFAULTS: AppSettings = {
   driveClientId: '',
   driveClientSecret: '',

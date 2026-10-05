@@ -4,20 +4,12 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DriveStatus } from '@zero/types';
 import { authorize, disconnect, getStatus, initDrive, onStatus } from '@zero/main/drive';
-import { EMBEDDED_CLIENT_ID, SCOPE_VERSION } from '@zero/main/drive/constants';
+import { SCOPE_VERSION } from '@zero/main/drive/constants';
 import { saveSettings } from '@zero/main/settings';
 import { shell } from '../mocks/electron.ts';
-import {
-  CLIENT_ID,
-  SECRET,
-  connect,
-  json,
-  resetDrive,
-  stubFetch,
-  tokensPath,
-} from '../helpers/drive.ts';
+import { APP_KEY, connect, json, resetDrive, stubFetch, tokensPath } from '../helpers/drive.ts';
 
-describe('estado do Drive', () => {
+describe('estado do Dropbox', { timeout: 60_000 }, () => {
   beforeEach(() => {
     resetDrive();
   });
@@ -76,14 +68,43 @@ describe('estado do Drive', () => {
     initDrive();
     expect(getStatus().connected).toBe(false);
   });
+
+  it('initDrive descarta a sessão do provedor anterior', () => {
+    fs.mkdirSync(path.dirname(tokensPath()), { recursive: true });
+    const legacy = path.join(path.dirname(tokensPath()), 'drive-tokens.json');
+    fs.writeFileSync(
+      legacy,
+      JSON.stringify({
+        accessToken: 'token-google',
+        expiresAt: Date.now() + 3_600_000,
+        accountEmail: 'leitor@example.com',
+        lastSync: null,
+        scopeVersion: 2,
+      }),
+      'utf-8',
+    );
+    initDrive();
+    expect(getStatus().connected).toBe(false);
+    expect(fs.existsSync(legacy)).toBe(false);
+  });
 });
 
-describe('authorize', () => {
+describe('authorize', { timeout: 60_000 }, () => {
   beforeEach(() => {
     resetDrive();
   });
 
-  it('usa as credenciais embutidas quando não há configuração própria', async () => {
+  it('recusa sem abrir o navegador quando não há chave do aplicativo', async () => {
+    saveSettings({ driveClientId: '', driveClientSecret: '', drivePassphrase: 'frase' });
+    const result = await authorize();
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('chave do aplicativo Dropbox');
+    expect(getStatus().lastError).toContain('chave do aplicativo Dropbox');
+    expect(shell.openExternal).not.toHaveBeenCalled();
+  });
+
+  it('abre o OAuth com PKCE, offline e redirect fixo', async () => {
+    saveSettings({ driveClientId: APP_KEY, driveClientSecret: '', drivePassphrase: 'frase' });
     shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
       const redirect = new URL(url).searchParams.get('redirect_uri');
       if (redirect !== null) {
@@ -100,7 +121,14 @@ describe('authorize', () => {
     expect(getStatus().lastError).toBe('access_denied');
     expect(shell.openExternal).toHaveBeenCalledTimes(1);
     const opened = shell.openExternal.mock.calls[0]?.[0] ?? '';
-    expect(opened).toContain(`client_id=${EMBEDDED_CLIENT_ID}`);
+    const params = new URL(opened).searchParams;
+    expect(params.get('client_id')).toBe(APP_KEY);
+    expect(params.get('code_challenge_method')).toBe('S256');
+    expect(params.get('code_challenge')).not.toBeNull();
+    expect(params.get('token_access_type')).toBe('offline');
+    // Porta fixa quando livre; efêmera sob contenção (suíte em paralelo).
+    expect(params.get('redirect_uri')).toMatch(/^http:\/\/localhost:\d+\/callback$/);
+    expect(opened).not.toContain('client_secret');
   });
 
   it('conclui o OAuth pelo callback local e grava o e-mail da conta', async () => {
@@ -113,7 +141,7 @@ describe('authorize', () => {
   });
 
   it('propaga o erro quando o usuário recusa a autorização', async () => {
-    saveSettings({ driveClientId: CLIENT_ID, driveClientSecret: SECRET, drivePassphrase: '' });
+    saveSettings({ driveClientId: APP_KEY, driveClientSecret: '', drivePassphrase: '' });
     shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
       const redirect = new URL(url).searchParams.get('redirect_uri');
       if (redirect !== null) {
@@ -129,7 +157,7 @@ describe('authorize', () => {
   });
 
   it('reporta falha na troca do código por tokens', async () => {
-    saveSettings({ driveClientId: CLIENT_ID, driveClientSecret: SECRET, drivePassphrase: '' });
+    saveSettings({ driveClientId: APP_KEY, driveClientSecret: '', drivePassphrase: '' });
     shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
       const redirect = new URL(url).searchParams.get('redirect_uri');
       if (redirect !== null) {

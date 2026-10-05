@@ -36,8 +36,8 @@ export default function RestorePasswordModal({
 
         <div className="modal-body">
           <div className="banner info">
-            Informe a senha de criptografia usada ao <strong>fazer o backup</strong> no Google
-            Drive. Ela é obrigatória para decifrar os arquivos baixados.
+            Informe a senha de criptografia usada ao <strong>fazer o backup</strong> no Dropbox. Ela
+            é obrigatória para decifrar os arquivos baixados.
           </div>
 
           <div className="field">

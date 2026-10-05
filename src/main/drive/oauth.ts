@@ -3,23 +3,17 @@ import http from 'http';
 import { URLSearchParams } from 'url';
 import { shell } from 'electron';
 import {
+  API_ENDPOINT,
   AUTH_ENDPOINT,
   AUTH_TIMEOUT_MS,
+  LOOPBACK_PORT,
+  REDIRECT_URI,
   SCOPES,
   SCOPE_VERSION,
   TOKEN_ENDPOINT,
-  USERINFO_ENDPOINT,
 } from '@zero/main/drive/constants';
-import { ensureLegacyMigration } from '@zero/main/drive/migrate';
 import { parseJson } from '@zero/main/drive/json';
-import {
-  credentials,
-  emit,
-  persistState,
-  setError,
-  state,
-  toMessage,
-} from '@zero/main/drive/state';
+import { appKey, emit, persistState, setError, state, toMessage } from '@zero/main/drive/state';
 import type { Tokens } from '@zero/main/drive/state';
 
 interface AuthOutcome {
@@ -27,65 +21,103 @@ interface AuthOutcome {
   error: string | null;
 }
 
-async function openBrowser(authorizeUrl: string, port: number): Promise<string> {
+const LOOPBACK_HOST = '127.0.0.1';
+
+function listen(server: http.Server, port: number): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    // Host explícito e único: evita a ambiguidade de `localhost` resolver ora
+    // para `127.0.0.1` ora para `::1` enquanto o servidor escuta só em uma
+    // família (navegadores e o `fetch`/`http` tentam as duas).
+    server.listen(port, LOOPBACK_HOST, () => resolve());
+  });
+}
+
+/** Encerra o servidor sem deixar sockets residuais para o próximo fluxo. */
+function shutdown(server: http.Server): void {
+  server.close();
+  server.closeAllConnections();
+}
+
+async function openBrowser(params: URLSearchParams): Promise<{
+  code: string;
+  redirectUri: string;
+}> {
   let resolveOutcome: (outcome: AuthOutcome) => void = () => undefined;
   const outcomePromise = new Promise<AuthOutcome>((resolve) => {
     resolveOutcome = resolve;
   });
 
   const server = http.createServer((req, res) => {
-    const url = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
+    const url = new URL(req.url ?? '/', 'http://localhost');
     if (url.pathname !== '/callback') {
       res.writeHead(404).end();
       return;
     }
     const code = url.searchParams.get('code');
-    const error = url.searchParams.get('error');
+    const error = url.searchParams.get('error_description') ?? url.searchParams.get('error');
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    // Só conclui após o flush: `closeAllConnections` destruiria a resposta
+    // ainda na fila se resolvesse antes.
     res.end(
       `<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;background:#000;color:#e8ecf6;padding:40px">
         <h2>${error !== null ? 'Autorização recusada' : 'Autorização concluída'}</h2>
         <p>${error !== null ? 'Você pode fechar esta aba.' : 'Pode fechar esta aba e voltar para o aplicativo.'}</p>
       </body>`,
+      () => {
+        shutdown(server);
+        resolveOutcome({ code, error });
+      },
     );
-    server.close();
-    resolveOutcome({ code, error });
   });
 
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(port, '127.0.0.1', () => resolve());
-  });
+  // A URI registrada no App Console usa a porta fixa; se ela estiver ocupada
+  // (ex.: suíte de testes em paralelo), cai para uma porta livre — nesse caso
+  // o Dropbox recusa o redirect, e o erro de troca de tokens indica o motivo.
+  let redirectUri = REDIRECT_URI;
+  try {
+    await listen(server, LOOPBACK_PORT);
+  } catch {
+    server.removeAllListeners('error');
+    await listen(server, 0);
+    const address = server.address();
+    const port = typeof address === 'object' && address !== null ? address.port : LOOPBACK_PORT;
+    redirectUri = `http://localhost:${port}/callback`;
+  }
+  params.set('redirect_uri', redirectUri);
 
-  await shell.openExternal(authorizeUrl);
+  await shell.openExternal(`${AUTH_ENDPOINT}?${params.toString()}`);
 
-  const timeout = new Promise<AuthOutcome>((resolve) =>
-    setTimeout(
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<AuthOutcome>((resolve) => {
+    timer = setTimeout(
       () => resolve({ code: null, error: 'Tempo esgotado aguardando autorização.' }),
       AUTH_TIMEOUT_MS,
-    ),
-  );
+    );
+    // Não segura o processo (testes) quando o fluxo já terminou por outro caminho.
+    if (typeof timer.unref === 'function') timer.unref();
+  });
   const outcome = await Promise.race([outcomePromise, timeout]);
-  if (server.listening) server.close();
+  if (timer !== undefined) clearTimeout(timer);
+  if (server.listening) shutdown(server);
 
-  if (outcome.code !== null && outcome.code !== '') return outcome.code;
+  if (outcome.code !== null && outcome.code !== '') return { code: outcome.code, redirectUri };
   throw new Error(outcome.error ?? 'Autorização cancelada.');
 }
 
 async function exchangeCode(
   code: string,
-  clientId: string,
-  clientSecret: string,
-  redirectUri: string,
+  key: string,
   codeVerifier: string,
+  redirectUri: string,
 ): Promise<Tokens> {
+  // Cliente público com PKCE: o Dropbox não exige `app secret` aqui.
   const body = new URLSearchParams({
     code,
-    client_id: clientId,
-    client_secret: clientSecret,
-    redirect_uri: redirectUri,
     grant_type: 'authorization_code',
     code_verifier: codeVerifier,
+    client_id: key,
+    redirect_uri: redirectUri,
   });
   const res = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
@@ -131,8 +163,10 @@ function isTokenResponse(
 async function fetchAccountEmail(token: string): Promise<string | null> {
   try {
     // Token no header Authorization (nunca na query string: URL vaza em logs/proxies).
-    const res = await fetch(USERINFO_ENDPOINT, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`${API_ENDPOINT}/users/get_current_account`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: 'null',
     });
     if (!res.ok) return null;
     const data = await parseJson<{ email?: string | undefined }>(res);
@@ -143,41 +177,31 @@ async function fetchAccountEmail(token: string): Promise<string | null> {
 }
 
 export async function authorize(): Promise<{ ok: boolean; error?: string }> {
-  const creds = credentials();
+  const key = appKey();
+  if (key === '') {
+    const error =
+      'Configure a chave do aplicativo Dropbox nas Configurações (ver docs/dropbox.md).';
+    setError(error);
+    return { ok: false, error };
+  }
   try {
-    const port = await freePort();
-    const redirectUri = `http://127.0.0.1:${port}/callback`;
     const codeVerifier = crypto.randomBytes(32).toString('base64url');
     const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
     const params = new URLSearchParams({
-      client_id: creds.clientId,
-      redirect_uri: redirectUri,
+      client_id: key,
       response_type: 'code',
-      scope: SCOPES,
-      access_type: 'offline',
-      prompt: 'consent',
-      include_granted_scopes: 'true',
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
+      scope: SCOPES,
+      token_access_type: 'offline',
     });
-    const code = await openBrowser(`${AUTH_ENDPOINT}?${params.toString()}`, port);
-    const tokens = await exchangeCode(
-      code,
-      creds.clientId,
-      creds.clientSecret,
-      redirectUri,
-      codeVerifier,
-    );
+    const { code, redirectUri } = await openBrowser(params);
+    const tokens = await exchangeCode(code, key, codeVerifier, redirectUri);
     tokens.accountEmail = await fetchAccountEmail(tokens.accessToken);
     state.tokens = tokens;
     setError(null);
     persistState();
     emit();
-    try {
-      await ensureLegacyMigration();
-    } catch {
-      // a migração da pasta legada é retentada no próximo backup/restauração
-    }
     return { ok: true };
   } catch (err) {
     const message = toMessage(err);
@@ -186,40 +210,30 @@ export async function authorize(): Promise<{ ok: boolean; error?: string }> {
   }
 }
 
-function freePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const srv = http.createServer();
-    srv.once('error', reject);
-    srv.listen(0, '127.0.0.1', () => {
-      const address = srv.address();
-      const port = typeof address === 'object' && address !== null ? address.port : 0;
-      srv.close(() => resolve(port));
-    });
-  });
-}
-
 export async function refreshAccessToken(): Promise<string> {
-  const creds = credentials();
+  const key = appKey();
+  if (key === '') {
+    throw new Error('Configure a chave do aplicativo Dropbox nas Configurações.');
+  }
   const refreshToken = state.tokens?.refreshToken;
   if (refreshToken === undefined || refreshToken === '') {
-    throw new Error('Sessão expirada. Conecte a conta Google novamente.');
+    throw new Error('Sessão expirada. Conecte a conta Dropbox novamente.');
   }
   const body = new URLSearchParams({
-    client_id: creds.clientId,
-    client_secret: creds.clientSecret,
-    refresh_token: refreshToken,
     grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+    client_id: key,
   });
   const res = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
   });
-  if (!res.ok) throw new Error('Não foi possível renovar a sessão do Google Drive.');
+  if (!res.ok) throw new Error('Não foi possível renovar a sessão do Dropbox.');
   const data = await parseJson<{ access_token: string; expires_in: number }>(res);
-  if (!isTokenResponse(data)) throw new Error('Não foi possível renovar a sessão do Google Drive.');
+  if (!isTokenResponse(data)) throw new Error('Não foi possível renovar a sessão do Dropbox.');
   const tokens = state.tokens;
-  if (tokens === null) throw new Error('Nenhuma conta Google conectada.');
+  if (tokens === null) throw new Error('Nenhuma conta Dropbox conectada.');
   tokens.accessToken = data.access_token;
   tokens.expiresAt = Date.now() + data.expires_in * 1000;
   persistState();
@@ -228,7 +242,7 @@ export async function refreshAccessToken(): Promise<string> {
 
 export async function accessToken(): Promise<string> {
   const tokens = state.tokens;
-  if (tokens === null) throw new Error('Nenhuma conta Google conectada.');
+  if (tokens === null) throw new Error('Nenhuma conta Dropbox conectada.');
   if (Date.now() > tokens.expiresAt - 60_000) return refreshAccessToken();
   return tokens.accessToken;
 }

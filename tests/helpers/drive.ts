@@ -7,16 +7,14 @@ import { saveSettings } from '@zero/main/settings';
 import { shell } from '../mocks/electron.ts';
 import { resetSandbox, sandboxPath } from './sandbox.ts';
 
-export const CLIENT_ID = 'id.apps.googleusercontent.com';
-export const SECRET = 'GOCSPX-segredo';
+export const APP_KEY = 'app-key-do-teste';
 export const PASSPHRASE = 'frase-secreta';
 
-export const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
-export const USERINFO_ENDPOINT = 'https://www.googleapis.com/oauth2/v3/userinfo';
-const DRIVE_API_PATH = '/drive/v3/files';
-const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
-
-export const LEGACY_FOLDER_ID = `id'com\\barra`;
+export const TOKEN_ENDPOINT = 'https://api.dropboxapi.com/oauth2/token';
+export const ACCOUNT_ENDPOINT = 'https://api.dropboxapi.com/2/users/get_current_account';
+export const LIST_FOLDER_ENDPOINT = 'https://api.dropboxapi.com/2/files/list_folder';
+export const UPLOAD_ENDPOINT = 'https://content.dropboxapi.com/2/files/upload';
+export const DOWNLOAD_ENDPOINT = 'https://content.dropboxapi.com/2/files/download';
 
 export interface FetchCall {
   url: string;
@@ -41,8 +39,34 @@ function requestUrl(input: RequestInfo | URL): string {
 
 /** Corpo textual de uma chamada (o app envia string ou URLSearchParams). */
 export function bodyText(call: FetchCall | undefined): string {
-  const body = call?.init.body;
-  return typeof body === 'string' ? body : '';
+  const body: unknown = call?.init.body;
+  if (typeof body === 'string') return body;
+  if (body instanceof URLSearchParams) return body.toString();
+  return '';
+}
+
+/** Lê um header da chamada, seja `Headers` ou objeto simples. */
+export function headerOf(call: FetchCall, name: string): string {
+  try {
+    return new Headers(call.init.headers).get(name) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+/** JSON do corpo quando a chamada enviou string ou URLSearchParams. */
+export function jsonBody(call: FetchCall): Record<string, unknown> {
+  try {
+    return JSON.parse(bodyText(call)) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+/** Lê um campo string do JSON do corpo ('' se ausente ou de outro tipo). */
+export function bodyField(call: FetchCall, name: string): string {
+  const value: unknown = jsonBody(call)[name];
+  return typeof value === 'string' ? value : '';
 }
 
 export function stubFetch(handler: FetchHandler): FetchCall[] {
@@ -63,7 +87,7 @@ function configPath(name: string): string {
 }
 
 export function tokensPath(): string {
-  return configPath('drive-tokens.json');
+  return configPath('dropbox-tokens.json');
 }
 
 export function coversPath(name: string): string {
@@ -97,120 +121,131 @@ function toBuffer(body: RequestInit['body']): Buffer {
   return Buffer.alloc(0);
 }
 
-interface RemoteFile {
+export interface FakeRemoteFile {
   id: string;
+  name: string;
   content: Buffer;
   modifiedTime: string;
-  size?: string;
+  size?: number | undefined;
 }
 
-/** Drive falso: entende as rotas REST usadas pelo backup/restauração. */
-export class FakeDrive {
-  public folderId: string | null = null;
-  public readonly files = new Map<string, RemoteFile>();
+/** Dropbox falso: entende as rotas usadas pelo backup/restauração. */
+export class FakeDropbox {
+  public readonly files = new Map<string, FakeRemoteFile>();
+  /** Tamanho da página de `list_folder`; `Infinity` desliga a paginação. */
+  public pageSize = Number.POSITIVE_INFINITY;
   private seq = 0;
 
-  public seed(name: string, content: Buffer, size?: string): string {
-    const id = `remote-${name}`;
+  public seed(name: string, content: Buffer, size?: number): string {
+    const id = `id:arquivo-${++this.seq}`;
     this.files.set(id, {
       id,
+      name,
       content,
       modifiedTime: '2026-02-03T04:05:06.000Z',
-      ...(size !== undefined ? { size } : {}),
+      size: size ?? content.byteLength,
     });
     return id;
   }
 
+  public seedWithoutSize(name: string, content: Buffer): string {
+    const id = this.seed(name, content);
+    const file = this.files.get(id);
+    if (file !== undefined) delete file.size;
+    return id;
+  }
+
+  public findByName(name: string): FakeRemoteFile | undefined {
+    for (const file of this.files.values()) {
+      if (file.name === name) return file;
+    }
+    return undefined;
+  }
+
   public handle(call: FetchCall): Response {
     const method = (call.init.method ?? 'GET').toUpperCase();
-    const url = new URL(call.url);
 
-    if (call.url.startsWith(UPLOAD_API)) {
-      return this.upload(call, method);
-    }
-
-    if (url.pathname === DRIVE_API_PATH && method === 'GET') {
-      // pageSize=1 é a busca da pasta legada ".webtoons-backup" (migração).
-      if (url.searchParams.get('pageSize') === '1') {
-        return json({
-          files: this.folderId === null ? [] : [{ id: this.folderId, name: '.webtoons-backup' }],
-        });
+    if (call.url === LIST_FOLDER_ENDPOINT && method === 'POST') {
+      const entries = [...this.files.values()].map((file) => ({
+        '.tag': 'file',
+        id: file.id,
+        name: file.name,
+        server_modified: file.modifiedTime,
+        size: file.size,
+      }));
+      if (entries.length <= this.pageSize) {
+        return json({ entries, cursor: 'cursor-fim', has_more: false });
       }
       return json({
-        files: [...this.files.values()].map((file) => ({
-          id: file.id,
-          name: nameOf(file.id),
-          modifiedTime: file.modifiedTime,
-          ...(file.size !== undefined ? { size: file.size } : {}),
-        })),
+        entries: entries.slice(0, this.pageSize),
+        cursor: `cursor-${this.pageSize}`,
+        has_more: true,
       });
     }
 
-    const idMatch = /^\/drive\/v3\/files\/([^/]+)$/.exec(url.pathname);
-    if (idMatch?.[1] !== undefined) {
-      const id = decodeURIComponent(idMatch[1]);
-      if (method === 'DELETE' && id === this.folderId) {
-        this.folderId = null;
-        return new Response(null, { status: 204 });
-      }
-      const file = this.files.get(id);
-      if (file === undefined) return json({ error: { message: 'Arquivo não encontrado.' } }, 404);
-      if (method === 'DELETE') {
-        this.files.delete(id);
-        return new Response(null, { status: 204 });
-      }
-      if (url.searchParams.get('alt') === 'media') {
-        return new Response(new Uint8Array(file.content), { status: 200 });
-      }
-      return json({ id, name: nameOf(id) });
+    if (call.url === `${LIST_FOLDER_ENDPOINT}/continue` && method === 'POST') {
+      const rawOffset = Number(bodyField(call, 'cursor').replace(/^cursor-/, ''));
+      const offset = Number.isNaN(rawOffset) ? 0 : rawOffset;
+      const entries = [...this.files.values()]
+        .map((file) => ({
+          '.tag': 'file',
+          id: file.id,
+          name: file.name,
+          server_modified: file.modifiedTime,
+          size: file.size,
+        }))
+        .slice(offset, offset + this.pageSize);
+      const rest = offset + this.pageSize;
+      const total = this.files.size;
+      return json({
+        entries,
+        cursor: rest >= total ? 'cursor-fim' : `cursor-${rest}`,
+        has_more: rest < total,
+      });
     }
 
-    return json({ error: { message: `rota desconhecida: ${call.url}` } }, 500);
-  }
-
-  private upload(call: FetchCall, method: string): Response {
-    const idMatch = /\/files\/([^?]+)\?/.exec(call.url);
-    const id = idMatch?.[1] === undefined ? '' : decodeURIComponent(idMatch[1]);
-    const raw = toBuffer(call.init.body);
-    const content = extractMedia(raw);
-    if (method === 'PATCH' && id !== '') {
-      const existing = this.files.get(id);
-      if (existing === undefined) return json({ error: { message: 'inexistente' } }, 404);
-      existing.content = content;
-      return json({ id: existing.id, name: nameOf(id) });
+    if (call.url === 'https://api.dropboxapi.com/2/files/delete_v2' && method === 'POST') {
+      const id = bodyField(call, 'path');
+      if (id === '' || !this.files.has(id)) return json({ error_summary: 'not_found' }, 409);
+      this.files.delete(id);
+      return json({ metadata: { '.tag': 'file', id } });
     }
-    const metaName = extractName(raw);
-    const newId = `remote-${++this.seq}-${metaName}`;
-    this.files.set(newId, { id: newId, content, modifiedTime: new Date().toISOString() });
-    return json({ id: newId, name: metaName });
+
+    if (call.url === ACCOUNT_ENDPOINT && method === 'POST') {
+      return json({ account_id: 'conta-1', email: 'leitor@example.com' });
+    }
+
+    if (call.url === UPLOAD_ENDPOINT && method === 'POST') {
+      const arg = JSON.parse(headerOf(call, 'Dropbox-API-Arg')) as { path?: string };
+      const name = (arg.path ?? '').replace(/^\//, '');
+      const content = toBuffer(call.init.body);
+      const existing = this.findByName(name);
+      if (existing !== undefined) {
+        existing.content = content;
+        existing.size = content.byteLength;
+        existing.modifiedTime = new Date().toISOString();
+        return json({ '.tag': 'file', id: existing.id, name });
+      }
+      const id = `id:arquivo-${++this.seq}`;
+      this.files.set(id, {
+        id,
+        name,
+        content,
+        modifiedTime: new Date().toISOString(),
+        size: content.byteLength,
+      });
+      return json({ '.tag': 'file', id, name });
+    }
+
+    if (call.url === DOWNLOAD_ENDPOINT && method === 'POST') {
+      const arg = JSON.parse(headerOf(call, 'Dropbox-API-Arg')) as { path?: string };
+      const file = this.files.get(arg.path ?? '');
+      if (file === undefined) return json({ error_summary: 'not_found/' }, 409);
+      return new Response(new Uint8Array(file.content), { status: 200 });
+    }
+
+    return json({ error_summary: `rota_desconhecida/${call.url}` }, 500);
   }
-}
-
-function nameOf(id: string): string {
-  const match = /^remote-(?:\d+-)?(.+)$/.exec(id);
-  return match?.[1] ?? id;
-}
-
-function extractName(content: Buffer): string {
-  const match = /"name":"([^"]+)"/.exec(content.toString('utf-8'));
-  return match?.[1] ?? 'desconhecido';
-}
-
-/**
- * O Drive real guarda só a parte de mídia do `multipart/related`; o falso
- * faz o mesmo (antes guardava o envelope inteiro, e o conteúdo baixado não
- * correspondia ao que foi cifrado).
- */
-function extractMedia(body: Buffer): Buffer {
-  const sep = Buffer.from('\r\n\r\n');
-  const first = body.indexOf(sep);
-  if (first === -1) return body;
-  const second = body.indexOf(sep, first + sep.length);
-  if (second === -1) return body;
-  const start = second + sep.length;
-  const end = body.lastIndexOf(Buffer.from('\r\n--'));
-  if (end === -1 || end < start) return body;
-  return body.subarray(start, end);
 }
 
 /** Zera o estado em memória e em disco entre os testes. */
@@ -224,12 +259,13 @@ export function resetDrive(): void {
 /** Faz o fluxo OAuth real do módulo completar contra o callback local. */
 export async function connect(passphrase = PASSPHRASE): Promise<void> {
   saveSettings({
-    driveClientId: CLIENT_ID,
-    driveClientSecret: SECRET,
+    driveClientId: APP_KEY,
+    driveClientSecret: '',
     drivePassphrase: passphrase,
   });
   shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
-    const redirect = new URL(url).searchParams.get('redirect_uri');
+    const params = new URL(url).searchParams;
+    const redirect = params.get('redirect_uri');
     if (redirect !== null) {
       const request = http.get(`${redirect}?code=codigo-valido`);
       request.on('error', () => undefined);
@@ -244,8 +280,8 @@ export async function connect(passphrase = PASSPHRASE): Promise<void> {
         expires_in: 3600,
       });
     }
-    if (call.url.startsWith(USERINFO_ENDPOINT)) return json({ email: 'leitor@example.com' });
-    return json({ error: { message: `rota desconhecida: ${call.url}` } }, 500);
+    if (call.url === ACCOUNT_ENDPOINT) return json({ email: 'leitor@example.com' });
+    return json({ error_summary: `rota_desconhecida/${call.url}` }, 500);
   });
   const result = await authorize();
   if (!result.ok) throw new Error(`Falha ao conectar no teste: ${result.error ?? 'desconhecida'}`);

@@ -41,7 +41,7 @@ function setup(options: Parameters<typeof createApiMock>[0] = {}): SetupResult {
 async function typeCredentials(): Promise<void> {
   const user = userEvent.setup();
   await user.type(
-    screen.getByPlaceholderText('Usada para criptografar o backup no Drive'),
+    screen.getByPlaceholderText('Usada para criptografar o backup no Dropbox'),
     'frase',
   );
 }
@@ -65,13 +65,13 @@ describe('SettingsModal — carregamento', () => {
     expect(screen.getByText('leitor@exemplo.com')).toBeInTheDocument();
     expect(screen.getByText('7 obra(s)')).toBeInTheDocument();
     expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
-    expect(screen.getByText(/Backup no Google Drive/)).toBeInTheDocument();
+    expect(screen.getByText(/Backup no Dropbox/)).toBeInTheDocument();
   });
 
   it('mostra o estado vazio quando não há conexão nem backup', async () => {
     setup();
     expect(await screen.findByText('Desconectado')).toBeInTheDocument();
-    expect(screen.getByText('Conta Google')).toBeInTheDocument();
+    expect(screen.getByText('Conta Dropbox')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(2);
   });
 
@@ -79,11 +79,11 @@ describe('SettingsModal — carregamento', () => {
     const { mock } = setup();
     await screen.findByText('Desconectado');
     mock.emitStatus({ ...CONNECTED, syncing: true });
-    expect(await screen.findByText('Sincronizando com o Google Drive…')).toBeInTheDocument();
+    expect(await screen.findByText('Sincronizando com o Dropbox…')).toBeInTheDocument();
     expect(screen.getByText('Conectado')).toBeInTheDocument();
   });
 
-  it('exibe o último erro reportado pelo Drive', async () => {
+  it('exibe o último erro reportado pelo Dropbox', async () => {
     setup({ status: { ...CONNECTED, lastError: 'Cota excedida.' } });
     expect(await screen.findByText('Cota excedida.')).toBeInTheDocument();
   });
@@ -129,12 +129,29 @@ describe('SettingsModal — credenciais', () => {
   it('mantém "Conectar" habilitado mesmo sem conexão', async () => {
     setup();
     await screen.findByText('Desconectado');
-    const connect = screen.getByRole('button', { name: /Conectar ao Drive/ });
+    const connect = screen.getByRole('button', { name: /Conectar ao Dropbox/ });
     expect(connect).toBeEnabled();
+  });
+
+  it('salva a chave do aplicativo Dropbox junto com a senha', async () => {
+    const { mock } = setup();
+    await screen.findByText('Desconectado');
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByPlaceholderText('Opcional: só precisa se o app ainda não tem chave embutida'),
+      'minha-app-key',
+    );
+
+    await user.click(screen.getByRole('button', { name: /^Salvar$/ }));
+    expect(mock.settingsSet).toHaveBeenCalledWith({
+      driveClientId: 'minha-app-key',
+      driveClientSecret: '',
+      drivePassphrase: '',
+    });
   });
 });
 
-describe('SettingsModal — ações do Drive', () => {
+describe('SettingsModal — ações do Dropbox', () => {
   it('conecta a conta com sucesso', async () => {
     const { mock, notify } = setup({
       settings: {
@@ -147,8 +164,10 @@ describe('SettingsModal — ações do Drive', () => {
     await screen.findByText('Conectado');
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /Conectar ao Drive/ }));
-    await waitFor(() => expect(notify).toHaveBeenCalledWith('Conta Google conectada com sucesso.'));
+    await user.click(screen.getByRole('button', { name: /Conectar ao Dropbox/ }));
+    await waitFor(() =>
+      expect(notify).toHaveBeenCalledWith('Conta Dropbox conectada com sucesso.'),
+    );
     expect(mock.driveAuth).toHaveBeenCalledTimes(1);
   });
 
@@ -163,7 +182,7 @@ describe('SettingsModal — ações do Drive', () => {
     mock.driveAuth.mockResolvedValueOnce({ ok: false, error: 'Usuário recusou.' });
     await screen.findByText('Desconectado');
 
-    await userEvent.setup().click(screen.getByRole('button', { name: /Conectar ao Drive/ }));
+    await userEvent.setup().click(screen.getByRole('button', { name: /Conectar ao Dropbox/ }));
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Usuário recusou.', 'error'));
   });
 
@@ -185,11 +204,11 @@ describe('SettingsModal — ações do Drive', () => {
     await screen.findByText('Desconectado');
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /Conectar ao Drive/ }));
+    await user.click(screen.getByRole('button', { name: /Conectar ao Dropbox/ }));
     expect(await screen.findByRole('button', { name: /Autorizando/ })).toBeDisabled();
     release();
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Conectar ao Drive/ })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: /Conectar ao Dropbox/ })).toBeEnabled(),
     );
   });
 
@@ -199,7 +218,7 @@ describe('SettingsModal — ações do Drive', () => {
 
     await userEvent.setup().click(screen.getByRole('button', { name: /Fazer backup agora/ }));
     await waitFor(() =>
-      expect(notify).toHaveBeenCalledWith('Backup concluído na pasta oculta do Drive.'),
+      expect(notify).toHaveBeenCalledWith('Backup concluído na pasta do app no Dropbox.'),
     );
     expect(mock.driveBackup).toHaveBeenCalledTimes(1);
   });
@@ -246,7 +265,7 @@ describe('SettingsModal — ações do Drive', () => {
     await screen.findByText('7 obra(s)');
 
     await userEvent.setup().click(screen.getByRole('button', { name: /Desconectar/ }));
-    await waitFor(() => expect(notify).toHaveBeenCalledWith('Conta Google desconectada.'));
+    await waitFor(() => expect(notify).toHaveBeenCalledWith('Conta Dropbox desconectada.'));
     expect(mock.driveDisconnect).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('Desconectado')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(2);
@@ -270,7 +289,7 @@ describe('SettingsModal — configurações exibidas', () => {
     };
     setup({ settings: saved });
     await screen.findByText('Desconectado');
-    expect(screen.getByPlaceholderText('Usada para criptografar o backup no Drive')).toHaveValue(
+    expect(screen.getByPlaceholderText('Usada para criptografar o backup no Dropbox')).toHaveValue(
       'frase-salva',
     );
   });

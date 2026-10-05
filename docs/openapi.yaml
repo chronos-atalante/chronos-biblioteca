@@ -10,7 +10,7 @@ info:
   version: 1.0.0
   description: >
     Ponte `window.api` (contextBridge) entre o renderer e o processo main:
-    biblioteca de obras, capas, configurações e backup no Google Drive.
+    biblioteca de obras, capas, configurações e backup no Dropbox.
     Respostas do Drive usam o envelope `{ ok, error?, ... }` e nunca lançam;
     mensagens de erro são em pt-BR (ver `docs/api.md`, §5).
   license:
@@ -25,7 +25,7 @@ tags:
   - name: configuracoes
     description: Credenciais e senha de backup (`settings.json`, modo 0600)
   - name: drive
-    description: Sessão Google, backup criptografado e restauração
+    description: Sessão Dropbox, backup criptografado e restauração
 paths:
   /library/get:
     post:
@@ -144,8 +144,8 @@ paths:
   /drive/status:
     post:
       tags: [drive]
-      summary: Estado da sessão Google
-      description: Montado a partir dos tokens em memória (`drive-tokens.json`).
+      summary: Estado da sessão Dropbox
+      description: Montado a partir dos tokens em memória (`dropbox-tokens.json`).
       x-ipc-channel: drive:status
       responses:
         '200':
@@ -157,8 +157,8 @@ paths:
   /drive/auth:
     post:
       tags: [drive]
-      summary: Conectar conta Google (OAuth PKCE)
-      description: Abre o navegador (loopback 127.0.0.1), troca o código por tokens e persiste em `drive-tokens.json` (0600).
+      summary: Conectar conta Dropbox (OAuth PKCE)
+      description: Abre o navegador (loopback fixo localhost:17431, sem app secret), troca o código por tokens e persiste em `dropbox-tokens.json` (0600).
       x-ipc-channel: drive:auth
       responses:
         '200':
@@ -171,7 +171,7 @@ paths:
     post:
       tags: [drive]
       summary: Fazer backup agora
-      description: Exige conta conectada, biblioteca não vazia e senha definida. Envia `library.json` + capas sempre criptografados (AES-256-GCM) ao `appDataFolder` e apaga órfãos remotos.
+      description: Exige conta conectada, biblioteca não vazia e senha definida. Envia `library.json` + capas sempre criptografados (AES-256-GCM) à pasta do app no Dropbox e apaga órfãos remotos.
       x-ipc-channel: drive:backup
       responses:
         '200':
@@ -234,7 +234,7 @@ paths:
     post:
       tags: [drive]
       summary: Desconectar conta
-      description: Apaga `drive-tokens.json` local. O backup na nuvem permanece.
+      description: Apaga `dropbox-tokens.json` local. O backup na nuvem permanece.
       x-ipc-channel: drive:disconnect
       responses:
         '200':
@@ -335,10 +335,10 @@ components:
       properties:
         driveClientId:
           type: string
-          description: "'' usa as credenciais embutidas"
+          description: App key do Dropbox ('' usa a chave embutida)
         driveClientSecret:
           type: string
-          description: "'' usa as credenciais embutidas"
+          description: Legado do provedor anterior, ignorado
         drivePassphrase:
           type: string
           description: Senha de criptografia do backup (obrigatória para enviar)

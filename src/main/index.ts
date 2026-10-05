@@ -58,7 +58,6 @@ app.setPath('userData', cacheDir());
         ['library.json', path.join(dataDir(), 'library.json')],
         ['covers', path.join(dataDir(), 'covers')],
         ['settings.json', path.join(configDir(), 'settings.json')],
-        ['drive-tokens.json', path.join(configDir(), 'drive-tokens.json')],
       ];
       for (const [name, to] of mapping) {
         const from = path.join(legacy, name);

@@ -104,9 +104,9 @@ export function decryptWith(data: Buffer, passphrase: string): Buffer {
 /**
  * Nomes remotos opacos (ver `backup.ts`).
  *
- * O `appDataFolder` já é privado por app, mas nomes como `library.json`
- * dizem o que cada arquivo é. Por isso o upload usa nomes opacos e um
- * manifesto cifrado `{ nomeRemoto: nomeLocal }`.
+ * A pasta do app no Dropbox já é privada por aplicativo, mas nomes como
+ * `library.json` dizem o que cada arquivo é. Por isso o upload usa nomes
+ * opacos e um manifesto cifrado `{ nomeRemoto: nomeLocal }`.
  */
 
 /** Nome local do manifesto dentro do backup. */

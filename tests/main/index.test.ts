@@ -5,7 +5,7 @@ import path from 'path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppSettings, Work } from '@zero/types';
 import { configDir, coversDir, dataDir } from '@zero/main/library';
-import { EMBEDDED_CLIENT_ID, SCOPE_VERSION } from '@zero/main/drive/constants';
+import { EMBEDDED_APP_KEY } from '@zero/main/drive/constants';
 import { makeDraft, makeWork } from '../helpers/fixtures.ts';
 import { sandboxPath } from '../helpers/sandbox.ts';
 import {
@@ -89,18 +89,7 @@ beforeAll(async () => {
     JSON.stringify({ driveClientId: 'id-legado' }),
     'utf-8',
   );
-  fs.writeFileSync(
-    path.join(legacyData, 'drive-tokens.json'),
-    JSON.stringify({
-      accessToken: 'token-legado',
-      refreshToken: 'refresh-legado',
-      expiresAt: Date.now() + 3_600_000,
-      accountEmail: 'legado@exemplo.com',
-      lastSync: '2026-01-10T12:00:00.000Z',
-      scopeVersion: SCOPE_VERSION,
-    }),
-    'utf-8',
-  );
+  // Sessão do provedor anterior (Google): o app novo não a reaproveita nem a copia.
 
   app.getPath.mockReturnValue(LEGACY_ROOT);
   await import('@zero/main/index');
@@ -211,13 +200,14 @@ describe('atalho F11 (tela cheia)', () => {
 });
 
 describe('migração de dados legados', () => {
-  it('copia biblioteca, capas, settings e tokens antigos', () => {
+  it('copia biblioteca, capas e settings antigos (sem sessão do provedor anterior)', () => {
     expect(fs.existsSync(path.join(dataDir(), 'library.json'))).toBe(true);
     expect(fs.readFileSync(path.join(dataDir(), 'covers', 'legada.png'), 'utf-8')).toBe(
       'legacy-image',
     );
     expect(fs.existsSync(path.join(configDir(), 'settings.json'))).toBe(true);
-    expect(fs.existsSync(path.join(configDir(), 'drive-tokens.json'))).toBe(true);
+    expect(fs.existsSync(path.join(configDir(), 'drive-tokens.json'))).toBe(false);
+    expect(fs.existsSync(path.join(configDir(), 'dropbox-tokens.json'))).toBe(false);
     expect(fs.existsSync(coversDir())).toBe(true);
   });
 });
@@ -250,13 +240,18 @@ describe('handlers de configurações e Drive', () => {
     });
   });
 
-  it('drive:status reflete os tokens migrados', () => {
+  it('drive:status inicia desconectado sem sessão anterior', () => {
     const status = invoke('drive:status') as { connected: boolean; accountEmail: string | null };
-    expect(status.connected).toBe(true);
-    expect(status.accountEmail).toBe('legado@exemplo.com');
+    expect(status.connected).toBe(false);
+    expect(status.accountEmail).toBeNull();
   });
 
-  it('drive:auth roda o OAuth com as credenciais embutidas e reporta a recusa', async () => {
+  it('drive:auth usa a chave das configurações e roda o OAuth do Dropbox', async () => {
+    invoke('settings:set', {
+      driveClientId: 'id-do-teste',
+      driveClientSecret: '',
+      drivePassphrase: '',
+    });
     shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
       const redirect = new URL(url).searchParams.get('redirect_uri');
       if (redirect !== null) {
@@ -270,7 +265,10 @@ describe('handlers de configurações e Drive', () => {
 
     expect(result).toEqual({ ok: false, error: 'access_denied' });
     const opened = shell.openExternal.mock.calls.at(-1)?.[0] ?? '';
-    expect(opened).toContain(`client_id=${EMBEDDED_CLIENT_ID}`);
+    expect(opened).toContain('client_id=id-do-teste');
+    expect(opened).toMatch(/redirect_uri=http(%3A|:)(\/\/|%2F%2F)localhost(%3A|:)\d+/);
+    expect(opened).not.toContain('client_secret');
+    expect(EMBEDDED_APP_KEY).toBe('');
   });
 
   it('drive:disconnect limpa a sessão e avisa a janela', () => {
@@ -283,17 +281,17 @@ describe('handlers de configurações e Drive', () => {
       'drive:status-changed',
       expect.objectContaining({ connected: false }),
     );
-    expect(fs.existsSync(path.join(configDir(), 'drive-tokens.json'))).toBe(false);
+    expect(fs.existsSync(path.join(configDir(), 'dropbox-tokens.json'))).toBe(false);
   });
 
   it('drive:backup, restore e backup-info exigem conexão', async () => {
     expect(await invokeAsync('drive:backup')).toEqual({
       ok: false,
-      error: 'Conecte a conta Google primeiro.',
+      error: 'Conecte a conta Dropbox primeiro.',
     });
     expect(await invokeAsync('drive:restore')).toEqual({
       ok: false,
-      error: 'Conecte a conta Google primeiro.',
+      error: 'Conecte a conta Dropbox primeiro.',
     });
     expect(await invokeAsync('drive:backup-info')).toBeNull();
   });
