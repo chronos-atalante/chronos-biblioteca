@@ -7,7 +7,7 @@
 # O que faz:
 #   1. baixa o .deb da GitHub Release privada (tag v<versão>);
 #   2. roda `reprepro includedeb noble` no checkout do repo-apt;
-#   3. commita e pusha — o GitHub Pages serve a nova versão em ~1 min.
+#   3. commita e pusha; o GitHub Pages serve a nova versão em ~1 min.
 #
 # Pré-requisitos (uma única vez): sudo apt install reprepro gh && gh auth login
 set -euo pipefail

@@ -6,7 +6,7 @@
 # Referência narrativa em `api.md`. Tipos-fonte em `src/types/`.
 openapi: 3.1.0
 info:
-  title: Chronos Biblioteca — API interna (ponte IPC)
+  title: 'Chronos Biblioteca: API interna (ponte IPC)'
   version: 1.0.0
   description: >
     Ponte `window.api` (contextBridge) entre o renderer e o processo main:

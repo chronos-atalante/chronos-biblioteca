@@ -29,7 +29,7 @@ export const AUTH_TIMEOUT_MS = 5 * 60 * 1000;
  * Porta fixa do callback loopback (`http://localhost:17431/callback`).
  *
  * Diferente do Google, o Dropbox exige a URI de redirecionamento pré-cadastrada
- * no App Console — por isso a porta não pode ser sorteada. Cadastre exatamente
+ * no App Console; por isso a porta não pode ser sorteada. Cadastre exatamente
  * essa URI no app (ver `docs/dropbox.md`).
  */
 export const LOOPBACK_PORT = 17431;

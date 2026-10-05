@@ -28,7 +28,7 @@ npm run dev     # abre o app com hot reload
 ## 3. Convenções de código (resumo)
 
 - **Imports em `src/` sempre por alias** `@zero/*` (`@zero/types`, `@zero/main/*`,
-  `@zero/preload/*`, `@zero/renderer/*`) — nunca caminho relativo entre pastas.
+  `@zero/preload/*`, `@zero/renderer/*`); nunca caminho relativo entre pastas.
   O mapa vive em `tsconfig.base.json` e é espelhado em `electron.vite.config.mts`,
   `vitest.config.mts` e `src/node.loader.ts`.
 - **Arquivos `index` só como barrel**, exceto os entrypoints exigidos pelo
@@ -48,7 +48,7 @@ npm run dev     # abre o app com hot reload
 ## 5. Documentação junto com o código
 
 Toda mudança de comportamento, fluxo, configuração, mensagens ou dependências
-**atualiza `README.md` e/ou `docs/*.md` na mesma mudança** — nunca depois.
+**atualiza `README.md` e/ou `docs/*.md` na mesma mudança**, nunca depois.
 Guias novos vão em `docs/`; o `README.md` é o índice. Mudanças voltadas ao
 usuário ganham entrada em [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -66,18 +66,31 @@ usuário ganham entrada em [`CHANGELOG.md`](CHANGELOG.md).
   `.gitignore`).
 - Vulnerabilidades de dependências: rode `npm run security:audit`; ignores só
   com justificativa e data de revisão em `.osv-scanner.toml`.
-- Achou uma falha? **Não abra issue pública** — siga [`SECURITY.md`](SECURITY.md).
+- Achou uma falha? **Não abra issue pública**: siga [`SECURITY.md`](SECURITY.md).
 
 ## 8. Enviar a mudança
 
 1. Crie um branch a partir da `main`: `git checkout -b minha-mudanca`.
 2. Faça commits pequenos, com mensagens claras em pt-BR.
 3. Rode `npm run check` e `npm test` (tudo verde).
-4. Abra o PR descrevendo **o quê**, **por quê** e **como testar**.
+4. Abra o PR pelo formulário do repositório (`.github/pull_request_template.md`),
+   descrevendo **o quê**, **por quê** e **como testar**.
 
-## 9. Commits e lançamentos automáticos
+## 9. Issues e automações do GitHub
 
-Os lançamentos são automáticos via GitHub Actions — **sem token manual e sem
+- Issues só pelas templates de `.github/ISSUE_TEMPLATE/` (bug e funcionalidade);
+  vulnerabilidade de segurança vai pelo canal privado do `SECURITY.md` (link em
+  `.github/ISSUE_TEMPLATE/config.yml`).
+- `.github/dependabot.yml` abre PRs toda segunda para dependências (npm) e para
+  as versões das GitHub Actions.
+- `.github/workflows/codeql.yml` roda o CodeQL em push/PR para `main` e toda
+  segunda-feira, complementando o `npm run security:audit`.
+- Ao mesclar um PR, `.github/workflows/agradecer.yml` deixa um comentário de
+  agradecimento.
+
+## 10. Commits e lançamentos automáticos
+
+Os lançamentos são automáticos via GitHub Actions, **sem token manual e sem
 bump manual de versão**:
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/) em pt-BR no
@@ -91,9 +104,9 @@ bump manual de versão**:
 - O workflow **Publicar .deb** então compila (`npm run dist`), anexa o `.deb`
   à Release e dispara o redeploy da landing (via Deploy Hook).
 - Atalho: `git push origin v1.2.3` numa tag também publica (a Release é criada
-  com notas geradas). Use só em exceção — o fluxo normal é via PR do bot.
+  com notas geradas). Use só em exceção; o fluxo normal é via PR do bot.
 
-## 10. Publicar no APT (único passo manual por release)
+## 11. Publicar no APT (único passo manual por release)
 
 O `.deb` chega aos usuários via repositório APT público
 (`https://chronos-atalante.github.io/repo-apt/`, repo `repo-apt` + GitHub

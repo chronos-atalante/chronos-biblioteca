@@ -11,7 +11,7 @@ function setup(): { onClose: Mock<() => void> } {
   return { onClose };
 }
 
-describe('AttributionsModal — créditos', () => {
+describe('AttributionsModal: créditos', () => {
   it('lista as dependências com licença em loop duplicado', () => {
     setup();
     expect(screen.getByRole('dialog', { name: 'Atribuições' })).toBeInTheDocument();

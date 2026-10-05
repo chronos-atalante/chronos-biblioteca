@@ -139,9 +139,9 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
             <div className="banner info">
               <strong>Backup no Dropbox.</strong> Sua biblioteca é gravada na pasta reservada do app
               (dentro de <code>/Apps/</code> na sua conta): pela API, só este aplicativo enxerga
-              essa pasta — o resto do seu Dropbox nem aparece para ele. Como a pasta é visível para
-              você, todo arquivo sobe com nome ilegível e conteúdo criptografado (AES-256-GCM) —
-              defina a senha de criptografia abaixo antes do primeiro backup.
+              essa pasta, e o resto do seu Dropbox nem aparece para ele. Como a pasta é visível para
+              você, todo arquivo sobe com nome ilegível e conteúdo criptografado (AES-256-GCM),
+              então defina a senha de criptografia abaixo antes do primeiro backup.
             </div>
 
             <div className="form-row">
@@ -189,7 +189,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
                 <span>Último backup</span>
               </div>
               <div className="stat">
-                <b>{info?.works != null ? `${info.works} obra(s)` : '—'}</b>
+                <b>{info?.works != null ? `${info.works} obra(s)` : '-'}</b>
                 <span>No backup do Dropbox</span>
               </div>
             </div>

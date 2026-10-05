@@ -58,7 +58,7 @@ function cardOf(title: string): HTMLElement {
   return element;
 }
 
-describe('App — carregamento e estatísticas', () => {
+describe('App: carregamento e estatísticas', () => {
   it('mostra o estado de carregamento até a biblioteca chegar', async () => {
     const mock = createApiMock({ works: WORKS });
     let release: (works: Work[]) => void = () => undefined;
@@ -108,7 +108,7 @@ describe('App — carregamento e estatísticas', () => {
   });
 });
 
-describe('App — busca e filtros', () => {
+describe('App: busca e filtros', () => {
   it('filtra por título', async () => {
     const user = userEvent.setup();
     setup();
@@ -170,7 +170,7 @@ describe('App — busca e filtros', () => {
   });
 });
 
-describe('App — ações nas obras', () => {
+describe('App: ações nas obras', () => {
   it('salva o novo progresso após o debounce', async () => {
     const user = userEvent.setup();
     const { mock } = setup();
@@ -258,7 +258,7 @@ describe('App — ações nas obras', () => {
   });
 });
 
-describe('App — modais', () => {
+describe('App: modais', () => {
   it('abre as atribuições pelo botão do cabeçalho', async () => {
     const user = userEvent.setup();
     setup();
@@ -320,7 +320,7 @@ describe('App — modais', () => {
   });
 });
 
-describe('App — status do Dropbox', () => {
+describe('App: status do Dropbox', () => {
   it('reflete conexão, sincronização e desconexão no cabeçalho', async () => {
     const { mock } = setup();
     await screen.findByText(/4 obra\(s\)/);

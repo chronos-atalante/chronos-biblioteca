@@ -56,7 +56,7 @@ async function confirmRestore(passphrase: string): Promise<void> {
   await user.click(within(modal).getByRole('button', { name: /^Restaurar$/ }));
 }
 
-describe('SettingsModal — carregamento', () => {
+describe('SettingsModal: carregamento', () => {
   it('carrega configurações, status e resumo do backup', async () => {
     setup({ status: CONNECTED, backupInfo: SUMMARY });
     expect(screen.getByText('Carregando…')).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('SettingsModal — carregamento', () => {
     setup();
     expect(await screen.findByText('Desconectado')).toBeInTheDocument();
     expect(screen.getByText('Conta Dropbox')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getAllByText('-')).toHaveLength(2);
   });
 
   it('reflete atualizações de status recebidas por push', async () => {
@@ -111,7 +111,7 @@ describe('SettingsModal — carregamento', () => {
   });
 });
 
-describe('SettingsModal — credenciais', () => {
+describe('SettingsModal: credenciais', () => {
   it('atualiza o campo e salva as configurações', async () => {
     const { mock, notify } = setup();
     await screen.findByText('Desconectado');
@@ -151,7 +151,7 @@ describe('SettingsModal — credenciais', () => {
   });
 });
 
-describe('SettingsModal — ações do Dropbox', () => {
+describe('SettingsModal: ações do Dropbox', () => {
   it('conecta a conta com sucesso', async () => {
     const { mock, notify } = setup({
       settings: {
@@ -268,7 +268,7 @@ describe('SettingsModal — ações do Dropbox', () => {
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Conta Dropbox desconectada.'));
     expect(mock.driveDisconnect).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('Desconectado')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getAllByText('-')).toHaveLength(2);
   });
 
   it('desabilita as ações quando não há conexão', async () => {
@@ -280,7 +280,7 @@ describe('SettingsModal — ações do Dropbox', () => {
   });
 });
 
-describe('SettingsModal — configurações exibidas', () => {
+describe('SettingsModal: configurações exibidas', () => {
   it('preenche o campo com a configuração salva', async () => {
     const saved: AppSettings = {
       driveClientId: 'id-salvo',

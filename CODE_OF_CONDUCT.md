@@ -37,7 +37,7 @@ Comportamentos inaceitáveis:
 Quem mantém o projeto é responsável por esclarecer os padrões, tomar medidas
 corretivas apropriadas e justas em resposta a comportamentos inaceitáveis e
 remover, editar ou rejeitar comentários, commits, código, issues e outras
-contribuições fora destas regras — comunicando o motivo quando adequado.
+contribuições fora destas regras, comunicando o motivo quando adequado.
 
 ## 4. Escopo
 
@@ -53,9 +53,9 @@ rapidez, justiça e confidencialidade.
 
 Medidas cabíveis, da mais leve à mais severa:
 
-1. **Correção** — aviso privado ou público sobre o comportamento.
-2. **Advertência** — proibição temporária de interação com o projeto.
-3. **Banimento temporário ou permanente** — sem interação com o projeto,
+1. **Correção**: aviso privado ou público sobre o comportamento.
+2. **Advertência**: proibição temporária de interação com o projeto.
+3. **Banimento temporário ou permanente**: sem interação com o projeto,
    incluindo espaços externos, pelo período definido.
 
 ## 6. Atribuição

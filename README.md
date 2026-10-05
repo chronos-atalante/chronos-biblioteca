@@ -2,9 +2,8 @@
 
 Aplicativo desktop (Electron + TypeScript + React) para anotar o progresso das suas leituras de
 **webtoons, manhwas, manhuas, mangás e livros**: capa da obra, título, descrição, barra de
-progresso
-em porcentagem e marcação de conclusão — com **backup manual no Dropbox** na pasta
-do app.
+progresso em porcentagem e marcação de conclusão, com **backup manual no Dropbox** na pasta do
+app.
 
 Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 
@@ -14,11 +13,11 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 
 - **Biblioteca em grade** com capa, título, tipo (webtoon/manhwa/manhua/mangá/livro), status
   (planejado, lendo, pausado, concluído, cancelado) e progresso.
-- **Capa da obra**: escolha uma imagem JPG/PNG/WebP do disco — ela é copiada para a biblioteca
-  local e servida pelo protocolo interno `cover://`.
+- **Capa da obra**: escolha uma imagem JPG/PNG/WebP do disco. A imagem é copiada para a
+  biblioteca local e servida pelo protocolo interno `cover://`.
 - **Título e descrição** livres, além de uma marcação opcional (`Cap. 45`, `Vol. 3`).
 - **Barra de progresso** no card com setas `↑` / `↓` (ajuste de 1 em 1) e botões de status
-  contextuais — **Concluir**, **Pausar**/**Retomar** e **Cancelar** — todos em uma única linha e
+  contextuais (**Concluir**, **Pausar**/**Retomar** e **Cancelar**), todos em uma única linha e
   compactos (só ícone, com a ação no tooltip); no modal de edição, campo numérico direto,
   `−10` / `+10`, **concluir** e **zerar**.
 - **Busca** por título ou descrição e **filtros** por status (Lendo, Planejados, Pausados,
@@ -33,9 +32,9 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
   para dividir a tela, maximizar/fechar) e `F11` alterna tela cheia.
 - **Atribuições**: botão ao lado da pílula do Drive abre os créditos das dependências em
   rolagem lenta e contínua (estilo pós-créditos de cinema), com pausar/continuar e
-  respeito a `prefers-reduced-motion` — detalhes em [`docs/atribuicoes.md`](docs/atribuicoes.md).
+  respeito a `prefers-reduced-motion`; detalhes em [`docs/atribuicoes.md`](docs/atribuicoes.md).
 - **Doações**: botão **Doar** no cabeçalho abre a página de apoio ao projeto, com link do
-  Mercado Pago (abre no navegador), botão de copiar e QR Code Pix — detalhes em
+  Mercado Pago (abre no navegador), botão de copiar e QR Code Pix; detalhes em
   [`docs/doacoes.md`](docs/doacoes.md).
 - Tema escuro com fundo preto (`#000`) e paleta sólida azul; ícones **Font Awesome**.
 
@@ -114,7 +113,7 @@ O projeto roda com o máximo de rigor disponível:
 - `eslint-plugin-react-hooks` com `rules-of-hooks` e `exhaustive-deps` em `error`.
 - `eslint-config-prettier` desliga apenas o que conflita com a formatação.
 
-**Prettier (`.prettierrc.json`)** — 100 colunas, aspas simples, ponto e vírgula, vírgula final,
+**Prettier (`.prettierrc.json`)**: 100 colunas, aspas simples, ponto e vírgula, vírgula final,
 2 espaços. Rode `npm run check` antes de commitar.
 
 ---
@@ -139,7 +138,7 @@ resolvers que o projeto usa (build, testes e Node puro):
   (`.ts` / `.tsx` / `index.tsx`); `allowImportingTsExtensions: true` (que exige `noEmit`) é o
   que permite isso sem erro de import.
 - **Node puro** (sem bundler): o loader `src/node.loader.ts` registra hooks de resolução com
-  `module.registerHooks()` — hooks **síncronos, na mesma thread** (estáveis desde o
+  `module.registerHooks()`: hooks **síncronos, na mesma thread** (estáveis desde o
   Node 22.15/23.5). O caminho antigo, `module.register()` com hooks assíncronos em thread
   separada (o antigo `--experimental-loader`), está **deprecado** desde o Node 25.9.
 
@@ -152,7 +151,7 @@ O loader só precisa dos aliases: o Node já remove as anotações de tipo dos `
 `src/package.json` **e a raiz** declaram `"type": "module"`: o Node lê `src/` como ESM e o
 electron-vite emite `out/main/index.js` (ESM). O preload sai como **CommonJS**
 (`out/preload/index.cjs`), porque o Electron roda preload **sandboxed** como script simples, sem
-loader ESM — por isso `electron.vite.config.mts` fixa `format: 'cjs'` no build de `preload`.
+loader ESM; por isso `electron.vite.config.mts` fixa `format: 'cjs'` no build de `preload`.
 `preloadScript()` em `src/main/index.ts` resolve `index.cjs`, `index.mjs` ou `index.js` nessa
 ordem.
 
@@ -162,13 +161,13 @@ ordem.
 
 ```mermaid
 flowchart TD
-    subgraph RENDERER["Renderer — React + Vite (src/renderer)"]
-        UI1["App.tsx — busca, filtros, estatísticas"]
-        UI2["WorkCard — capa, progresso, concluir/pausar/cancelar"]
-        UI3["WorkModal — formulário da obra"]
-        UI4["SettingsModal — credenciais e backup"]
-        UI5["AttributionsModal — créditos em loop"]
-        UI6["DonateModal — apoio via Mercado Pago"]
+    subgraph RENDERER["Renderer: React + Vite (src/renderer)"]
+        UI1["App.tsx: busca, filtros, estatísticas"]
+        UI2["WorkCard: capa, progresso, concluir/pausar/cancelar"]
+        UI3["WorkModal: formulário da obra"]
+        UI4["SettingsModal: credenciais e backup"]
+        UI5["AttributionsModal: créditos em loop"]
+        UI6["DonateModal: apoio via Mercado Pago"]
         BRIDGE["window.api (contextBridge)"]
         UI1 --> UI2
         UI1 --> UI3
@@ -180,11 +179,11 @@ flowchart TD
         UI4 --> BRIDGE
     end
 
-    subgraph MAIN["Main — Electron (src/main)"]
-        IDX["index.ts — janela, IPC, protocolo cover:, F11"]
-        LIB["library.ts — library.json + capas"]
-        SET["settings.ts — App key e senha do backup"]
-        DRV["drive/ — OAuth PKCE, REST do Dropbox, backup"]
+    subgraph MAIN["Main: Electron (src/main)"]
+        IDX["index.ts: janela, IPC, protocolo cover:, F11"]
+        LIB["library.ts: library.json + capas"]
+        SET["settings.ts: App key e senha do backup"]
+        DRV["drive/: OAuth PKCE, REST do Dropbox, backup"]
     end
 
     subgraph STORAGE["Persistência"]
@@ -223,7 +222,7 @@ oferece **Retomar**; uma `concluída`, só **Reabrir**). No modal de edição, o
 permite ir de qualquer estado para qualquer outro, e **Zerar** volta o progresso para 0 e o status
 para `planejado`. Mexer no progresso de uma obra `concluída` a devolve para `lendo`.
 
-Progresso e status são independentes: marcar `concluido` **não** altera o número salvo — o card
+Progresso e status são independentes: marcar `concluido` **não** altera o número salvo, o card
 apenas passa a exibir `100%` (use **Zerar** no modal para voltar a 0).
 
 ### Fluxo do progresso (anotação contínua)
@@ -288,6 +287,11 @@ Webtoons/
 │   ├── main/                 # drive-auth, drive-backup, drive-info (<500 linhas cada)
 │   ├── helpers/              # fixtures, sandbox, drive (FakeDropbox + stubFetch)
 │   └── mocks/                # mock do electron para o Vitest
+├── .github/
+│   ├── workflows/            # CodeQL, agradecimento, publicação do .deb, release-please
+│   ├── ISSUE_TEMPLATE/       # formulários de bug e de funcionalidade
+│   ├── dependabot.yml        # deps e actions atualizadas semanalmente
+│   └── pull_request_template.md
 ├── eslint.config.mjs
 ├── .prettierrc.json
 ├── tsconfig*.json
@@ -323,7 +327,7 @@ Detalhes da configuração (campo `build` do `package.json`):
 - `postinst` do electron-builder cuida do AppArmor (Ubuntu/Mint 24+) e do `chrome-sandbox`
 - Slim via `afterPack` (`build/after-pack.cjs`): remove do pacote locales não usados
   (mantém `pt-BR`/`pt-PT`/`en-US`), SwiftShader/Vulkan e `libffmpeg` (o app é DOM/CSS
-  estático, sem WebGL nem mídia) — economiza ~5 MB no `.deb`, margem contra o
+  estático, sem WebGL nem mídia), o que economiza ~5 MB no `.deb`, margem contra o
   limite de 100 MiB por arquivo do GitHub
 
 ---
@@ -334,7 +338,7 @@ Fluxo resumido (passo a passo completo em [`docs/dropbox.md`](docs/dropbox.md)):
 
 1. ⚙ → defina a **senha de criptografia do backup** (obrigatória) e, se o app ainda não
    tem chave embutida, informe a **App key** do Dropbox (cadastro único de 5 minutos no
-   App Console — ver `docs/dropbox.md`). Com PKCE não existe segredo: só a chave identifica
+   App Console; ver `docs/dropbox.md`). Com PKCE não existe segredo: só a chave identifica
    o app, e o acesso real fica no `refresh_token` guardado na sua máquina.
 2. **Conectar ao Dropbox** → janela do navegador → consentimento → tokens guardados
    localmente em `dropbox-tokens.json` (PKCE + callback fixo em `localhost:17431`, a URI
@@ -342,7 +346,7 @@ Fluxo resumido (passo a passo completo em [`docs/dropbox.md`](docs/dropbox.md)):
 3. **Fazer backup agora** → `library.json` + capas sobem **sempre criptografados**
    (AES-256-GCM, nomes de arquivo opacos via HMAC) para a **pasta do app**
    (`/Apps/Chronos Biblioteca`). A pasta aparece na sua conta, mas só este app a acessa
-   via API — e mesmo bisbilhotando, só há blobs sem nome legível.
+   via API, e mesmo bisbilhotando, só há blobs sem nome legível.
 4. **Restaurar** → pede a **senha de criptografia**, baixa o backup e substitui a biblioteca
    local.
 
@@ -379,7 +383,7 @@ sequenceDiagram
 
 ## Ícone
 
-`build/icon.png` (512×512, gerado por `build/make-icon.py` — livro aberto + barra de progresso
+`build/icon.png` (512×512, gerado por `build/make-icon.py`: livro aberto + barra de progresso
 sobre fundo azul sólido). É ele que vira o ícone do pacote `.deb` e do lançador de menu. Para
 regenerar:
 
@@ -409,4 +413,4 @@ Guias e referências (tudo em pt-BR):
 
 ## Licença
 
-[MIT](LICENSE) — ver o texto integral em [`LICENSE`](LICENSE).
+[MIT](LICENSE); o texto integral está em [`LICENSE`](LICENSE).

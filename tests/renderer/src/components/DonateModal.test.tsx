@@ -11,7 +11,7 @@ function setup(): { onClose: Mock<() => void> } {
   return { onClose };
 }
 
-describe('DonateModal — conteúdo', () => {
+describe('DonateModal: conteúdo', () => {
   it('mostra o texto e o link de doação com destino externo', () => {
     setup();
     expect(screen.getByRole('dialog', { name: 'Doações' })).toBeInTheDocument();

@@ -42,7 +42,7 @@ function progressInput(): HTMLInputElement {
   return element;
 }
 
-describe('WorkModal — cabeçalho e fechamento', () => {
+describe('WorkModal: cabeçalho e fechamento', () => {
   it('identifica uma obra nova', () => {
     setup(makeWork(), true);
     expect(screen.getByRole('heading', { name: 'Nova obra' })).toBeInTheDocument();
@@ -78,7 +78,7 @@ describe('WorkModal — cabeçalho e fechamento', () => {
   });
 });
 
-describe('WorkModal — validação e salvamento', () => {
+describe('WorkModal: validação e salvamento', () => {
   it('exige título antes de salvar', async () => {
     const user = userEvent.setup();
     const { onSave, onClose } = setup(makeWork({ title: '' }));
@@ -140,7 +140,7 @@ describe('WorkModal — validação e salvamento', () => {
   });
 });
 
-describe('WorkModal — campos', () => {
+describe('WorkModal: campos', () => {
   it('edita título, descrição e marcação', async () => {
     const user = userEvent.setup();
     setup();
@@ -225,7 +225,7 @@ describe('WorkModal — campos', () => {
   });
 });
 
-describe('WorkModal — capa', () => {
+describe('WorkModal: capa', () => {
   it('escolhe e remove a capa', async () => {
     const user = userEvent.setup();
     setup(makeWork({ coverFile: '' }), true);
@@ -241,7 +241,7 @@ describe('WorkModal — capa', () => {
   });
 });
 
-describe('WorkModal — exclusão', () => {
+describe('WorkModal: exclusão', () => {
   it('pede confirmação antes de excluir', async () => {
     const user = userEvent.setup();
     const { onDelete, onClose } = setup(makeWork(), false);

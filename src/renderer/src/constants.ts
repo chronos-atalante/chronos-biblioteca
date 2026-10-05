@@ -73,14 +73,14 @@ export function coverUrl(coverFile?: string): string | null {
 }
 
 export function formatDate(iso: string | null): string {
-  if (iso === null || iso === '') return '—';
+  if (iso === null || iso === '') return '-';
   try {
     return new Date(iso).toLocaleString('pt-BR', {
       dateStyle: 'short',
       timeStyle: 'short',
     });
   } catch {
-    return '—';
+    return '-';
   }
 }
 

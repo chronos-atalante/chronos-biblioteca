@@ -8,7 +8,7 @@ contínuo.
 
 No cabeçalho do app, ao lado da pílula **Drive conectado / Drive off**, há o botão
 **Atribuições** (ícone de claquete). Ele abre o modal de créditos por cima da
-biblioteca — `Escape`, clique fora ou **Fechar** dispensam o modal.
+biblioteca: `Escape`, clique fora ou **Fechar** dispensam o modal.
 
 ## Comportamento
 
@@ -17,7 +17,7 @@ biblioteca — `Escape`, clique fora ou **Fechar** dispensam o modal.
 - Animação CSS `credits-scroll` de **89,8 s, linear e infinita**, com máscara de
   fade no topo e na base (`mask-image`).
 - A rolagem **pausa** ao passar o mouse, ao focar o painel (`:focus-within`) ou
-  pelo botão **Pausar / Continuar** — pensado para leitura e acessibilidade.
+  pelo botão **Pausar / Continuar**; pensado para leitura e acessibilidade.
 - Com `prefers-reduced-motion: reduce`, a animação é desligada e o painel vira
   uma lista rolável manualmente.
 
@@ -25,7 +25,7 @@ biblioteca — `Escape`, clique fora ou **Fechar** dispensam o modal.
 
 A fonte de verdade da tela é `src/renderer/src/attributions.ts` (`ATTRIBUTIONS`):
 nome, licença, descrição curta e URL de cada dependência direta do
-`package.json`. As **versões exatas** não ficam hardcoded na tela — consulte
+`package.json`. As **versões exatas** não ficam hardcoded na tela; consulte
 `package.json` / `package-lock.json`.
 
 | Dependência                                                           | Licença                                              |

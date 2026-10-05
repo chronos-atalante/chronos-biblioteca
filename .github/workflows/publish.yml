@@ -14,7 +14,7 @@ on:
 permissions:
   contents: write
 
-# secrets não pode ser usado em `if:` — copia para env (padrão do GitHub).
+# secrets não pode ser usado em `if:`; copia para env (padrão do GitHub).
 env:
   VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
 
@@ -48,6 +48,6 @@ jobs:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.event.release.tag_name }}
 
       - name: Disparar redeploy da landing (Vercel Deploy Hook)
-        # Sem hook configurado, pula em silêncio — a Release funciona igual.
+        # Sem hook configurado, pula em silêncio; a Release funciona igual.
         if: ${{ env.VERCEL_DEPLOY_HOOK_URL != '' }}
         run: curl -fsS -X POST "$VERCEL_DEPLOY_HOOK_URL"

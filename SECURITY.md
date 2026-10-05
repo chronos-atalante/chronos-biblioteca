@@ -6,7 +6,7 @@
 | ------ | ------------------- |
 | 1.0.x  | ✅ Correções ativas |
 
-Versões anteriores ao 1.0.0 não recebem correções — atualize pelo `.deb` mais
+Versões anteriores ao 1.0.0 não recebem correções; atualize pelo `.deb` mais
 recente (`npm run dist` gera em `release/`).
 
 ## Como reportar uma vulnerabilidade
@@ -33,14 +33,14 @@ contrário).
 - **Nomes remotos opacos**: HMAC-SHA256 com chave de nomes derivada da senha
   - manifesto cifrado (nome remoto → nome local). Ao Google restam visíveis
     só a quantidade aproximada e o tamanho dos blobs (limitação da API do
-    Drive — tamanhos exatos não têm como ser ocultados sem padding).
+    Drive; tamanhos exatos não têm como ser ocultados sem padding).
 - **Senha no keyring**: `drivePassphrase` vai para o cofre do SO
   (`safeStorage`) quando há keyring; sem keyring, em claro com `0600`
   (fallback documentado, com migração automática).
 - **Escopos mínimos**: `drive.appdata` + `drive.file` + `openid email`.
 - **Sem servidor intermediário**: do PC direto para o Google (`fetch` nativo).
 - **Credenciais embutidas**: o `client_secret` de app desktop não é segredo
-  real (é público por definição; a proteção vem de PKCE + loopback) — não
+  real (é público por definição; a proteção vem de PKCE + loopback); não
   reporte isso como falha.
 - **Dependências auditadas**: `npm run security:audit` (OSV Scanner) roda em
   todo `npm run check`.

@@ -72,7 +72,7 @@ async function openBrowser(params: URLSearchParams): Promise<{
   });
 
   // A URI registrada no App Console usa a porta fixa; se ela estiver ocupada
-  // (ex.: suíte de testes em paralelo), cai para uma porta livre — nesse caso
+  // (ex.: suíte de testes em paralelo), cai para uma porta livre; nesse caso
   // o Dropbox recusa o redirect, e o erro de troca de tokens indica o motivo.
   let redirectUri = REDIRECT_URI;
   try {

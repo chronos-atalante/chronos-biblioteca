@@ -2,13 +2,13 @@
  * Loader de resolução ESM do projeto.
  *
  * Resolve os aliases `@zero/*` (definidos em `tsconfig.base.json`) quando o
- * Node executa arquivos TypeScript direto, sem bundler — ou seja, fora do
+ * Node executa arquivos TypeScript direto, sem bundler, ou seja, fora do
  * electron-vite (build) e do vitest (testes).
  *
  * Uso (registrado com `--import`, antes de qualquer código da aplicação):
  *   node --import ./src/node.loader.ts caminho/para/arquivo.ts
  *
- * API: `module.registerHooks()` (hooks síncronos, na mesma thread) — estável
+ * API: `module.registerHooks()` (hooks síncronos, na mesma thread), estável
  * desde o Node 22.15/23.5 e recomendada pela documentação. O caminho antigo,
  * `module.register()` com hooks assíncronos em thread separada (o antigo
  * `--experimental-loader`), está deprecado desde o Node 25.9.

@@ -96,7 +96,7 @@ export function onStatus(listener: (status: DriveStatus) => void): void {
 /**
  * Chave do aplicativo Dropbox (App key) em uso.
  *
- * Com PKCE não há `app secret` em cliente público — só a chave identifica o
+ * Com PKCE não há `app secret` em cliente público; só a chave identifica o
  * app. Vale a chave informada nas Configurações (`driveClientId`, mantido por
  * compatibilidade com o `settings.json` existente) ou a embutida.
  */

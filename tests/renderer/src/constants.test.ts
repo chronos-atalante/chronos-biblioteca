@@ -57,14 +57,14 @@ describe('coverUrl', () => {
 });
 
 describe('formatDate', () => {
-  it('usa travessão para datas vazias', () => {
-    expect(formatDate(null)).toBe('—');
-    expect(formatDate('')).toBe('—');
+  it('usa hífen para datas vazias', () => {
+    expect(formatDate(null)).toBe('-');
+    expect(formatDate('')).toBe('-');
   });
 
   it('formata datas ISO válidas em pt-BR', () => {
     const formatted = formatDate('2026-03-04T15:30:00.000Z');
-    expect(formatted).not.toBe('—');
+    expect(formatted).not.toBe('-');
     expect(formatted).toMatch(/\d{2}\/\d{2}\/\d{2}/);
   });
 });

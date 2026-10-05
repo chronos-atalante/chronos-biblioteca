@@ -36,7 +36,7 @@ const ENC_PREFIX = 'enc:';
 
 /**
  * Guarda a senha no keyring do SO (libsecret/KWallet/Keychain/DPAPI).
- * Sem keyring disponível, mantém em claro com permissão 0600 (fallback) —
+ * Sem keyring disponível, mantém em claro com permissão 0600 (fallback);
  * instalações antigas em claro continuam lendo normalmente e migram
  * sozinhas para o keyring no próximo salvamento.
  */

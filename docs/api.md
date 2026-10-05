@@ -44,7 +44,7 @@ níveis (método → canal → origem dos dados):
 
 ## 2. Convenção de respostas
 
-Métodos do Drive devolvem um envelope de resultado — **nunca lançam**:
+Métodos do Drive devolvem um envelope de resultado e **nunca lançam**:
 
 ```ts
 { ok: true, summary?: BackupSummary } // sucesso
@@ -61,7 +61,7 @@ indicado). Erros de Drive usam sempre mensagens em pt-BR (ver §5).
 ### `library.get() → Promise<Work[]>`
 
 Devolve todas as obras salvas (`library.json`). Lista vazia se ainda não há
-obras — nunca `null`.
+obras; nunca `null`.
 
 ### `library.save(obra) → Promise<Work[]>`
 
@@ -131,7 +131,7 @@ interface DriveStatus {
 ### `drive.auth() → Promise<{ ok: boolean; error?: string }>`
 
 Abre o navegador (PKCE, sem `app secret`, com `token_access_type=offline`) e escuta o
-callback num servidor loopback de **porta fixa** (`localhost:17431` — o Dropbox exige a
+callback num servidor loopback de **porta fixa** (`localhost:17431`; o Dropbox exige a
 URI de redirect pré-cadastrada no App Console, então a porta não pode ser sorteada;
 se estiver ocupada, cai para uma livre e o Dropbox recusa com `redirect_uri_mismatch`).
 Troca o código por tokens e grava `dropbox-tokens.json` (modo `0600`). Falhas típicas:
@@ -146,7 +146,7 @@ senha de criptografia definida, nenhuma sincronização em andamento. Envia
 `library.json` + capas **sempre criptografados** à pasta do app
 (`/Apps/Chronos Biblioteca`, o `path` raiz da API com permissão App folder) e apaga
 arquivos remotos órfãos. Cada upload usa `mode: overwrite` direto no
-`content.dropboxapi.com` — não há multipart nem id prévio.
+`content.dropboxapi.com`, sem multipart nem id prévio.
 
 Cifra (ver `src/main/drive/crypto.ts`): AES-256-GCM com chave de 32 bytes
 derivada por **scrypt explícito** (`N=2¹⁶`, `r=8`, `p=1`), salt de 16 e IV de
@@ -156,7 +156,7 @@ restauráveis.
 
 Nomes remotos opacos: a pasta do app é visível na conta do usuário, então nada nela
 pode entregar o conteúdo. Cada upload usa `HMAC-SHA256(chaveDeNomes, nomeLocal)` como
-nome remoto (chave determinística derivada da senha por scrypt, só para nomes — o conteúdo usa
+nome remoto (chave determinística derivada da senha por scrypt, só para nomes; o conteúdo usa
 outra chave), mais um **manifesto cifrado** (`manifest.json` → HMAC)
 `{ nomeRemoto: nomeLocal }` gravado por último como "commit" do backup. A
 restauração e o `backupInfo` resolvem os nomes pelo manifesto, com fallback
@@ -197,7 +197,7 @@ para cortar o acesso do app, remova-o em `dropbox.com/account/security`).
 ### `drive.onStatus(cb) → () => void`
 
 Assina o evento `drive:status-changed` (emitido a cada transição: conectar,
-sincronizar, erro, desconectar). Devolve a função de cancelamento — chame-a
+sincronizar, erro, desconectar). Devolve a função de cancelamento; chame-a
 ao desmontar o componente.
 
 ### Erros comuns (pt-BR, como exibidos no app)
@@ -255,5 +255,5 @@ Marcar `concluido` não altera o número salvo (o card exibe `100%`).
 
 ### Demais esquemas
 
-Ver `AppSettings` (§4), `DriveStatus` e `BackupSummary` (§5) acima — tipos-fonte
+Ver `AppSettings` (§4), `DriveStatus` e `BackupSummary` (§5) acima; tipos-fonte
 em `src/types/settings.ts` e `src/types/drive.ts`.

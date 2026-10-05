@@ -114,7 +114,7 @@ export const MANIFEST_FILE = 'manifest.json';
 
 /**
  * Chave que opacifica nomes remotos. Determinística (mesma senha, mesmos
- * nomes — necessário para atualizar no lugar e para restaurar em outra
+ * nomes, necessário para atualizar no lugar e para restaurar em outra
  * máquina) e com domínio separado da chave de conteúdo dos arquivos.
  */
 export function nameKeyFor(passphrase: string): Buffer {

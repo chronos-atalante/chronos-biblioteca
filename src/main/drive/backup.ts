@@ -58,7 +58,7 @@ function isWorkArray(value: unknown): value is Work[] {
  *
  * Nomes opacos (HMAC) + manifesto cifrado. Sem manifesto (backup vazio ou
  * legado), cada nome vale por si. Um manifesto corrompido ou com senha errada
- * falha de forma fechada — nunca se restaura mapeamento adivinhado.
+ * falha de forma fechada; nunca se restaura mapeamento adivinhado.
  */
 async function resolveLocalNames(
   remote: RemoteFile[],
@@ -122,7 +122,7 @@ export async function backupNow(): Promise<{
     for (const file of files) manifest[toRemote(file.name)] = file.name;
     await uploadFile(manifestRemote, encryptWith(buildManifest(manifest), passphrase));
 
-    // Tudo que não é esperado some — órfãos de backups interrompidos.
+    // Tudo que não é esperado some: órfãos de backups interrompidos.
     const expected = new Set([...files.map((file) => toRemote(file.name)), manifestRemote]);
     for (const file of remote) {
       if (!expected.has(file.name)) {
