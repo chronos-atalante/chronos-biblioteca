@@ -4,6 +4,13 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.1.1](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.0...v1.1.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* detecta escopos faltantes no Dropbox e orienta a correção ([29f009f](https://github.com/chronos-atalante/chronos-biblioteca/commit/29f009fc89b67f1024534afc2b69b038c252773d))
+
 ## [1.1.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.0.2...v1.1.0) (2026-10-05)
 
 ### Features
