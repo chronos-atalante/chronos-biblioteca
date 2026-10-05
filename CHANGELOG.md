@@ -4,10 +4,11 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
-## [Não publicado]
+## [1.0.1] - 2026-10-04
 
 ### Segurança
 
+- Chaves OAuth do Google atualizadas (novo `client_id`/`client_secret`).
 - Cifra do backup com scrypt explícito (`N=2¹⁶`, `r=8`, `p=1`) e formato
   `WTENC2`, mantendo leitura dos backups antigos `WTENC1`.
 - Migração da pasta legada recifra arquivos em claro quando há senha

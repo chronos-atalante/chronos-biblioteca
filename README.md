@@ -43,7 +43,7 @@ npm install
 npm run dist
 
 # instale
-sudo apt install ./release/chronos-biblioteca_1.0.0_amd64.deb
+sudo apt install ./release/chronos-biblioteca_1.0.1_amd64.deb
 ```
 
 O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
@@ -296,7 +296,7 @@ flowchart LR
     PRT --> VITE
     VITE --> EB["electron-builder --linux deb"]
     ICON["build/icon.png"] --> EB
-    EB --> DEB[("release/<br/>chronos-biblioteca_1.0.0_amd64.deb")]
+    EB --> DEB[("release/<br/>chronos-biblioteca_1.0.1_amd64.deb")]
 ```
 
 Detalhes da configuração (campo `build` do `package.json`):

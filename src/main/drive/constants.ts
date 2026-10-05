@@ -16,8 +16,8 @@ export const LEGACY_FOLDER_NAME = '.webtoons-backup';
 export const FOLDER_MIME = 'application/vnd.google-apps.folder';
 
 export const EMBEDDED_CLIENT_ID =
-  '181078843337-vdfo3s7npqup9hiqpc08kulkgrao5lkl.apps.googleusercontent.com';
-export const EMBEDDED_CLIENT_SECRET = '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';
+  '565185989671-giruq2vbmjakauomsn6s902cufkfqn9f.apps.googleusercontent.com';
+export const EMBEDDED_CLIENT_SECRET = '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';
 
 export const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 export const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
