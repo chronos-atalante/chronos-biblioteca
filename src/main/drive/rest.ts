@@ -53,14 +53,23 @@ async function apiFetch(path: string, body: unknown): Promise<Response> {
 
 async function toDropboxError(res: Response): Promise<Error> {
   let detail = '';
+  let raw = '';
   try {
     // `error_summary` já é legível (ex.: "insufficient_space/..."); usa cru.
-    const data = await parseJson<{ error_summary?: string | undefined }>(res);
+    const data = (await res.clone().json()) as { error_summary?: string | undefined };
     detail = data.error_summary ?? '';
   } catch {
     // resposta sem corpo JSON aproveitável
   }
-  throw new Error(detail !== '' ? detail : `Erro do Dropbox (HTTP ${res.status}).`);
+  if (detail === '') {
+    try {
+      raw = (await res.text()).slice(0, 160);
+    } catch {
+      raw = '';
+    }
+  }
+  const suffix = raw !== '' ? ` Resposta: ${raw}` : '';
+  throw new Error(detail !== '' ? detail : `Erro do Dropbox (HTTP ${res.status}).${suffix}`);
 }
 
 /**
@@ -98,7 +107,7 @@ export async function listAppFiles(): Promise<RemoteFile[]> {
 
 async function contentFetch(
   endpoint: 'upload' | 'download',
-  apiArg: Record<string, string>,
+  apiArg: Record<string, string | boolean>,
   body?: Buffer,
 ): Promise<Response> {
   const token = await accessToken();
@@ -122,9 +131,10 @@ async function contentFetch(
 
 /** Sobe (ou sobrescreve) um arquivo na pasta do app. */
 export async function uploadFile(name: string, buffer: Buffer): Promise<void> {
+  // Tipos exatos: a API rejeita (HTTP 400) `autorename`/`mute` como string.
   await contentFetch(
     'upload',
-    { path: `/${name}`, mode: 'overwrite', autorename: 'false', mute: 'true' },
+    { path: `/${name}`, mode: 'overwrite', autorename: false, mute: true },
     buffer,
   );
 }

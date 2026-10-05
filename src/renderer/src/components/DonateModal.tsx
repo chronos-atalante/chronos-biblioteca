@@ -65,7 +65,7 @@ export default function DonateModal({ onClose }: DonateModalProps): JSX.Element 
           <p className="donate-text">
             Querendo ou não, eu tô mais quebrado que arroz de quinta e o backup em nuvem depende do
             Dropbox: enquanto o app não passar pela revisão de produção, depois das primeiras 50
-            contas conectadas ele ganha um relógio de 2 semanas para ser aprovado — senão para de
+            contas conectadas ele ganha um relógio de 2 semanas para ser aprovado senão para de
             aceitar gente nova. Sua doação ajuda a manter o app (e a paciência) no ar.
           </p>
           <p className="donate-text">

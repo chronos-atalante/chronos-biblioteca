@@ -8,11 +8,13 @@ import {
   FakeDropbox,
   LIST_FOLDER_ENDPOINT,
   PASSPHRASE,
+  UPLOAD_ENDPOINT,
   bodyField,
   connect,
   coversPath,
   defer,
   encryptForTest,
+  headerOf,
   json,
   resetDrive,
   stubFetch,
@@ -101,6 +103,27 @@ describe('backupNow', { timeout: 60_000 }, () => {
     expect(uploads.some((body) => body.includes(Buffer.from('Título Sigiloso')))).toBe(false);
   });
 
+  it('envia o upload no contrato exato da API (booleanos de verdade)', async () => {
+    await connect();
+    saveLibrary([makeWork({ id: 'obra-tipos' })]);
+    const drive = new FakeDropbox();
+    const calls = stubFetch((call) => drive.handle(call));
+
+    const result = await backupNow();
+    expect(result.ok).toBe(true);
+    const upload = calls.find((call) => call.url === UPLOAD_ENDPOINT);
+    expect(upload).toBeDefined();
+    if (upload === undefined) throw new Error('Upload ausente no teste.');
+    const arg = JSON.parse(headerOf(upload, 'Dropbox-API-Arg')) as {
+      mode?: unknown;
+      autorename?: unknown;
+      mute?: unknown;
+    };
+    expect(arg.mode).toBe('overwrite');
+    expect(arg.autorename).toBe(false);
+    expect(arg.mute).toBe(true);
+  });
+
   it('atualiza arquivos existentes e apaga remotos órfãos', async () => {
     await connect();
     saveLibrary([makeWork({ id: 'obra-4' })]);
@@ -163,7 +186,10 @@ describe('backupNow', { timeout: 60_000 }, () => {
     saveLibrary([makeWork({ id: 'obra-6' })]);
     stubFetch(() => new Response('erro interno', { status: 500 }));
     const result = await backupNow();
-    expect(result).toEqual({ ok: false, error: 'Erro do Dropbox (HTTP 500).' });
+    expect(result).toEqual({
+      ok: false,
+      error: 'Erro do Dropbox (HTTP 500). Resposta: erro interno',
+    });
   });
 });
 

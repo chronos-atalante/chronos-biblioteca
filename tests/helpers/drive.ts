@@ -216,8 +216,20 @@ export class FakeDropbox {
     }
 
     if (call.url === UPLOAD_ENDPOINT && method === 'POST') {
-      const arg = JSON.parse(headerOf(call, 'Dropbox-API-Arg')) as { path?: string };
-      const name = (arg.path ?? '').replace(/^\//, '');
+      const arg = JSON.parse(headerOf(call, 'Dropbox-API-Arg')) as {
+        path?: unknown;
+        mode?: unknown;
+        autorename?: unknown;
+        mute?: unknown;
+      };
+      // A API real rejeita (HTTP 400) tipos fora do contrato.
+      if (typeof arg.path !== 'string' || arg.mode !== 'overwrite') {
+        return json({ error_summary: 'invalid_argument' }, 400);
+      }
+      if (typeof arg.autorename !== 'boolean' || typeof arg.mute !== 'boolean') {
+        return json({ error_summary: 'invalid_argument' }, 400);
+      }
+      const name = arg.path.replace(/^\//, '');
       const content = toBuffer(call.init.body);
       const existing = this.findByName(name);
       if (existing !== undefined) {
