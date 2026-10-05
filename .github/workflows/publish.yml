@@ -34,7 +34,10 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run dist
+      - name: Gerar .deb (compila e empacota; o upload é no step seguinte)
+        # --publish never: sem isso, o electron-builder tenta publicar
+        # sozinho por causa da tag ("Implicit publishing") e falha sem token.
+        run: npm run build && npx electron-builder --linux deb --publish never
 
       - name: Anexar .deb à Release
         uses: softprops/action-gh-release@v2
