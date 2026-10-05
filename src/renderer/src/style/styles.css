@@ -408,6 +408,7 @@ textarea {
   line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: calc();
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 38px;

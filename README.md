@@ -35,7 +35,7 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
   rolagem lenta e contínua (estilo pós-créditos de cinema), com pausar/continuar e
   respeito a `prefers-reduced-motion` — detalhes em [`docs/atribuicoes.md`](docs/atribuicoes.md).
 - **Doações**: botão **Doar** no cabeçalho abre a página de apoio ao projeto, com link do
-  Mercado Pago (abre no navegador) e botão de copiar — detalhes em
+  Mercado Pago (abre no navegador), botão de copiar e QR Code Pix — detalhes em
   [`docs/doacoes.md`](docs/doacoes.md).
 - Tema escuro com fundo preto (`#000`) e paleta sólida azul; ícones **Font Awesome**.
 
@@ -256,7 +256,7 @@ Webtoons/
 ├── docs/
 │   ├── dropbox.md              # guia do backup + diagramas
 │   ├── atribuicoes.md        # página de Atribuições (créditos em loop)
-│   ├── doacoes.md            # página de Doações (link do Mercado Pago)
+│   ├── doacoes.md            # página de Doações (Mercado Pago + QR Pix)
 │   └── api.md                # referência da API interna
 ├── src/
 │   ├── main/                 # processo main (Electron)
@@ -275,7 +275,7 @@ Webtoons/
 │   ├── preload/index.ts      # contextBridge (window.api)
 │   ├── renderer/             # React + Vite
 │   │   ├── index.html        # CSP com scheme cover:
-│   │   └── src/              # App, componentes, attributions.ts, donations.ts, style/styles.css
+│   │   └── src/              # App, componentes, assets/qr-code-pix.png, donations.ts, style/styles.css
 │   ├── types/                # tipos compartilhados main ↔ renderer (@zero/types)
 │   │   ├── index.ts          # barrel (arquivo index só como barrel)
 │   │   ├── work.ts           # Work, WorkType, WorkStatus
@@ -321,6 +321,10 @@ Detalhes da configuração (campo `build` do `package.json`):
   o alvo `deb` do electron-builder exige uma URL no campo `Homepage:` do controle do pacote e o
   projeto não está no GitHub
 - `postinst` do electron-builder cuida do AppArmor (Ubuntu/Mint 24+) e do `chrome-sandbox`
+- Slim via `afterPack` (`build/after-pack.cjs`): remove do pacote locales não usados
+  (mantém `pt-BR`/`pt-PT`/`en-US`), SwiftShader/Vulkan e `libffmpeg` (o app é DOM/CSS
+  estático, sem WebGL nem mídia) — economiza ~5 MB no `.deb`, margem contra o
+  limite de 100 MiB por arquivo do GitHub
 
 ---
 
@@ -393,7 +397,7 @@ Guias e referências (tudo em pt-BR):
 | -------------------------------------------- | ------------------------------------------------------- |
 | [`docs/dropbox.md`](docs/dropbox.md)         | Guia do backup: OAuth PKCE, App folder, troubleshooting |
 | [`docs/atribuicoes.md`](docs/atribuicoes.md) | Página de Atribuições: créditos em loop e licenças      |
-| [`docs/doacoes.md`](docs/doacoes.md)         | Página de Doações: link do Mercado Pago                 |
+| [`docs/doacoes.md`](docs/doacoes.md)         | Página de Doações: Mercado Pago + QR Pix                |
 | [`docs/api.md`](docs/api.md)                 | Referência da API interna (`window.api` + canais IPC)   |
 | [`docs/openapi.yaml`](docs/openapi.yaml)     | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)     |
 | [`CHANGELOG.md`](CHANGELOG.md)               | Histórico de mudanças por versão                        |

@@ -1,7 +1,7 @@
 {
   "name": "chronos-biblioteca",
   "productName": "Chronos Biblioteca",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Biblioteca de anotação de progresso em leituras de webtoons, manhwas, manhuas, mangás e livros",
   "main": "out/main/index.js",
   "desktopName": "chronos-biblioteca.desktop",
@@ -75,6 +75,7 @@
     "appId": "com.chronos.biblioteca",
     "productName": "Chronos Biblioteca",
     "artifactName": "chronos-biblioteca_${version}_${arch}.${ext}",
+    "afterPack": "./build/after-pack.cjs",
     "directories": {
       "output": "release",
       "buildResources": "build"

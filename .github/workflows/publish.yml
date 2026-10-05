@@ -7,7 +7,7 @@ name: Publicar .deb
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
   release:
     types: [published]
 

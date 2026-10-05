@@ -4,11 +4,11 @@ if [ "$1" = "purge" ]; then
   for home in /home/* /root; do
     [ -d "$home" ] || continue
     rm -rf \
-      "$home/.config/webtoons-biblioteca" \
-      "$home/.local/share/webtoons-biblioteca" \
-      "$home/.cache/webtoons-biblioteca" \
-      "$home/.local/state/webtoons-biblioteca" \
-      "$home/.config/Webtoons Biblioteca"
+      "$home/.config/Chronos-biblioteca" \
+      "$home/.local/share/Chronos-biblioteca" \
+      "$home/.cache/Chronos-biblioteca" \
+      "$home/.local/state/Chronos-biblioteca" \
+      "$home/.config/Chronos Biblioteca"
   done
 fi
 exit 0
