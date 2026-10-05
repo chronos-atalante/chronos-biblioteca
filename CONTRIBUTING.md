@@ -74,3 +74,21 @@ usuário ganham entrada em [`CHANGELOG.md`](CHANGELOG.md).
 2. Faça commits pequenos, com mensagens claras em pt-BR.
 3. Rode `npm run check` e `npm test` (tudo verde).
 4. Abra o PR descrevendo **o quê**, **por quê** e **como testar**.
+
+## 9. Commits e lançamentos automáticos
+
+Os lançamentos são automáticos via GitHub Actions — **sem token manual e sem
+bump manual de versão**:
+
+- Use [Conventional Commits](https://www.conventionalcommits.org/) em pt-BR no
+  título do commit vindo da `developer` para a `main`:
+  - `feat: ...` → nova funcionalidade (sobe `MINOR`, ex.: 1.0.2 → 1.1.0);
+  - `fix: ...` → correção de bug (sobe `PATCH`, ex.: 1.0.2 → 1.0.3);
+  - `docs: ...`, `test: ...`, `chore: ...`, `refactor: ...` → sem lançamento.
+- Ao mesclar na `main`, o bot **release-please** abre o PR `chore: release x.y.z`
+  (bump em `package.json` + entrada no `CHANGELOG.md`). **Mesclar esse PR**
+  cria a tag `vx.y.z` e a GitHub Release.
+- O workflow **Publicar .deb** então compila (`npm run dist`), anexa o `.deb`
+  à Release e dispara o redeploy da landing (via Deploy Hook).
+- Atalho: `git push origin v1.2.3` numa tag também publica (a Release é criada
+  com notas geradas). Use só em exceção — o fluxo normal é via PR do bot.

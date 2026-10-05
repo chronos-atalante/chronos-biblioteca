@@ -1,0 +1,48 @@
+name: Publicar .deb
+
+# Publica o .deb na GitHub Release correspondente:
+# - tag v* enviada manualmente (ex.: git push origin v1.0.3), ou
+# - Release criada pelo bot do release-please ao mesclar o PR de release.
+# Sem loop: releases criadas com GITHUB_TOKEN não disparam novos runs.
+on:
+  push:
+    tags:
+      - "v*"
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Dependências do sistema (electron-builder --linux deb)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fakeroot
+
+      - run: npm ci
+
+      - run: npm run dist
+
+      - name: Anexar .deb à Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/chronos-biblioteca_*_amd64.deb
+          # Se a Release ainda não existe (tag manual), ela é criada aqui.
+          generate_release_notes: true
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.event.release.tag_name }}
+
+      - name: Disparar redeploy da landing (Vercel Deploy Hook)
+        # Sem hook configurado, pula em silêncio — a Release funciona igual.
+        if: ${{ secrets.VERCEL_DEPLOY_HOOK_URL != '' }}
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: curl -fsS -X POST "$VERCEL_DEPLOY_HOOK_URL"
