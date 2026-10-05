@@ -92,3 +92,17 @@ bump manual de versão**:
   à Release e dispara o redeploy da landing (via Deploy Hook).
 - Atalho: `git push origin v1.2.3` numa tag também publica (a Release é criada
   com notas geradas). Use só em exceção — o fluxo normal é via PR do bot.
+
+## 10. Publicar no APT (único passo manual por release)
+
+O `.deb` chega aos usuários via repositório APT público
+(`https://chronos-atalante.github.io/repo-apt/`, repo `repo-apt` + GitHub
+Pages) e via botão de download da landing (que lê a versão do `Packages`
+público). Depois que a Release com o `.deb` existir:
+
+```bash
+bin/publicar-apt 1.2.3 /caminho/do/repo-apt   # reprepro + commit + push
+```
+
+Pré-requisitos uma única vez: `sudo apt install reprepro gh && gh auth login.
+O GitHub Pages serve a nova versão em ~1 min, sem tocar na landing.

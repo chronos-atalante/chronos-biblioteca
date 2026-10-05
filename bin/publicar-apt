@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Publica uma versão no repositório APT (passo manual por release).
+#
+# Uso: bin/publicar-apt <versão> [dir-do-repo-apt]
+# Ex.: bin/publicar-apt 1.2.3 ~/Laboratorio/Chronos/repo-apt
+#
+# O que faz:
+#   1. baixa o .deb da GitHub Release privada (tag v<versão>);
+#   2. roda `reprepro includedeb noble` no checkout do repo-apt;
+#   3. commita e pusha — o GitHub Pages serve a nova versão em ~1 min.
+#
+# Pré-requisitos (uma única vez): sudo apt install reprepro gh && gh auth login
+set -euo pipefail
+
+VERSAO="${1:?Uso: bin/publicar-apt <versão> [dir-do-repo-apt] (ex.: 1.2.3)}"
+REPO_APT="${2:-$HOME/Laboratorio/Chronos/repo-apt}"
+APP_REPO="chronos-atalante/chronos-biblioteca"
+
+command -v gh >/dev/null || { echo "erro: instale gh (sudo apt install gh) e rode gh auth login" >&2; exit 1; }
+command -v reprepro >/dev/null || { echo "erro: instale reprepro (sudo apt install reprepro)" >&2; exit 1; }
+[ -d "$REPO_APT/conf" ] || { echo "erro: $REPO_APT não é um checkout do repo-apt" >&2; exit 1; }
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+echo "→ baixando .deb da Release v$VERSAO ..."
+gh release download "v$VERSAO" --repo "$APP_REPO" --pattern "*_amd64.deb" --dir "$TMP"
+DEB="$(echo "$TMP"/chronos-biblioteca_*_amd64.deb)"
+
+echo "→ reprepro includedeb noble $DEB ..."
+reprepro -b "$REPO_APT" includedeb noble "$DEB"
+reprepro -b "$REPO_APT" list noble chronos-biblioteca
+
+echo "→ commit + push do repo-apt ..."
+git -C "$REPO_APT" add -A
+git -C "$REPO_APT" commit -m "Publica chronos-biblioteca $VERSAO no APT (noble/main)"
+git -C "$REPO_APT" push origin main
+
+echo "ok: $VERSAO no ar em https://chronos-atalante.github.io/repo-apt/ (Pages atualiza em ~1 min)"
