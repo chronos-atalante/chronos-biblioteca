@@ -4,6 +4,18 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.1.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.0.2...v1.1.0) (2026-10-05)
+
+
+### Features
+
+* migra backup em nuvem do Google Drive para o Dropbox ([c55190e](https://github.com/chronos-atalante/chronos-biblioteca/commit/c55190e62250866841bfcbf93c1d2bae2f8b020e))
+
+
+### Bug Fixes
+
+* corrige tipos do upload no Dropbox (autorename/mute booleanos) ([59454b5](https://github.com/chronos-atalante/chronos-biblioteca/commit/59454b5b630231436e6f680df9ac69e2921dbfc1))
+
 ## [1.0.2] - 2026-10-05
 
 ### Adicionado
