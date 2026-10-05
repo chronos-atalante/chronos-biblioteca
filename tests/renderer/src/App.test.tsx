@@ -259,6 +259,24 @@ describe('App — ações nas obras', () => {
 });
 
 describe('App — modais', () => {
+  it('abre as atribuições pelo botão do cabeçalho', async () => {
+    const user = userEvent.setup();
+    setup();
+    await screen.findByText(/4 obra\(s\)/);
+
+    await user.click(screen.getByRole('button', { name: /Atribuições/ }));
+    expect(screen.getByRole('dialog', { name: 'Atribuições' })).toBeInTheDocument();
+  });
+
+  it('abre as doações pelo botão do cabeçalho', async () => {
+    const user = userEvent.setup();
+    setup();
+    await screen.findByText(/4 obra\(s\)/);
+
+    await user.click(screen.getByRole('button', { name: /^Doar$/ }));
+    expect(screen.getByRole('dialog', { name: 'Doações' })).toBeInTheDocument();
+  });
+
   it('abre a configuração pelo botão de engrenagem', async () => {
     const user = userEvent.setup();
     setup();

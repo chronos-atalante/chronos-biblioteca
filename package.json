@@ -14,7 +14,7 @@
     "biblioteca"
   ],
   "author": "chronos",
-  "homepage": "https://example.com/chronos-biblioteca",
+  "homepage": "https://github.com/chronos-biblioteca",
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",

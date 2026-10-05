@@ -31,6 +31,12 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 - **Janela nativa sem barra de menus**: sem botões File/Edit/View no topo (menu da
   aplicação removido por completo); decorações do gerenciador de janelas (encaixe em cantos
   para dividir a tela, maximizar/fechar) e `F11` alterna tela cheia.
+- **Atribuições**: botão ao lado da pílula do Drive abre os créditos das dependências em
+  rolagem lenta e contínua (estilo pós-créditos de cinema), com pausar/continuar e
+  respeito a `prefers-reduced-motion` — detalhes em [`docs/atribuicoes.md`](docs/atribuicoes.md).
+- **Doações**: botão **Doar** no cabeçalho abre a página de apoio ao projeto, com link do
+  Mercado Pago (abre no navegador) e botão de copiar — detalhes em
+  [`docs/doacoes.md`](docs/doacoes.md).
 - Tema escuro com fundo preto (`#000`) e paleta sólida azul; ícones **Font Awesome**.
 
 ---
@@ -161,10 +167,14 @@ flowchart TD
         UI2["WorkCard — capa, progresso, concluir/pausar/cancelar"]
         UI3["WorkModal — formulário da obra"]
         UI4["SettingsModal — credenciais e backup"]
+        UI5["AttributionsModal — créditos em loop"]
+        UI6["DonateModal — apoio via Mercado Pago"]
         BRIDGE["window.api (contextBridge)"]
         UI1 --> UI2
         UI1 --> UI3
         UI1 --> UI4
+        UI1 --> UI5
+        UI1 --> UI6
         UI2 --> BRIDGE
         UI3 --> BRIDGE
         UI4 --> BRIDGE
@@ -244,7 +254,10 @@ Webtoons/
 │   ├── icon.png              # ícone 512×512 usado no .deb
 │   └── make-icon.py          # gerador do ícone (PIL)
 ├── docs/
-│   └── google-drive.md       # guia do backup + diagramas
+│   ├── google-drive.md       # guia do backup + diagramas
+│   ├── atribuicoes.md        # página de Atribuições (créditos em loop)
+│   ├── doacoes.md            # página de Doações (link do Mercado Pago)
+│   └── api.md                # referência da API interna
 ├── src/
 │   ├── main/                 # processo main (Electron)
 │   │   ├── index.ts          # janela, IPC, protocolo cover://, F11 em tela cheia
@@ -263,7 +276,7 @@ Webtoons/
 │   ├── preload/index.ts      # contextBridge (window.api)
 │   ├── renderer/             # React + Vite
 │   │   ├── index.html        # CSP com scheme cover:
-│   │   └── src/              # App, componentes, style/styles.css
+│   │   └── src/              # App, componentes, attributions.ts, donations.ts, style/styles.css
 │   ├── types/                # tipos compartilhados main ↔ renderer (@zero/types)
 │   │   ├── index.ts          # barrel (arquivo index só como barrel)
 │   │   ├── work.ts           # Work, WorkType, WorkStatus
@@ -380,6 +393,8 @@ Guias e referências (tudo em pt-BR):
 | Documento                                      | Conteúdo                                              |
 | ---------------------------------------------- | ----------------------------------------------------- |
 | [`docs/google-drive.md`](docs/google-drive.md) | Guia do backup: OAuth, criptografia, troubleshooting  |
+| [`docs/atribuicoes.md`](docs/atribuicoes.md)   | Página de Atribuições: créditos em loop e licenças    |
+| [`docs/doacoes.md`](docs/doacoes.md)           | Página de Doações: link do Mercado Pago               |
 | [`docs/api.md`](docs/api.md)                   | Referência da API interna (`window.api` + canais IPC) |
 | [`docs/openapi.yaml`](docs/openapi.yaml)       | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)   |
 | [`CHANGELOG.md`](CHANGELOG.md)                 | Histórico de mudanças por versão                      |

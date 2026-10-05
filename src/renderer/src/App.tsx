@@ -5,6 +5,8 @@ import { FILTERS, STATUS_COLORS, clampProgress, type StatusFilter } from '@zero/
 import WorkCard from '@zero/renderer/components/WorkCard';
 import WorkModal from '@zero/renderer/components/WorkModal';
 import SettingsModal from '@zero/renderer/components/SettingsModal';
+import AttributionsModal from '@zero/renderer/components/AttributionsModal';
+import DonateModal from '@zero/renderer/components/DonateModal';
 
 interface EditingState {
   work: Work;
@@ -54,6 +56,8 @@ export default function App(): JSX.Element {
   const [filter, setFilter] = useState<StatusFilter>('todos');
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAttributions, setShowAttributions] = useState(false);
+  const [showDonate, setShowDonate] = useState(false);
   const [drive, setDrive] = useState<DriveStatus | null>(null);
   const [toast, setToast] = useState<{ message: string; kind: 'info' | 'error' } | null>(null);
 
@@ -229,6 +233,20 @@ export default function App(): JSX.Element {
             {driveLabel}
           </button>
           <button
+            className="btn ghost"
+            onClick={() => setShowAttributions(true)}
+            title="Ver atribuições e licenças das dependências"
+          >
+            <i className="fa-solid fa-clapperboard" /> Atribuições
+          </button>
+          <button
+            className="btn ghost"
+            onClick={() => setShowDonate(true)}
+            title="Apoie o projeto com uma doação"
+          >
+            <i className="fa-solid fa-heart" /> Doar
+          </button>
+          <button
             className="btn ghost icon-only"
             onClick={() => setShowSettings(true)}
             title="Configurações"
@@ -328,6 +346,10 @@ export default function App(): JSX.Element {
       {showSettings ? (
         <SettingsModal onClose={() => setShowSettings(false)} notify={notify} />
       ) : null}
+
+      {showAttributions ? <AttributionsModal onClose={() => setShowAttributions(false)} /> : null}
+
+      {showDonate ? <DonateModal onClose={() => setShowDonate(false)} /> : null}
 
       {toast !== null ? (
         <div className={`toast${toast.kind === 'error' ? ' error' : ''}`}>{toast.message}</div>
