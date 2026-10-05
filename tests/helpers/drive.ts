@@ -290,6 +290,9 @@ export async function connect(passphrase = PASSPHRASE): Promise<void> {
         access_token: 'token-inicial',
         refresh_token: 'refresh-inicial',
         expires_in: 3600,
+        scope:
+          'account_info.read files.metadata.read files.metadata.write ' +
+          'files.content.read files.content.write',
       });
     }
     if (call.url === ACCOUNT_ENDPOINT) return json({ email: 'leitor@example.com' });

@@ -202,19 +202,20 @@ ao desmontar o componente.
 
 ### Erros comuns (pt-BR, como exibidos no app)
 
-| Mensagem                                                | Quando                                                          |
-| ------------------------------------------------------- | --------------------------------------------------------------- |
-| `Conecte a conta Dropbox primeiro.`                     | backup/restauração sem sessão                                   |
-| `Nenhuma biblioteca local para backup. …`               | backup com biblioteca vazia                                     |
-| `Defina uma senha de criptografia do backup…`           | backup sem senha configurada                                    |
-| `Sincronização já em andamento.`                        | backup/restauração paralelos                                    |
-| `Sessão expirada. Conecte a conta Dropbox novamente.`   | refresh token ausente                                           |
-| `Não foi possível renovar a sessão do Dropbox.`         | refresh recusado pelo Dropbox                                   |
-| `Senha de criptografia incorreta ou backup corrompido.` | restauração com senha errada                                    |
-| `Nenhum backup encontrado na pasta do app no Dropbox.`  | restauração sem backup remoto                                   |
-| `Backup inválido (library.json corrompido).`            | backup remoto não é uma lista de obras                          |
-| `Permissões do Dropbox atualizadas. Reconecte…`         | escopos do app mudaram desde a sessão salva                     |
-| `Erro do Dropbox (HTTP 500)[. Resposta: …]`             | falha de rede/API sem `error_summary` (traz trecho da resposta) |
+| Mensagem                                                | Quando                                                                     |
+| ------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `Conecte a conta Dropbox primeiro.`                     | backup/restauração sem sessão                                              |
+| `Nenhuma biblioteca local para backup. …`               | backup com biblioteca vazia                                                |
+| `Defina uma senha de criptografia do backup…`           | backup sem senha configurada                                               |
+| `Sincronização já em andamento.`                        | backup/restauração paralelos                                               |
+| `Sessão expirada. Conecte a conta Dropbox novamente.`   | refresh token ausente                                                      |
+| `Não foi possível renovar a sessão do Dropbox.`         | refresh recusado pelo Dropbox                                              |
+| `Senha de criptografia incorreta ou backup corrompido.` | restauração com senha errada                                               |
+| `Nenhum backup encontrado na pasta do app no Dropbox.`  | restauração sem backup remoto                                              |
+| `Backup inválido (library.json corrompido).`            | backup remoto não é uma lista de obras                                     |
+| `Faltam permissões no app Dropbox…`                     | concessão sem todos os escopos, ou `missing_scope`/`required scope` da API |
+| `Permissões do Dropbox atualizadas. Reconecte…`         | escopos do app mudaram desde a sessão salva                                |
+| `Erro do Dropbox (HTTP 500)[. Resposta: …]`             | falha de rede/API sem `error_summary` (traz trecho da resposta)            |
 
 ---
 

@@ -69,6 +69,14 @@ async function toDropboxError(res: Response): Promise<Error> {
     }
   }
   const suffix = raw !== '' ? ` Resposta: ${raw}` : '';
+  // Escopo faltando (permissão não marcada no App Console, ou sessão concedida
+  // antes dela): traduz para ação concreta em vez de vazar o inglês da API.
+  if (/missing_scope|required scope/i.test(`${detail} ${raw}`)) {
+    throw new Error(
+      'Faltam permissões no app Dropbox. Marque todos os escopos na aba Permissions ' +
+        'do App Console, Desconecte e Conecte de novo.',
+    );
+  }
   throw new Error(detail !== '' ? detail : `Erro do Dropbox (HTTP ${res.status}).${suffix}`);
 }
 

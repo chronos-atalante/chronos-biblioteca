@@ -12,6 +12,8 @@ export interface Tokens {
   accountEmail: string | null;
   lastSync: string | null;
   scopeVersion: number;
+  /** Escopos concedidos na autorização (auditoria; ausente em sessões antigas). */
+  grantedScopes?: string | undefined;
 }
 
 export interface DriveState {

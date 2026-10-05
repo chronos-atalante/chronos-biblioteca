@@ -171,6 +171,28 @@ describe('backupNow', { timeout: 60_000 }, () => {
     expect(continued.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('traduz falta de escopo em ação concreta', async () => {
+    await connect();
+    saveLibrary([makeWork({ id: 'obra-escopo' })]);
+    stubFetch(() =>
+      json(
+        {
+          error_summary:
+            'missing_scope/Your app (ID: 8812259) is not permitted to access this endpoint ' +
+            "because it does not have the required scope 'files.metadata.read'",
+        },
+        400,
+      ),
+    );
+    const result = await backupNow();
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Faltam permissões no app Dropbox. Marque todos os escopos na aba Permissions ' +
+        'do App Console, Desconecte e Conecte de novo.',
+    });
+  });
+
   it('reporta erro vindo da API do Dropbox', async () => {
     await connect();
     saveLibrary([makeWork({ id: 'obra-5' })]);

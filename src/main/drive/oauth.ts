@@ -129,6 +129,7 @@ async function exchangeCode(
     access_token: string;
     refresh_token?: string | undefined;
     expires_in: number;
+    scope?: string | undefined;
   }>(res);
   if (!isTokenResponse(data)) throw new Error(`Resposta de tokens inválida (${res.status}).`);
   return {
@@ -141,7 +142,18 @@ async function exchangeCode(
     accountEmail: null,
     lastSync: null,
     scopeVersion: SCOPE_VERSION,
+    grantedScopes:
+      'scope' in data && typeof data.scope === 'string' && data.scope !== ''
+        ? data.scope
+        : undefined,
   };
+}
+
+/** Escopos que faltaram na concessão ('' quando o provedor não informou). */
+export function missingScopes(granted: string | undefined): string[] {
+  if (granted === undefined) return [];
+  const have = new Set(granted.split(' ').filter((scope) => scope !== ''));
+  return SCOPES.split(' ').filter((scope) => !have.has(scope));
 }
 
 /** Valida a forma mínima da resposta de tokens antes de usar (falha fechada). */
@@ -197,6 +209,14 @@ export async function authorize(): Promise<{ ok: boolean; error?: string }> {
     });
     const { code, redirectUri } = await openBrowser(params);
     const tokens = await exchangeCode(code, key, codeVerifier, redirectUri);
+    const missing = missingScopes(tokens.grantedScopes);
+    if (missing.length > 0) {
+      const error =
+        `Faltam permissões no app Dropbox (${missing.join(', ')}). ` +
+        'Marque todos os escopos na aba Permissions do App Console e conecte de novo.';
+      setError(error);
+      return { ok: false, error };
+    }
     tokens.accountEmail = await fetchAccountEmail(tokens.accessToken);
     state.tokens = tokens;
     setError(null);

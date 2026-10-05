@@ -156,6 +156,34 @@ describe('authorize', { timeout: 60_000 }, () => {
     expect(getStatus().lastError).toBe('access_denied');
   });
 
+  it('recusa a concessão sem todos os escopos', async () => {
+    saveSettings({ driveClientId: APP_KEY, driveClientSecret: '', drivePassphrase: '' });
+    shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
+      const redirect = new URL(url).searchParams.get('redirect_uri');
+      if (redirect !== null) {
+        const request = http.get(`${redirect}?code=codigo-valido`);
+        request.on('error', () => undefined);
+      }
+      return Promise.resolve();
+    });
+    stubFetch((call) => {
+      if (call.url.endsWith('/oauth2/token')) {
+        return json({
+          access_token: 'token-parcial',
+          refresh_token: 'refresh-parcial',
+          expires_in: 3600,
+          scope: 'account_info.read files.content.read',
+        });
+      }
+      return json({ error_summary: 'inesperado' }, 500);
+    });
+    const result = await authorize();
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('Faltam permissões no app Dropbox');
+    expect(result.error).toContain('files.metadata.read');
+    expect(getStatus().connected).toBe(false);
+  });
+
   it('reporta falha na troca do código por tokens', async () => {
     saveSettings({ driveClientId: APP_KEY, driveClientSecret: '', drivePassphrase: '' });
     shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
