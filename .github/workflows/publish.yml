@@ -78,7 +78,26 @@ jobs:
           # Alias estável SEM versão: o APT resolve Filename relativo à base
           # .../releases/latest/download/, que só redireciona nomes exatos.
           cp release/chronos-biblioteca_*_amd64.deb apt/chronos-biblioteca_amd64.deb
-          printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          # Falhas aqui viram ::error:: explícito (annotations são legíveis
+          # na UI do Actions sem precisar abrir o log cru).
+          printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import || true
+          if ! gpg --list-secret-keys F2B0A3843C9FF986 >/dev/null 2>&1; then
+            echo "::error::GPG_PRIVATE_KEY inválido ou incompleto — cole o bloco inteiro do arquivo, COM as linhas -----BEGIN PGP PRIVATE KEY BLOCK----- e -----END PGP PRIVATE KEY BLOCK----- (sem elas o gpg não reconhece o formato)."
+            exit 1
+          fi
+          if [ -n "${GPG_PASSPHRASE:-}" ]; then
+            GPG_OPTS=(--batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE")
+          else
+            GPG_OPTS=(--batch --yes)
+          fi
+          # Teste de assinatura antes de gerar nada: falha = passphrase errada
+          # (ou secret GPG_PASSPHRASE ausente — no CI não há pinentry).
+          echo preflight > apt/.sign-test
+          if ! gpg "${GPG_OPTS[@]}" --clearsign -o apt/.sign-test.asc apt/.sign-test; then
+            echo "::error::GPG_PASSPHRASE incorreto (ou secret ausente) para a chave F2B0A3843C9FF986."
+            exit 1
+          fi
+          rm -f apt/.sign-test apt/.sign-test.asc
           cd apt
           dpkg-scanpackages . /dev/null > Packages.raw
           # Filename precisa ser o nome puro do asset (sem ./ nem pool/).
@@ -98,11 +117,6 @@ jobs:
             -o APT::FTPArchive::Release::Description="Chronos Biblioteca" \
             . > ../Release.tmp
           mv ../Release.tmp Release
-          if [ -n "${GPG_PASSPHRASE:-}" ]; then
-            GPG_OPTS=(--batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE")
-          else
-            GPG_OPTS=(--batch --yes)
-          fi
           gpg "${GPG_OPTS[@]}" --clearsign -o InRelease Release
           gpg "${GPG_OPTS[@]}" -abs -o Release.gpg Release
           gpg --armor --export > public.key
