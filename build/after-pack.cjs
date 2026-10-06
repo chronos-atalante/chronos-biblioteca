@@ -5,10 +5,14 @@
 // - locales/: mantém só pt-BR, pt-PT e en-US (fallback obrigatório do Chromium).
 // - SwiftShader/Vulkan (libvk_swiftshader.so, libvulkan.so.1,
 //   vk_swiftshader_icd.json): o app é DOM/CSS estático, sem WebGL.
-// - libffmpeg.so: o app não tem áudio/vídeo (capas são imagens estáticas,
-//   decodificadas nativamente pelo Chromium, sem ffmpeg).
 //
-// Se o app um dia precisar de WebGL ou mídia, rever a lista abaixo.
+// NUNCA remover libffmpeg.so: o binário do Electron declara DT_NEEDED nele,
+// então o loader exige o arquivo na hora do exec — sem ele o app morre
+// instantaneamente ("error while loading shared libraries: libffmpeg.so")
+// mesmo o app não usando áudio/vídeo. (O 1.1.1 foi publicado assim e não
+// abria.)
+//
+// Se o app um dia precisar de WebGL, rever a lista abaixo.
 // Exportado nos dois formatos (module.exports + .default) porque o
 // electron-builder pode carregar o hook via require() ou import().
 const fs = require('node:fs');
@@ -16,12 +20,7 @@ const path = require('node:path');
 
 const KEEP_LOCALES = new Set(['en-US.pak', 'pt-BR.pak', 'pt-PT.pak']);
 
-const REMOVE_FILES = [
-  'libvk_swiftshader.so',
-  'libvulkan.so.1',
-  'vk_swiftshader_icd.json',
-  'libffmpeg.so',
-];
+const REMOVE_FILES = ['libvk_swiftshader.so', 'libvulkan.so.1', 'vk_swiftshader_icd.json'];
 
 async function afterPack(context) {
   const dir = context.appOutDir;

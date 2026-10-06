@@ -4,6 +4,14 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.1.2](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.1...v1.1.2) (2026-10-06)
+
+### Bug Fixes
+
+- embalagem: o `after-pack` não remove mais o `libffmpeg.so` — o binário do
+  Electron o declara como `DT_NEEDED` e o 1.1.1 abria apenas o ícone,
+  morrendo com "error while loading shared libraries: libffmpeg.so".
+
 ## [1.1.1](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.0...v1.1.1) (2026-10-05)
 
 ### Bug Fixes
