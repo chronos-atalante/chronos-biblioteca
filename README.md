@@ -45,7 +45,10 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 ### Via repositório APT (recomendado — recebe `sudo apt upgrade`)
 
 O repositório é a própria GitHub Release do projeto (índices assinados como
-assets; nada de binário no git). Na primeira instalação:
+assets; nada de binário no git). Motivo da escolha, passo a passo da
+publicação e regras de manutenção: [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md).
+
+Na primeira instalação:
 
 ```bash
 curl -fsSL https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download/public.key \
@@ -281,6 +284,7 @@ Webtoons/
 │   └── make-icon.py          # gerador do ícone (PIL)
 ├── docs/
 │   ├── dropbox.md              # guia do backup + diagramas
+│   ├── distribuicao-apt.md     # distribuição: Release + repo APT flat assinado
 │   ├── atribuicoes.md        # página de Atribuições (créditos em loop)
 │   ├── doacoes.md            # página de Doações (Mercado Pago + QR Pix)
 │   └── api.md                # referência da API interna
@@ -424,17 +428,18 @@ python3 build/make-icon.py
 
 Guias e referências (tudo em pt-BR):
 
-| Documento                                    | Conteúdo                                                |
-| -------------------------------------------- | ------------------------------------------------------- |
-| [`docs/dropbox.md`](docs/dropbox.md)         | Guia do backup: OAuth PKCE, App folder, troubleshooting |
-| [`docs/atribuicoes.md`](docs/atribuicoes.md) | Página de Atribuições: créditos em loop e licenças      |
-| [`docs/doacoes.md`](docs/doacoes.md)         | Página de Doações: Mercado Pago + QR Pix                |
-| [`docs/api.md`](docs/api.md)                 | Referência da API interna (`window.api` + canais IPC)   |
-| [`docs/openapi.yaml`](docs/openapi.yaml)     | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)     |
-| [`CHANGELOG.md`](CHANGELOG.md)               | Histórico de mudanças por versão                        |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md)         | Como contribuir (ambiente, scripts, convenções)         |
-| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)   | Código de conduta da comunidade                         |
-| [`SECURITY.md`](SECURITY.md)                 | Política de segurança e como reportar falhas            |
+| Documento                                              | Conteúdo                                                         |
+| ------------------------------------------------------ | ---------------------------------------------------------------- |
+| [`docs/dropbox.md`](docs/dropbox.md)                   | Guia do backup: OAuth PKCE, App folder, troubleshooting          |
+| [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md) | Distribuição: Release, repo APT flat assinado e fluxo de release |
+| [`docs/atribuicoes.md`](docs/atribuicoes.md)           | Página de Atribuições: créditos em loop e licenças               |
+| [`docs/doacoes.md`](docs/doacoes.md)                   | Página de Doações: Mercado Pago + QR Pix                         |
+| [`docs/api.md`](docs/api.md)                           | Referência da API interna (`window.api` + canais IPC)            |
+| [`docs/openapi.yaml`](docs/openapi.yaml)               | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)              |
+| [`CHANGELOG.md`](CHANGELOG.md)                         | Histórico de mudanças por versão                                 |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md)                   | Como contribuir (ambiente, scripts, convenções)                  |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)             | Código de conduta da comunidade                                  |
+| [`SECURITY.md`](SECURITY.md)                           | Política de segurança e como reportar falhas                     |
 
 ---
 

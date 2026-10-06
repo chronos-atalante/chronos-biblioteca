@@ -116,3 +116,6 @@ Para publicar uma versão (manualmente, a partir da `main`):
 A landing lê essa Release na API pública e atualiza versão, botão de
 download e os comandos APT (`…/releases/latest/download/`, suite `./`) —
 o `.deb` nunca é versionado no git.
+
+Guia completo do fluxo de distribuição (motivos, passo a passo, lições e
+verificação de sanidade): [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md).
