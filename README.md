@@ -36,6 +36,8 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 - **Doações**: botão **Doar** no cabeçalho abre a página de apoio ao projeto, com link do
   Mercado Pago (abre no navegador), botão de copiar e QR Code Pix; detalhes em
   [`docs/doacoes.md`](docs/doacoes.md).
+- **Idioma**: interface em **português (Brasil)** ou **inglês**, escolhido em Configurações e
+  persistido; todo texto fixo mora em `src/messages/` (ver [`docs/messages.md`](docs/messages.md)).
 - Tema escuro com fundo preto (`#000`) e paleta sólida azul; ícones **Font Awesome**.
 
 ---
@@ -154,13 +156,15 @@ Dentro de `src/` **não existe import relativo**: todo módulo é referenciado p
 `@zero/*`. O mapa é declarado uma única vez em `tsconfig.base.json` e espelhado nos três
 resolvers que o projeto usa (build, testes e Node puro):
 
-| Alias              | Alvo                  | Onde é resolvido                                        |
-| ------------------ | --------------------- | ------------------------------------------------------- |
-| `@zero/types`      | `src/types/` (barrel) | `electron.vite.config.mts`, `vitest.config.mts`, loader |
-| `@zero/types/*`    | `src/types/*`         | `tsconfig.base.json`                                    |
-| `@zero/main/*`     | `src/main/*`          | `electron.vite.config.mts`, `vitest.config.mts`, loader |
-| `@zero/preload/*`  | `src/preload/*`       | `electron.vite.config.mts`, `vitest.config.mts`, loader |
-| `@zero/renderer/*` | `src/renderer/src/*`  | `electron.vite.config.mts`, `vitest.config.mts`, loader |
+| Alias              | Alvo                     | Onde é resolvido                                        |
+| ------------------ | ------------------------ | ------------------------------------------------------- |
+| `@zero/types`      | `src/types/` (barrel)    | `electron.vite.config.mts`, `vitest.config.mts`, loader |
+| `@zero/types/*`    | `src/types/*`            | `tsconfig.base.json`                                    |
+| `@zero/messages`   | `src/messages/` (barrel) | `electron.vite.config.mts`, `vitest.config.mts`, loader |
+| `@zero/messages/*` | `src/messages/*`         | `tsconfig.base.json`                                    |
+| `@zero/main/*`     | `src/main/*`             | `electron.vite.config.mts`, `vitest.config.mts`, loader |
+| `@zero/preload/*`  | `src/preload/*`          | `electron.vite.config.mts`, `vitest.config.mts`, loader |
+| `@zero/renderer/*` | `src/renderer/src/*`     | `electron.vite.config.mts`, `vitest.config.mts`, loader |
 
 - **Build** (`npm run dev` / `npm run build`): electron-vite (Vite) resolve os aliases.
 - **Testes** (`npm test`): vitest resolve os mesmos aliases.
@@ -212,8 +216,12 @@ flowchart TD
     subgraph MAIN["Main: Electron (src/main)"]
         IDX["index.ts: janela, IPC, protocolo cover:, F11"]
         LIB["library.ts: library.json + capas"]
-        SET["settings.ts: App key e senha do backup"]
+        SET["settings.ts: App key, senha do backup e idioma"]
         DRV["drive/: provedor Dropbox, OAuth PKCE, backup (AES-256-GCM)"]
+    end
+
+    subgraph MSG["Mensagens (src/messages)"]
+        M1["pt-BR (canônico) · en · messages()"]
     end
 
     subgraph STORAGE["Persistência"]
@@ -227,6 +235,8 @@ flowchart TD
     IDX --> DRV
     DRV <-->|"HTTPS (fetch) · App folder + PKCE, sem secret"| DRIVE
     IDX -.->|"cover://imagens-da-capa"| UI1
+    UI1 -.->|"useMessages() · i18n.tsx"| M1
+    IDX -.->|"currentMessages()"| M1
 ```
 
 ### Estados de uma obra
@@ -286,6 +296,7 @@ Webtoons/
 │   ├── dropbox.md              # guia do backup + diagramas
 │   ├── backup-providers.md     # provedores de nuvem (Dropbox · Google Drive)
 │   ├── distribuicao-apt.md     # distribuição: Release + repo APT flat assinado
+│   ├── messages.md             # i18n: bundles pt-BR/en e o que não se traduz
 │   ├── atribuicoes.md        # página de Atribuições (créditos em loop)
 │   ├── doacoes.md            # página de Doações (Mercado Pago + QR Pix)
 │   └── api.md                # referência da API interna
@@ -293,7 +304,8 @@ Webtoons/
 │   ├── main/                 # processo main (Electron)
 │   │   ├── index.ts          # janela, IPC, protocolo cover://, F11 em tela cheia
 │   │   ├── library.ts        # library.json + cópia/limpeza de capas
-│   │   ├── settings.ts       # App key + senha do backup
+│   │   ├── settings.ts       # App key, senha do backup e idioma
+│   │   ├── i18n.ts           # currentMessages() (idioma corrente no main)
 │   │   └── drive/            # provedores de nuvem, OAuth PKCE, backup/restauração
 │   │       ├── index.ts      # barrel da API pública (authorize, backupNow…)
 │   │       ├── provider.ts   # contrato BackupProvider + catálogo de provedores
@@ -305,10 +317,14 @@ Webtoons/
 │   │       ├── json.ts       # leitura tipada de corpos JSON (`parseJson`)
 │   │       ├── crypto.ts     # AES-256-GCM do backup
 │   │       └── backup.ts     # backup, restauração e desconexão
+│   ├── messages/             # textos do app (i18n): pt-BR (canônico) + en
+│   │   ├── index.ts          # LANGUAGES, LANGUAGE_LABELS, messages()
+│   │   ├── pt-BR.ts          # bundle canônico + tipo Messages
+│   │   └── en.ts             # tradução tipada contra Messages
 │   ├── preload/index.ts      # contextBridge (window.api)
 │   ├── renderer/             # React + Vite
 │   │   ├── index.html        # CSP com scheme cover:
-│   │   └── src/              # App, componentes, assets/qr-code-pix.png, donations.ts, style/styles.css
+│   │   └── src/              # App, i18n.tsx (contexto de idioma), componentes, assets/qr-code-pix.png, donations.ts, style/styles.css
 │   ├── types/                # tipos compartilhados main ↔ renderer (@zero/types)
 │   │   ├── index.ts          # barrel (arquivo index só como barrel)
 │   │   ├── work.ts           # Work, WorkType, WorkStatus
@@ -438,6 +454,7 @@ Guias e referências (tudo em pt-BR):
 | [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md) | Distribuição: Release, repo APT flat assinado e fluxo de release |
 | [`docs/atribuicoes.md`](docs/atribuicoes.md)           | Página de Atribuições: créditos em loop e licenças               |
 | [`docs/doacoes.md`](docs/doacoes.md)                   | Página de Doações: Mercado Pago + QR Pix                         |
+| [`docs/messages.md`](docs/messages.md)                 | i18n: bundles de mensagens (pt-BR/en) e regras de tradução       |
 | [`docs/api.md`](docs/api.md)                           | Referência da API interna (`window.api` + canais IPC)            |
 | [`docs/openapi.yaml`](docs/openapi.yaml)               | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)              |
 | [`CHANGELOG.md`](CHANGELOG.md)                         | Histórico de mudanças por versão                                 |

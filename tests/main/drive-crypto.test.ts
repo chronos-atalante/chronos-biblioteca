@@ -7,7 +7,12 @@ import { PASSPHRASE } from '../helpers/drive.ts';
 const SECRET_DATA = Buffer.from('{"obras":[{"id":"segredo"}]}', 'utf-8');
 
 function withPassphrase(passphrase = PASSPHRASE): void {
-  saveSettings({ driveClientId: '', driveClientSecret: '', drivePassphrase: passphrase });
+  saveSettings({
+    driveClientId: '',
+    driveClientSecret: '',
+    drivePassphrase: passphrase,
+    language: 'pt-BR',
+  });
 }
 
 describe('formato WTENC3 (único)', { timeout: 30_000 }, () => {

@@ -2,19 +2,21 @@ import fs from 'fs';
 import path from 'path';
 import { safeStorage } from 'electron';
 import { configDir } from '@zero/main/library';
-import type { AppSettings } from '@zero/types';
+import type { AppSettings, Language } from '@zero/types';
 
 /**
  * Forma persistida das configurações (nomes de campos mantidos por
  * compatibilidade com o `settings.json` existente):
  * - `driveClientId`: chave do aplicativo Dropbox (App key);
  * - `driveClientSecret`: legado do provedor anterior, ignorado;
- * - `drivePassphrase`: senha de criptografia do backup.
+ * - `drivePassphrase`: senha de criptografia do backup;
+ * - `language`: idioma da interface (`pt-BR` ou `en`).
  */
 const DEFAULTS: AppSettings = {
   driveClientId: '',
   driveClientSecret: '',
   drivePassphrase: '',
+  language: 'pt-BR',
 };
 
 function ensureConfigDir(): void {
@@ -30,6 +32,12 @@ function settingsPath(): string {
 function field(record: object, key: keyof AppSettings): string {
   const value: unknown = Reflect.get(record, key);
   return typeof value === 'string' ? value : DEFAULTS[key];
+}
+
+/** Lê o idioma; qualquer valor fora do catálogo cai no padrão. */
+function languageField(record: object): Language {
+  const value: unknown = Reflect.get(record, 'language');
+  return value === 'pt-BR' || value === 'en' ? value : DEFAULTS.language;
 }
 
 const ENC_PREFIX = 'enc:';
@@ -73,6 +81,7 @@ export function loadSettings(): AppSettings {
       driveClientId: field(parsed, 'driveClientId'),
       driveClientSecret: field(parsed, 'driveClientSecret'),
       drivePassphrase: unprotect(field(parsed, 'drivePassphrase')),
+      language: languageField(parsed),
     };
   } catch {
     return { ...DEFAULTS };
@@ -84,6 +93,7 @@ export function saveSettings(settings: AppSettings): AppSettings {
     driveClientId: settings.driveClientId.trim(),
     driveClientSecret: settings.driveClientSecret.trim(),
     drivePassphrase: settings.drivePassphrase,
+    language: settings.language === 'en' ? 'en' : 'pt-BR',
   };
   // Em disco a senha vai protegida (keyring) ou em claro (fallback); o
   // retorno é sempre a forma utilizável, que o renderer exibe no formulário.

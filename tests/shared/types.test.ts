@@ -4,6 +4,7 @@ import type {
   BackupSummary,
   DriveStatus,
   ElectronApi,
+  Language,
   Work,
   WorkStatus,
   WorkType,
@@ -45,6 +46,7 @@ describe('tipos compartilhados', () => {
       driveClientId: string;
       driveClientSecret: string;
       drivePassphrase: string;
+      language: Language;
     }>();
     expectTypeOf<DriveStatus['connected']>().toEqualTypeOf<boolean>();
     expectTypeOf<DriveStatus['lastSync']>().toEqualTypeOf<string | null>();

@@ -95,7 +95,12 @@ describe('authorize', { timeout: 60_000 }, () => {
   });
 
   it('recusa sem abrir o navegador quando não há chave do aplicativo', async () => {
-    saveSettings({ driveClientId: '', driveClientSecret: '', drivePassphrase: 'frase' });
+    saveSettings({
+      driveClientId: '',
+      driveClientSecret: '',
+      drivePassphrase: 'frase',
+      language: 'pt-BR',
+    });
     const result = await authorize();
     expect(result.ok).toBe(false);
     expect(result.error).toContain('chave do aplicativo Dropbox');
@@ -104,7 +109,12 @@ describe('authorize', { timeout: 60_000 }, () => {
   });
 
   it('abre o OAuth com PKCE, offline e redirect fixo', async () => {
-    saveSettings({ driveClientId: APP_KEY, driveClientSecret: '', drivePassphrase: 'frase' });
+    saveSettings({
+      driveClientId: APP_KEY,
+      driveClientSecret: '',
+      drivePassphrase: 'frase',
+      language: 'pt-BR',
+    });
     shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
       const redirect = new URL(url).searchParams.get('redirect_uri');
       if (redirect !== null) {
@@ -141,7 +151,12 @@ describe('authorize', { timeout: 60_000 }, () => {
   });
 
   it('propaga o erro quando o usuário recusa a autorização', async () => {
-    saveSettings({ driveClientId: APP_KEY, driveClientSecret: '', drivePassphrase: '' });
+    saveSettings({
+      driveClientId: APP_KEY,
+      driveClientSecret: '',
+      drivePassphrase: '',
+      language: 'pt-BR',
+    });
     shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
       const redirect = new URL(url).searchParams.get('redirect_uri');
       if (redirect !== null) {
@@ -157,7 +172,12 @@ describe('authorize', { timeout: 60_000 }, () => {
   });
 
   it('recusa a concessão sem todos os escopos', async () => {
-    saveSettings({ driveClientId: APP_KEY, driveClientSecret: '', drivePassphrase: '' });
+    saveSettings({
+      driveClientId: APP_KEY,
+      driveClientSecret: '',
+      drivePassphrase: '',
+      language: 'pt-BR',
+    });
     shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
       const redirect = new URL(url).searchParams.get('redirect_uri');
       if (redirect !== null) {
@@ -185,7 +205,12 @@ describe('authorize', { timeout: 60_000 }, () => {
   });
 
   it('reporta falha na troca do código por tokens', async () => {
-    saveSettings({ driveClientId: APP_KEY, driveClientSecret: '', drivePassphrase: '' });
+    saveSettings({
+      driveClientId: APP_KEY,
+      driveClientSecret: '',
+      drivePassphrase: '',
+      language: 'pt-BR',
+    });
     shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
       const redirect = new URL(url).searchParams.get('redirect_uri');
       if (redirect !== null) {

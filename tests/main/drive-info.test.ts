@@ -118,6 +118,7 @@ describe('renovação de sessão', { timeout: 60_000 }, () => {
       driveClientId: APP_KEY,
       driveClientSecret: '',
       drivePassphrase: PASSPHRASE,
+      language: 'pt-BR',
     });
     initDrive();
   }
@@ -156,7 +157,12 @@ describe('renovação de sessão', { timeout: 60_000 }, () => {
 
   it('sem chave do aplicativo, orienta configurar a chave', async () => {
     seedExpiredTokens('refresh-legal');
-    saveSettings({ driveClientId: '', driveClientSecret: '', drivePassphrase: PASSPHRASE });
+    saveSettings({
+      driveClientId: '',
+      driveClientSecret: '',
+      drivePassphrase: PASSPHRASE,
+      language: 'pt-BR',
+    });
     saveLibrary([makeWork({ id: 'obra-9' })]);
     const drive = new FakeDropbox();
     drive.seed('library.json', Buffer.from('[]'));

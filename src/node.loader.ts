@@ -26,6 +26,7 @@ type Alias = readonly [prefix: string, target: string];
 /** Espelha `compilerOptions.paths` de tsconfig.base.json. */
 const ALIASES: readonly Alias[] = [
   ['@zero/types', 'src/types'],
+  ['@zero/messages', 'src/messages'],
   ['@zero/main', 'src/main'],
   ['@zero/preload', 'src/preload'],
   ['@zero/renderer', 'src/renderer/src'],

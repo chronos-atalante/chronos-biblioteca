@@ -13,6 +13,7 @@ import {
   TOKEN_ENDPOINT,
 } from '@zero/main/drive/constants';
 import { parseJson } from '@zero/main/drive/json';
+import { currentMessages } from '@zero/main/i18n';
 import { appKey, emit, persistState, setError, state, toMessage } from '@zero/main/drive/state';
 import type { Tokens } from '@zero/main/drive/state';
 
@@ -47,6 +48,7 @@ async function openBrowser(params: URLSearchParams): Promise<{
   const outcomePromise = new Promise<AuthOutcome>((resolve) => {
     resolveOutcome = resolve;
   });
+  const m = currentMessages();
 
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
@@ -61,8 +63,8 @@ async function openBrowser(params: URLSearchParams): Promise<{
     // ainda na fila se resolvesse antes.
     res.end(
       `<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;background:#000;color:#e8ecf6;padding:40px">
-        <h2>${error !== null ? 'Autorização recusada' : 'Autorização concluída'}</h2>
-        <p>${error !== null ? 'Você pode fechar esta aba.' : 'Pode fechar esta aba e voltar para o aplicativo.'}</p>
+        <h2>${error !== null ? m.oauthPage.deniedTitle : m.oauthPage.doneTitle}</h2>
+        <p>${error !== null ? m.oauthPage.deniedBody : m.oauthPage.doneBody}</p>
       </body>`,
       () => {
         shutdown(server);
@@ -91,7 +93,11 @@ async function openBrowser(params: URLSearchParams): Promise<{
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<AuthOutcome>((resolve) => {
     timer = setTimeout(
-      () => resolve({ code: null, error: 'Tempo esgotado aguardando autorização.' }),
+      () =>
+        resolve({
+          code: null,
+          error: currentMessages().driveErrors.tokenTimeout,
+        }),
       AUTH_TIMEOUT_MS,
     );
     // Não segura o processo (testes) quando o fluxo já terminou por outro caminho.
@@ -102,7 +108,7 @@ async function openBrowser(params: URLSearchParams): Promise<{
   if (server.listening) shutdown(server);
 
   if (outcome.code !== null && outcome.code !== '') return { code: outcome.code, redirectUri };
-  throw new Error(outcome.error ?? 'Autorização cancelada.');
+  throw new Error(outcome.error ?? currentMessages().driveErrors.authCancelled);
 }
 
 async function exchangeCode(
@@ -124,14 +130,16 @@ async function exchangeCode(
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
   });
-  if (!res.ok) throw new Error(`Falha ao obter tokens (${res.status}).`);
+  if (!res.ok) throw new Error(currentMessages().driveErrors.tokenFailed(res.status));
   const data = await parseJson<{
     access_token: string;
     refresh_token?: string | undefined;
     expires_in: number;
     scope?: string | undefined;
   }>(res);
-  if (!isTokenResponse(data)) throw new Error(`Resposta de tokens inválida (${res.status}).`);
+  if (!isTokenResponse(data)) {
+    throw new Error(currentMessages().driveErrors.invalidTokenResponse(res.status));
+  }
   return {
     accessToken: data.access_token,
     refreshToken:
@@ -191,8 +199,7 @@ async function fetchAccountEmail(token: string): Promise<string | null> {
 export async function authorize(): Promise<{ ok: boolean; error?: string }> {
   const key = appKey();
   if (key === '') {
-    const error =
-      'Configure a chave do aplicativo Dropbox nas Configurações (ver docs/dropbox.md).';
+    const error = currentMessages().driveErrors.configureAppKey;
     setError(error);
     return { ok: false, error };
   }
@@ -211,9 +218,7 @@ export async function authorize(): Promise<{ ok: boolean; error?: string }> {
     const tokens = await exchangeCode(code, key, codeVerifier, redirectUri);
     const missing = missingScopes(tokens.grantedScopes);
     if (missing.length > 0) {
-      const error =
-        `Faltam permissões no app Dropbox (${missing.join(', ')}). ` +
-        'Marque todos os escopos na aba Permissions do App Console e conecte de novo.';
+      const error = currentMessages().driveErrors.missingScopesList(missing.join(', '));
       setError(error);
       return { ok: false, error };
     }
@@ -231,13 +236,14 @@ export async function authorize(): Promise<{ ok: boolean; error?: string }> {
 }
 
 export async function refreshAccessToken(): Promise<string> {
+  const m = currentMessages();
   const key = appKey();
   if (key === '') {
-    throw new Error('Configure a chave do aplicativo Dropbox nas Configurações.');
+    throw new Error(m.driveErrors.configureAppKey);
   }
   const refreshToken = state.tokens?.refreshToken;
   if (refreshToken === undefined || refreshToken === '') {
-    throw new Error('Sessão expirada. Conecte a conta Dropbox novamente.');
+    throw new Error(m.driveErrors.sessionExpired);
   }
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
@@ -249,11 +255,11 @@ export async function refreshAccessToken(): Promise<string> {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
   });
-  if (!res.ok) throw new Error('Não foi possível renovar a sessão do Dropbox.');
+  if (!res.ok) throw new Error(m.driveErrors.refreshFailed);
   const data = await parseJson<{ access_token: string; expires_in: number }>(res);
-  if (!isTokenResponse(data)) throw new Error('Não foi possível renovar a sessão do Dropbox.');
+  if (!isTokenResponse(data)) throw new Error(m.driveErrors.refreshFailed);
   const tokens = state.tokens;
-  if (tokens === null) throw new Error('Nenhuma conta Dropbox conectada.');
+  if (tokens === null) throw new Error(m.driveErrors.noAccount);
   tokens.accessToken = data.access_token;
   tokens.expiresAt = Date.now() + data.expires_in * 1000;
   persistState();
@@ -262,7 +268,7 @@ export async function refreshAccessToken(): Promise<string> {
 
 export async function accessToken(): Promise<string> {
   const tokens = state.tokens;
-  if (tokens === null) throw new Error('Nenhuma conta Dropbox conectada.');
+  if (tokens === null) throw new Error(currentMessages().driveErrors.noAccount);
   if (Date.now() > tokens.expiresAt - 60_000) return refreshAccessToken();
   return tokens.accessToken;
 }

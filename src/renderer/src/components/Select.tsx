@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JSX, KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useMessages } from '@zero/renderer/i18n';
 
 export interface SelectOption<T extends string> {
   value: T;
@@ -18,8 +19,9 @@ export default function Select<T extends string>({
   value,
   options,
   onChange,
-  placeholder = 'Selecione',
+  placeholder,
 }: SelectProps<T>): JSX.Element {
+  const m = useMessages();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -118,7 +120,7 @@ export default function Select<T extends string>({
             {selected.label}
           </span>
         ) : (
-          <span className="select-placeholder">{placeholder}</span>
+          <span className="select-placeholder">{placeholder ?? m.common.select}</span>
         )}
         <i className="fa-solid fa-chevron-down select-chevron" />
       </button>

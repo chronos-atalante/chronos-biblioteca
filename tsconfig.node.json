@@ -8,6 +8,7 @@
     "vitest.config.mts",
     "src/node.loader.ts",
     "src/main/**/*",
+    "src/messages/**/*",
     "src/preload/**/*",
     "src/types/**/*"
   ]

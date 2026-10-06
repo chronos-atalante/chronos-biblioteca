@@ -1,21 +1,22 @@
-import type { WorkStatus, WorkType } from '@zero/types';
+import type { Language, WorkStatus, WorkType } from '@zero/types';
 
-export const TYPE_LABELS: Record<WorkType, string> = {
-  webtoon: 'Webtoon',
-  manhwa: 'Manhwa',
-  manhua: 'Manhua',
-  manga: 'Mangá',
-  livro: 'Livro',
-  outro: 'Outro',
-};
+/** Chaves fechadas de tipo/status na ordem de exibição (rótulos ficam em `@zero/messages`). */
+export const TYPE_OPTIONS: readonly WorkType[] = [
+  'webtoon',
+  'manhwa',
+  'manhua',
+  'manga',
+  'livro',
+  'outro',
+];
 
-export const STATUS_LABELS: Record<WorkStatus, string> = {
-  planejado: 'Planejado',
-  lendo: 'Lendo',
-  pausado: 'Pausado',
-  concluido: 'Concluído',
-  cancelado: 'Cancelado',
-};
+export const STATUS_OPTIONS: readonly WorkStatus[] = [
+  'planejado',
+  'lendo',
+  'pausado',
+  'concluido',
+  'cancelado',
+];
 
 export const TYPE_COLORS: Record<WorkType, string> = {
   webtoon: '#7c8cff',
@@ -33,9 +34,6 @@ export const STATUS_COLORS: Record<WorkStatus, string> = {
   concluido: '#4ecf8b',
   cancelado: '#e06c75',
 };
-
-export const TYPE_OPTIONS = Object.keys(TYPE_LABELS) as WorkType[];
-export const STATUS_OPTIONS = Object.keys(STATUS_LABELS) as WorkStatus[];
 
 export const CATEGORIES: string[] = [
   'Isekai',
@@ -58,13 +56,14 @@ export const CATEGORIES: string[] = [
 
 export type StatusFilter = 'todos' | WorkStatus;
 
-export const FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: 'todos', label: 'Todos' },
-  { value: 'lendo', label: 'Lendo' },
-  { value: 'planejado', label: 'Planejados' },
-  { value: 'pausado', label: 'Pausados' },
-  { value: 'concluido', label: 'Concluídos' },
-  { value: 'cancelado', label: 'Cancelados' },
+/** Valores dos chips de filtro da barra superior (rótulos em `m.app.filters`). */
+export const FILTER_OPTIONS: readonly StatusFilter[] = [
+  'todos',
+  'lendo',
+  'planejado',
+  'pausado',
+  'concluido',
+  'cancelado',
 ];
 
 export function coverUrl(coverFile?: string): string | null {
@@ -72,10 +71,10 @@ export function coverUrl(coverFile?: string): string | null {
   return `cover://app/${encodeURIComponent(coverFile)}`;
 }
 
-export function formatDate(iso: string | null): string {
+export function formatDate(iso: string | null, language: Language): string {
   if (iso === null || iso === '') return '-';
   try {
-    return new Date(iso).toLocaleString('pt-BR', {
+    return new Date(iso).toLocaleString(language, {
       dateStyle: 'short',
       timeStyle: 'short',
     });

@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   CATEGORIES,
-  FILTERS,
+  FILTER_OPTIONS,
   STATUS_COLORS,
-  STATUS_LABELS,
   STATUS_OPTIONS,
   TYPE_COLORS,
-  TYPE_LABELS,
   TYPE_OPTIONS,
   clampProgress,
   coverUrl,
@@ -14,11 +12,10 @@ import {
 } from '@zero/renderer/constants';
 import type { StatusFilter } from '@zero/renderer/constants';
 
-describe('rótulos e cores', () => {
+describe('opções e cores', () => {
   it('cobre todos os tipos de obra', () => {
     expect(TYPE_OPTIONS).toEqual(['webtoon', 'manhwa', 'manhua', 'manga', 'livro', 'outro']);
     for (const type of TYPE_OPTIONS) {
-      expect(TYPE_LABELS[type]).not.toBe('');
       expect(TYPE_COLORS[type]).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
@@ -26,15 +23,13 @@ describe('rótulos e cores', () => {
   it('cobre todos os status', () => {
     expect(STATUS_OPTIONS).toEqual(['planejado', 'lendo', 'pausado', 'concluido', 'cancelado']);
     for (const status of STATUS_OPTIONS) {
-      expect(STATUS_LABELS[status]).not.toBe('');
       expect(STATUS_COLORS[status]).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
 
   it('expõe os filtros da barra superior', () => {
-    const values: StatusFilter[] = FILTERS.map((filter) => filter.value);
+    const values: readonly StatusFilter[] = FILTER_OPTIONS;
     expect(values).toEqual(['todos', 'lendo', 'planejado', 'pausado', 'concluido', 'cancelado']);
-    expect(FILTERS.every((filter) => filter.label !== '')).toBe(true);
   });
 
   it('lista categorias prontas para uso', () => {
@@ -58,14 +53,18 @@ describe('coverUrl', () => {
 
 describe('formatDate', () => {
   it('usa hífen para datas vazias', () => {
-    expect(formatDate(null)).toBe('-');
-    expect(formatDate('')).toBe('-');
+    expect(formatDate(null, 'pt-BR')).toBe('-');
+    expect(formatDate('', 'en')).toBe('-');
   });
 
-  it('formata datas ISO válidas em pt-BR', () => {
-    const formatted = formatDate('2026-03-04T15:30:00.000Z');
-    expect(formatted).not.toBe('-');
-    expect(formatted).toMatch(/\d{2}\/\d{2}\/\d{2}/);
+  it('formata datas ISO válidas no idioma pedido', () => {
+    const pt = formatDate('2026-03-04T15:30:00.000Z', 'pt-BR');
+    expect(pt).not.toBe('-');
+    expect(pt).toMatch(/\d{2}\/\d{2}\/\d{2}/);
+
+    const en = formatDate('2026-03-04T15:30:00.000Z', 'en');
+    expect(en).not.toBe('-');
+    expect(en).not.toBe(pt);
   });
 });
 

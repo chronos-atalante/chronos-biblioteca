@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { currentMessages } from '@zero/main/i18n';
 import { loadSettings } from '@zero/main/settings';
 
 const MAGIC = Buffer.from('WTENC3');
@@ -42,8 +43,9 @@ export function isEncrypted(data: Buffer): boolean {
 }
 
 function decryptBuffer(data: Buffer, passphrase: string): Buffer {
-  if (!isCurrentFormat(data)) throw new Error('Não é um backup criptografado.');
-  if (data.length < HEADER_BYTES) throw new Error('Backup truncado ou corrompido.');
+  const m = currentMessages();
+  if (!isCurrentFormat(data)) throw new Error(m.driveErrors.notEncrypted);
+  if (data.length < HEADER_BYTES) throw new Error(m.driveErrors.truncated);
   const salt = data.subarray(MAGIC_BYTES, MAGIC_BYTES + SALT_BYTES);
   const iv = data.subarray(MAGIC_BYTES + SALT_BYTES, MAGIC_BYTES + SALT_BYTES + IV_BYTES);
   const tag = data.subarray(
@@ -64,22 +66,23 @@ export function maybeEncrypt(data: Buffer): Buffer {
 /** Cifra com senha explícita (a senha vazia é recusada em vez de ignorada). */
 export function encryptWith(data: Buffer, passphrase: string): Buffer {
   if (passphrase === '') {
-    throw new Error('Defina uma senha de criptografia do backup nas configurações.');
+    throw new Error(currentMessages().driveErrors.definePassphrase);
   }
   return encryptBuffer(data, passphrase);
 }
 
 export function decryptWith(data: Buffer, passphrase: string): Buffer {
+  const m = currentMessages();
   if (!isEncrypted(data)) return data;
   if (passphrase === '') {
-    throw new Error('Este backup está criptografado. Informe a senha de criptografia.');
+    throw new Error(m.driveErrors.needsPassphrase);
   }
   try {
     return decryptBuffer(data, passphrase);
   } catch {
     // Mensagem única de propósito: não distingue senha errada de corrupção
     // para não dar oráculo a quem manipula o blob remoto.
-    throw new Error('Senha de criptografia incorreta ou backup corrompido.');
+    throw new Error(m.driveErrors.wrongPassphrase);
   }
 }
 
@@ -124,15 +127,16 @@ export function buildManifest(mapping: Record<string, string>): Buffer {
 
 /** Valida o manifesto decifrado; qualquer forma estranha é rejeitada. */
 export function parseManifest(data: Buffer): Record<string, string> {
+  const invalid = new Error(currentMessages().driveErrors.invalidManifest);
   const parsed: unknown = JSON.parse(data.toString('utf-8'));
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new Error('Manifesto do backup inválido.');
+    throw invalid;
   }
   const mapping: Record<string, string> = {};
   for (const remote of Object.keys(parsed)) {
     const local: unknown = Reflect.get(parsed, remote);
     if (remote === '' || typeof local !== 'string' || local === '') {
-      throw new Error('Manifesto do backup inválido.');
+      throw invalid;
     }
     mapping[remote] = local;
   }

@@ -5,6 +5,7 @@ import { defineConfig } from 'vitest/config';
 /** Espelha `paths` de tsconfig.base.json e o mapa de `node.loader.ts`. */
 const aliases = {
   '@zero/types': resolve(import.meta.dirname, 'src/types'),
+  '@zero/messages': resolve(import.meta.dirname, 'src/messages'),
   '@zero/main': resolve(import.meta.dirname, 'src/main'),
   '@zero/preload': resolve(import.meta.dirname, 'src/preload'),
   '@zero/renderer': resolve(import.meta.dirname, 'src/renderer/src'),

@@ -238,6 +238,7 @@ describe('handlers de configurações e Drive', () => {
       driveClientId: 'id-legado',
       driveClientSecret: '',
       drivePassphrase: '',
+      language: 'pt-BR',
     });
   });
 
@@ -315,11 +316,13 @@ describe('handlers de configurações e Drive', () => {
       driveClientId: '  novo-id  ',
       driveClientSecret: '  novo-segredo  ',
       drivePassphrase: 'frase',
+      language: 'en',
     }) as AppSettings;
     expect(saved).toEqual({
       driveClientId: 'novo-id',
       driveClientSecret: 'novo-segredo',
       drivePassphrase: 'frase',
+      language: 'en',
     });
     const onDisk = JSON.parse(
       fs.readFileSync(path.join(configDir(), 'settings.json'), 'utf-8'),

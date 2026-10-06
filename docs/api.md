@@ -48,11 +48,12 @@ Métodos do Drive devolvem um envelope de resultado e **nunca lançam**:
 
 ```ts
 { ok: true, summary?: BackupSummary } // sucesso
-{ ok: false, error: 'mensagem em pt-BR' } // falha
+{ ok: false, error: 'mensagem' } // falha (no idioma corrente)
 ```
 
 Métodos de biblioteca/configurações devolvem os dados direto (ou `null` onde
-indicado). Erros de Drive usam sempre mensagens em pt-BR (ver §5).
+indicado). Erros de Drive saem no idioma corrente (`AppSettings.language`,
+pt-BR por padrão; ver §4 e [`messages.md`](messages.md)).
 
 ---
 
@@ -90,14 +91,20 @@ usuário cancelar. A imagem é servida pelo protocolo interno (§6).
 ### `settings.get() → Promise<AppSettings>`
 
 ```ts
+type Language = 'pt-BR' | 'en';
+
 interface AppSettings {
   driveClientId: string; // App key do Dropbox ('' = usa a chave embutida)
   driveClientSecret: string; // legado do provedor anterior, ignorado
   drivePassphrase: string; // senha de criptografia do backup (obrigatória p/ backup)
+  language: Language; // idioma da interface e das mensagens
 }
 ```
 
-Campos ausentes ou com tipo errado no disco caem para `''` (padrão seguro).
+Campos ausentes ou com tipo errado no disco caem para `''` (padrão seguro);
+`language` fora de `'pt-BR' | 'en'` cai para `'pt-BR'` (padrão também quando o
+arquivo não existe — o app não detecta o idioma do SO, a escolha é explícita
+em Configurações).
 
 A senha (`drivePassphrase`) é guardada no keyring do SO via `safeStorage`
 quando disponível (`enc:<base64>` em `settings.json`); sem keyring, em claro
@@ -107,8 +114,9 @@ formulário nunca exibe o blob `enc:`).
 
 ### `settings.set(cfg: AppSettings) → Promise<AppSettings>`
 
-Normaliza (`trim` em ID/secret; senha preservada como digitada), grava
-`settings.json` com permissão `0600` e devolve o valor salvo.
+Normaliza (`trim` em ID/secret; senha preservada como digitada; `language`
+recaído para o valor válido mais próximo), grava `settings.json` com permissão
+`0600` e devolve o valor salvo.
 
 ---
 
@@ -132,7 +140,9 @@ interface BackupProviderInfo {
 
 Ordem de exibição: Dropbox (operante) e depois Google Drive (**não
 operante** — a UI mostra o selo _Não operante_ e o motivo, sempre com o
-destino oculto `appDataFolder`).
+destino oculto `appDataFolder`). Os textos (`unavailableReason`,
+`storageTarget`) voltam **no idioma corrente** (`AppSettings.language`, §4) —
+ver [`messages.md`](messages.md).
 
 ### `drive.status() → Promise<DriveStatus>`
 
@@ -141,7 +151,7 @@ interface DriveStatus {
   connected: boolean; // há tokens válidos em memória
   syncing: boolean; // backup/restauração em andamento
   lastSync: string | null; // ISO 8601 do último backup
-  lastError: string | null; // última falha (pt-BR), ou null
+  lastError: string | null; // última falha (idioma corrente), ou null
   accountEmail: string | null; // e-mail da conta conectada
 }
 ```
@@ -219,7 +229,7 @@ Assina o evento `drive:status-changed` (emitido a cada transição: conectar,
 sincronizar, erro, desconectar). Devolve a função de cancelamento; chame-a
 ao desmontar o componente.
 
-### Erros comuns (pt-BR, como exibidos no app)
+### Erros comuns (pt-BR por padrão, como exibidos no app)
 
 | Mensagem                                                | Quando                                                                     |
 | ------------------------------------------------------- | -------------------------------------------------------------------------- |

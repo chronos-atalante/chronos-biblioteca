@@ -263,6 +263,7 @@ export async function connect(passphrase = PASSPHRASE): Promise<void> {
     driveClientId: APP_KEY,
     driveClientSecret: '',
     drivePassphrase: passphrase,
+    language: 'pt-BR',
   });
   shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
     const params = new URL(url).searchParams;

@@ -1,4 +1,6 @@
 import type { BackupProviderId, BackupProviderInfo } from '@zero/types';
+import type { Messages } from '@zero/messages';
+import { currentMessages } from '@zero/main/i18n';
 import { dropboxProvider } from '@zero/main/drive/providers/dropbox';
 import { googleDriveProvider } from '@zero/main/drive/providers/google-drive';
 import type { RemoteFile } from '@zero/main/drive/rest';
@@ -14,14 +16,22 @@ export type { RemoteFile };
  * dos tokens vivem em `src/main/drive/providers/<provedor>/` (hoje em módulos
  * irmãos, já que só o Dropbox tem implementação).
  *
+ * Textos da UI ficam em `describe(messages)` (idioma corrente em cada chamada);
+ * `label` é o nome da marca, que não se traduz. O catálogo (`listProviders`)
+ * formata tudo de uma vez no idioma vigente.
+ *
  * Estado ainda é único (sem provedor por sessão): `state.tokens` descreve a
  * sessão do provedor atual. Isso muda quando um segundo provedor ficar operante
  * (ver `docs/backup-providers.md`).
  */
 export interface BackupProvider {
   readonly id: BackupProviderId;
-  /** Dados exibidos na UI; também é o que `drive.providers()` devolve. */
-  readonly info: BackupProviderInfo;
+  /** Nome da marca, fixo entre idiomas ("Dropbox", "Google Drive"). */
+  readonly label: string;
+  readonly operational: boolean;
+  readonly storageHidden: boolean;
+  /** Dados de UI localizados; também é o que `drive.providers()` devolve. */
+  describe(messages: Messages): BackupProviderInfo;
   authorize(): Promise<{ ok: boolean; error?: string }>;
   listAppFiles(): Promise<RemoteFile[]>;
   uploadFile(name: string, buffer: Buffer): Promise<void>;
@@ -37,7 +47,8 @@ const REGISTRY: Record<BackupProviderId, BackupProvider> = {
 
 /** Catálogo de provedores na ordem de exibição (UI e documentação). */
 export function listProviders(): BackupProviderInfo[] {
-  return Object.values(REGISTRY).map((provider) => provider.info);
+  const m = currentMessages();
+  return Object.values(REGISTRY).map((provider) => provider.describe(m));
 }
 
 export function getProvider(id: BackupProviderId): BackupProvider {

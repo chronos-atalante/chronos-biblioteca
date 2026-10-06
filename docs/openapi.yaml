@@ -12,7 +12,8 @@ info:
     Ponte `window.api` (contextBridge) entre o renderer e o processo main:
     biblioteca de obras, capas, configurações e backup no Dropbox.
     Respostas do Drive usam o envelope `{ ok, error?, ... }` e nunca lançam;
-    mensagens de erro são em pt-BR (ver `docs/api.md`, §5).
+    mensagens de erro saem no idioma corrente (pt-BR por padrão; ver
+    `docs/api.md` e `docs/messages.md`).
   license:
     name: MIT
     url: https://opensource.org/license/mit
@@ -161,7 +162,8 @@ paths:
       description: >
         Lista os provedores catalogados (`BackupProviderInfo`): Dropbox
         operante e Google Drive não operante, com o motivo e o destino do
-        backup (pasta oculta `appDataFolder` no Google).
+        backup (pasta oculta `appDataFolder` no Google). Textos no idioma
+        corrente (`AppSettings.language`).
       x-ipc-channel: drive:providers
       responses:
         '200':
@@ -349,7 +351,7 @@ components:
           format: date-time
     AppSettings:
       type: object
-      required: [driveClientId, driveClientSecret, drivePassphrase]
+      required: [driveClientId, driveClientSecret, drivePassphrase, language]
       properties:
         driveClientId:
           type: string
@@ -360,6 +362,10 @@ components:
         drivePassphrase:
           type: string
           description: Senha de criptografia do backup (obrigatória para enviar)
+        language:
+          type: string
+          enum: [pt-BR, en]
+          description: Idioma da interface e das mensagens (padrão pt-BR)
     DriveStatus:
       type: object
       required: [connected, syncing, lastSync, lastError, accountEmail]
@@ -423,7 +429,7 @@ components:
           type: boolean
         error:
           type: string
-          description: Mensagem em pt-BR (presente quando ok=false)
+          description: Mensagem no idioma corrente, pt-BR por padrão (presente quando ok=false)
     AuthOutcome:
       allOf:
         - $ref: '#/components/schemas/Outcome'

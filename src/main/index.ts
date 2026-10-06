@@ -35,6 +35,7 @@ import {
   onStatus,
   restoreNow,
 } from '@zero/main/drive';
+import { currentMessages } from '@zero/main/i18n';
 import type { AppSettings, DriveStatus, Work } from '@zero/types';
 
 protocol.registerSchemesAsPrivileged([
@@ -161,11 +162,15 @@ function registerIpc(): void {
   ipcMain.handle('library:delete', (_event, id: string): Work[] => deleteWork(id));
 
   ipcMain.handle('cover:pick', async (event): Promise<string | null> => {
+    const m = currentMessages();
     const options = {
-      title: 'Escolher imagem da capa',
+      title: m.dialogs.pickCover,
       properties: ['openFile' as const],
       filters: [
-        { name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'bmp'] },
+        {
+          name: m.dialogs.imageFilter,
+          extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'bmp'],
+        },
       ],
     };
     const window = BrowserWindow.fromWebContents(event.sender);

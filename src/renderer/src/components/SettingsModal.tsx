@@ -7,8 +7,12 @@ import type {
   BackupSummary,
   DriveStatus,
 } from '@zero/types';
+import { LANGUAGES, LANGUAGE_LABELS, messages } from '@zero/messages';
 import { formatDate } from '@zero/renderer/constants';
+import { richText, useLanguage, useMessages } from '@zero/renderer/i18n';
 import RestorePasswordModal from '@zero/renderer/components/RestorePasswordModal';
+import Select from '@zero/renderer/components/Select';
+import type { SelectOption } from '@zero/renderer/components/Select';
 
 /** Ícone de marca por provedor (catálogo fechado em `BackupProviderId`). */
 const PROVIDER_ICONS: Record<BackupProviderId, string> = {
@@ -19,15 +23,24 @@ const PROVIDER_ICONS: Record<BackupProviderId, string> = {
 interface SettingsModalProps {
   onClose: () => void;
   notify: (message: string, kind?: 'info' | 'error') => void;
+  /** Aplica o novo idioma na UI ao salvar (o valor volta do backend normalizado). */
+  onLanguageChange: (language: AppSettings['language']) => void;
 }
 
-export default function SettingsModal({ onClose, notify }: SettingsModalProps): JSX.Element {
+export default function SettingsModal({
+  onClose,
+  notify,
+  onLanguageChange,
+}: SettingsModalProps): JSX.Element {
+  const m = useMessages();
+  const language = useLanguage();
   // driveClientId guarda a App key do Dropbox (nome mantido por compatibilidade
   // com o settings.json); driveClientSecret é legado e ignorado pelo backend.
   const [settings, setSettings] = useState<AppSettings>({
     driveClientId: '',
     driveClientSecret: '',
     drivePassphrase: '',
+    language: 'pt-BR',
   });
   const [status, setStatus] = useState<DriveStatus | null>(null);
   const [info, setInfo] = useState<BackupSummary | null>(null);
@@ -45,6 +58,19 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
       window.removeEventListener('keydown', onKey);
     };
   }, [onClose]);
+
+  const refreshDriveStatus = async (): Promise<void> => {
+    const [driveStatus, backupSummary] = await Promise.all([
+      window.api.drive.status(),
+      window.api.drive.backupInfo(),
+    ]);
+    setStatus(driveStatus);
+    setInfo(backupSummary);
+  };
+
+  const refreshProviders = async (): Promise<void> => {
+    setProviders(await window.api.drive.providers());
+  };
 
   useEffect(() => {
     const unsubscribe = window.api.drive.onStatus((next) => setStatus(next));
@@ -70,15 +96,6 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
     };
   }, []);
 
-  const refreshDriveStatus = async (): Promise<void> => {
-    const [driveStatus, backupSummary] = await Promise.all([
-      window.api.drive.status(),
-      window.api.drive.backupInfo(),
-    ]);
-    setStatus(driveStatus);
-    setInfo(backupSummary);
-  };
-
   const run = async (label: string, task: () => Promise<void>): Promise<void> => {
     setBusy(label);
     try {
@@ -92,30 +109,34 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
     run('save', async () => {
       const saved = await window.api.settings.set(settings);
       setSettings(saved);
-      notify('Configurações salvas.');
+      onLanguageChange(saved.language);
+      // O catálogo e o resumo voltam já no idioma novo (o main relê as config).
+      await Promise.all([refreshProviders(), refreshDriveStatus()]);
+      // Toast no idioma recém-salvo: o provider muda depois deste retorno.
+      notify(messages(saved.language).settings.toastSaved);
     });
 
   const connect = (): Promise<void> =>
     run('auth', async () => {
       const result = await window.api.drive.auth();
-      if (!result.ok) notify(result.error ?? 'Falha na autorização.', 'error');
-      else notify('Conta Dropbox conectada com sucesso.');
+      if (!result.ok) notify(result.error ?? m.settings.toastAuthFailed, 'error');
+      else notify(m.settings.toastConnected);
       await refreshDriveStatus();
     });
 
   const backup = (): Promise<void> =>
     run('backup', async () => {
       const result = await window.api.drive.backup();
-      if (!result.ok) notify(result.error ?? 'Falha no backup.', 'error');
-      else notify('Backup concluído na pasta do app no Dropbox.');
+      if (!result.ok) notify(result.error ?? m.settings.toastBackupFailed, 'error');
+      else notify(m.settings.toastBackupDone);
       await refreshDriveStatus();
     });
 
   const restore = (passphrase: string): Promise<void> =>
     run('restore', async () => {
       const result = await window.api.drive.restore(passphrase);
-      if (!result.ok) notify(result.error ?? 'Falha ao restaurar.', 'error');
-      else notify(`Backup restaurado com ${result.works ?? 0} obra(s).`);
+      if (!result.ok) notify(result.error ?? m.settings.toastRestoreFailed, 'error');
+      else notify(m.settings.toastRestored(result.works ?? 0));
       await refreshDriveStatus();
       window.location.reload();
     });
@@ -124,8 +145,13 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
     run('disconnect', async () => {
       setStatus(await window.api.drive.disconnect());
       setInfo(null);
-      notify('Conta Dropbox desconectada.');
+      notify(m.settings.toastDisconnected);
     });
+
+  const languageOptions: SelectOption<AppSettings['language']>[] = LANGUAGES.map((item) => ({
+    value: item,
+    label: LANGUAGE_LABELS[item],
+  }));
 
   const connected = status?.connected === true;
   const lastError = status?.lastError ?? '';
@@ -143,24 +169,31 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
         <div className="modal wide">
           <div className="modal-header">
             <h2>
-              <i className="fa-solid fa-gear" /> Configurações
+              <i className="fa-solid fa-gear" /> {m.settings.title}
             </h2>
-            <button className="modal-close" onClick={onClose} title="Fechar">
+            <button className="modal-close" onClick={onClose} title={m.common.close}>
               <i className="fa-solid fa-xmark" />
             </button>
           </div>
 
           <div className="modal-body">
             <div className="banner info">
-              <strong>Backup no Dropbox.</strong> Sua biblioteca é gravada na pasta reservada do app
-              (dentro de <code>/Apps/</code> na sua conta): pela API, só este aplicativo enxerga
-              essa pasta, e o resto do seu Dropbox nem aparece para ele. Como a pasta é visível para
-              você, todo arquivo sobe com nome ilegível e conteúdo criptografado (AES-256-GCM),
-              então defina a senha de criptografia abaixo antes do primeiro backup.
+              <strong>{m.settings.bannerTitle}</strong> {richText(m.settings.bannerBody)}
+            </div>
+
+            <div className="form-row">
+              <div className="field">
+                <label>{m.settings.languageLabel}</label>
+                <Select
+                  value={settings.language}
+                  options={languageOptions}
+                  onChange={(next) => setSettings({ ...settings, language: next })}
+                />
+              </div>
             </div>
 
             <div className="field">
-              <label>Provedores de backup</label>
+              <label>{m.settings.providersLabel}</label>
               <ul className="provider-list">
                 {providers.map((provider) => (
                   <li key={provider.id} className="provider-item">
@@ -168,12 +201,12 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
                       <i className={PROVIDER_ICONS[provider.id]} /> {provider.label}
                     </span>
                     {provider.storageHidden ? (
-                      <span className="provider-badge hidden">Pasta oculta</span>
+                      <span className="provider-badge hidden">{m.settings.hiddenFolder}</span>
                     ) : null}
                     <span className={provider.operational ? 'provider-badge on' : 'provider-badge'}>
-                      {provider.operational ? 'Operante' : 'Não operante'}
+                      {provider.operational ? m.settings.operational : m.settings.notOperational}
                     </span>
-                    <span className="help">Backup em {provider.storageTarget}</span>
+                    <span className="help">{m.settings.backupIn(provider.storageTarget)}</span>
                     {provider.unavailableReason !== null ? (
                       <span className="help">{provider.unavailableReason}</span>
                     ) : null}
@@ -184,11 +217,11 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
 
             <div className="form-row">
               <div className="field">
-                <label>Senha de criptografia do backup</label>
+                <label>{m.settings.passphraseLabel}</label>
                 <input
                   type="password"
                   value={settings.drivePassphrase}
-                  placeholder="Usada para criptografar o backup no Dropbox"
+                  placeholder={m.settings.passphrasePlaceholder}
                   disabled={working}
                   onChange={(event) =>
                     setSettings({ ...settings, drivePassphrase: event.target.value })
@@ -199,47 +232,43 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
 
             <div className="form-row">
               <div className="field">
-                <label>Chave do aplicativo Dropbox (App key)</label>
+                <label>{m.settings.appKeyLabel}</label>
                 <input
                   type="text"
                   value={settings.driveClientId}
-                  placeholder="Opcional: só precisa se o app ainda não tem chave embutida"
+                  placeholder={m.settings.appKeyPlaceholder}
                   disabled={working}
                   onChange={(event) =>
                     setSettings({ ...settings, driveClientId: event.target.value })
                   }
                 />
-                <div className="help">
-                  Criada em <code>dropbox.com/developers/apps</code> como app do tipo App folder
-                  (ver <code>docs/dropbox.md</code>). Com PKCE não existe segredo: só a chave
-                  identifica o app, e o acesso real fica no token guardado nesta máquina.
-                </div>
+                <div className="help">{richText(m.settings.appKeyHelp)}</div>
               </div>
             </div>
 
             <div className="drive-meta">
               <div className="stat">
-                <b>{connected ? 'Conectado' : 'Desconectado'}</b>
-                <span>{status?.accountEmail ?? 'Conta Dropbox'}</span>
+                <b>{connected ? m.settings.connected : m.settings.disconnected}</b>
+                <span>{status?.accountEmail ?? m.settings.accountFallback}</span>
               </div>
               <div className="stat">
-                <b>{formatDate(status?.lastSync ?? null)}</b>
-                <span>Último backup</span>
+                <b>{formatDate(status?.lastSync ?? null, language)}</b>
+                <span>{m.settings.lastBackup}</span>
               </div>
               <div className="stat">
-                <b>{info?.works != null ? `${info.works} obra(s)` : '-'}</b>
-                <span>No backup do Dropbox</span>
+                <b>{info?.works != null ? m.settings.worksInBackup(info.works) : '-'}</b>
+                <span>{m.settings.inDropboxBackup}</span>
               </div>
             </div>
 
             {lastError !== '' ? <div className="banner error">{lastError}</div> : null}
             {syncing ? (
               <div className="banner info">
-                <i className="fa-solid fa-spinner fa-spin" /> Sincronizando com o Dropbox…
+                <i className="fa-solid fa-spinner fa-spin" /> {m.settings.syncingBanner}
               </div>
             ) : null}
 
-            {loading ? <div className="help">Carregando…</div> : null}
+            {loading ? <div className="help">{m.common.loading}</div> : null}
           </div>
 
           <div className="modal-footer">
@@ -249,9 +278,9 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
                 void disconnect();
               }}
               disabled={!connected || working}
-              title="Desconecta a conta Dropbox deste aplicativo"
+              title={m.settings.disconnectTitle}
             >
-              <i className="fa-solid fa-link-slash" /> Desconectar
+              <i className="fa-solid fa-link-slash" /> {m.settings.disconnectAction}
             </button>
             <span className="spacer" />
             <button
@@ -263,11 +292,11 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
             >
               {busy === 'save' ? (
                 <>
-                  <i className="fa-solid fa-spinner fa-spin" /> Salvando…
+                  <i className="fa-solid fa-spinner fa-spin" /> {m.common.saving}
                 </>
               ) : (
                 <>
-                  <i className="fa-solid fa-floppy-disk" /> Salvar
+                  <i className="fa-solid fa-floppy-disk" /> {m.common.save}
                 </>
               )}
             </button>
@@ -279,16 +308,16 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
               disabled={working}
             >
               <i className="fa-brands fa-dropbox" />{' '}
-              {busy === 'auth' ? 'Autorizando…' : 'Conectar ao Dropbox'}
+              {busy === 'auth' ? m.settings.authorizing : m.settings.connectAction}
             </button>
             <button
               className="btn"
               onClick={() => setPromptRestore(true)}
               disabled={!connected || working}
-              title="Baixa o backup do Dropbox e substitui a biblioteca atual"
+              title={m.settings.restoreTitle}
             >
               <i className="fa-solid fa-clock-rotate-left" />{' '}
-              {busy === 'restore' ? 'Restaurando…' : 'Restaurar'}
+              {busy === 'restore' ? m.settings.restoring : m.settings.restoreAction}
             </button>
             <button
               className="btn primary"
@@ -298,7 +327,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
               disabled={!connected || working}
             >
               <i className="fa-solid fa-cloud-arrow-up" />{' '}
-              {busy === 'backup' ? 'Enviando…' : 'Fazer backup agora'}
+              {busy === 'backup' ? m.settings.sending : m.settings.backupAction}
             </button>
           </div>
         </div>

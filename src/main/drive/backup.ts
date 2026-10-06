@@ -23,6 +23,7 @@ import {
   toMessage,
 } from '@zero/main/drive/state';
 import { backupFiles, coversDir, loadLibrary, restoreLibrary } from '@zero/main/library';
+import { currentMessages } from '@zero/main/i18n';
 import { loadSettings } from '@zero/main/settings';
 
 /** Valida a forma mínima de uma obra vinda do backup. */
@@ -90,14 +91,14 @@ export async function backupNow(): Promise<{
   error?: string;
   summary?: BackupSummary;
 }> {
-  if (state.syncing) return { ok: false, error: 'Sincronização já em andamento.' };
+  if (state.syncing) return { ok: false, error: currentMessages().driveErrors.syncInProgress };
   const provider = currentProvider();
   if (state.tokens === null) {
-    return { ok: false, error: `Conecte a conta ${provider.info.label} primeiro.` };
+    return { ok: false, error: currentMessages().driveErrors.connectFirst(provider.label) };
   }
   const passphrase = loadSettings().drivePassphrase;
   if (passphrase === '') {
-    const error = 'Defina uma senha de criptografia do backup nas configurações.';
+    const error = currentMessages().driveErrors.definePassphrase;
     setError(error);
     return { ok: false, error };
   }
@@ -107,7 +108,7 @@ export async function backupNow(): Promise<{
   try {
     const files = backupFiles();
     if (files === null) {
-      throw new Error('Nenhuma biblioteca local para backup. Adicione ao menos uma obra.');
+      throw new Error(currentMessages().driveErrors.emptyLibrary);
     }
 
     const key = nameKeyFor(passphrase);
@@ -162,10 +163,10 @@ export async function restoreNow(passphrase: string): Promise<{
   error?: string;
   works?: number;
 }> {
-  if (state.syncing) return { ok: false, error: 'Sincronização já em andamento.' };
+  if (state.syncing) return { ok: false, error: currentMessages().driveErrors.syncInProgress };
   const provider = currentProvider();
   if (state.tokens === null) {
-    return { ok: false, error: `Conecte a conta ${provider.info.label} primeiro.` };
+    return { ok: false, error: currentMessages().driveErrors.connectFirst(provider.label) };
   }
   state.syncing = true;
   setError(null);
@@ -177,13 +178,13 @@ export async function restoreNow(passphrase: string): Promise<{
     const libraryFile =
       libraryRemote === undefined ? undefined : remote.find((file) => file.name === libraryRemote);
     if (libraryFile === undefined) {
-      throw new Error(`Nenhum backup encontrado na pasta do app no ${provider.info.label}.`);
+      throw new Error(currentMessages().driveErrors.noBackupFound(provider.label));
     }
 
     const libraryBuffer = decryptWith(await provider.downloadFile(libraryFile.id), passphrase);
     const parsed: unknown = JSON.parse(libraryBuffer.toString('utf-8'));
     if (!isWorkArray(parsed)) {
-      throw new Error('Backup inválido (library.json corrompido).');
+      throw new Error(currentMessages().driveErrors.invalidLibrary);
     }
     const works: Work[] = parsed;
 

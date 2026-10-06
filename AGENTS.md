@@ -15,6 +15,8 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
 
 - `src/main/`: janela, IPC, protocolo `cover://` (`index.ts`), persistência
   (`library.ts`, `settings.ts`) e backup na nuvem (`drive/`).
+- `src/messages/`: textos do app em pt-BR (canônico) e en (`@zero/messages`);
+  guia em `docs/messages.md`.
 - `src/preload/`: única ponte da UI; monta e expõe `window.api` tipado.
 - `src/renderer/`: React; não acessa disco, rede nem Node direto.
 - `src/types/`: contratos compartilhados (`@zero/types`, barrel).
@@ -61,6 +63,13 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
 - Estilo: Prettier com 100 colunas, aspas simples e ponto e vírgula. Não
   desligue regra de lint para passar, corrija o código.
 - `console` só `warn`/`error` (regra do ESLint); nenhum `debugger`/`alert`.
+- Textos fixos de UI e de mensagem **só em `src/messages/`** (pt-BR é o
+  canônico; `en.ts` deve fechar com `Messages`): no renderer use
+  `useMessages()`/`richText()` (`src/renderer/src/i18n.tsx`), no main
+  `currentMessages()` (`src/main/i18n.tsx`). Marcadores ricos `**negrito**` e
+  `` `código` `` só em string exibida. Nomes de marca, dados por dependência
+  (`attributions.ts`, `CATEGORIES`) e logs ficam fora dos bundles — regras e
+  lista completas do que não se traduz em `docs/messages.md`.
 
 ## Comandos
 
@@ -119,6 +128,7 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
   tabela na mesma mudança).
 - Mapa: `docs/api.md` (contrato `window.api`), `docs/dropbox.md` (backup),
   `docs/backup-providers.md` (provedores de nuvem e status do Google Drive),
+  `docs/messages.md` (i18n: bundles e regras de tradução),
   `docs/atribuicoes.md` e `docs/doacoes.md` (páginas do app),
   `docs/distribuicao-apt.md` (distribuição APT), `docs/openapi.yaml` (API em
   OpenAPI 3.1).

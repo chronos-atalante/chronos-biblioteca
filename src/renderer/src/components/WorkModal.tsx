@@ -3,15 +3,14 @@ import type { JSX } from 'react';
 import type { Work, WorkStatus, WorkType } from '@zero/types';
 import {
   STATUS_COLORS,
-  STATUS_LABELS,
   STATUS_OPTIONS,
   TYPE_COLORS,
-  TYPE_LABELS,
   TYPE_OPTIONS,
   CATEGORIES,
   clampProgress,
   coverUrl,
 } from '@zero/renderer/constants';
+import { useMessages } from '@zero/renderer/i18n';
 import Select from '@zero/renderer/components/Select';
 import type { SelectOption } from '@zero/renderer/components/Select';
 
@@ -30,6 +29,7 @@ export default function WorkModal({
   onDelete,
   onClose,
 }: WorkModalProps): JSX.Element {
+  const m = useMessages();
   const [draft, setDraft] = useState<Work>(work);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -66,7 +66,7 @@ export default function WorkModal({
   const submit = async (): Promise<void> => {
     const title = draft.title.trim();
     if (title === '') {
-      setError('Informe o título da obra.');
+      setError(m.workModal.titleRequired);
       return;
     }
     setSaving(true);
@@ -75,7 +75,7 @@ export default function WorkModal({
       await onSave({ ...draft, title, progress: clampProgress(draft.progress) });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao salvar.');
+      setError(err instanceof Error ? err.message : m.workModal.saveError);
     } finally {
       setSaving(false);
     }
@@ -100,18 +100,18 @@ export default function WorkModal({
 
   const typeOptions: SelectOption<WorkType>[] = TYPE_OPTIONS.map((type) => ({
     value: type,
-    label: TYPE_LABELS[type],
+    label: m.workTypes[type],
     color: TYPE_COLORS[type],
   }));
 
   const statusOptions: SelectOption<WorkStatus>[] = STATUS_OPTIONS.map((status) => ({
     value: status,
-    label: STATUS_LABELS[status],
+    label: m.workStatus[status],
     color: STATUS_COLORS[status],
   }));
 
   const categoryOptions: SelectOption<string>[] = [
-    { value: '', label: 'Nenhuma' },
+    { value: '', label: m.common.none },
     ...CATEGORIES.map((category) => ({ value: category, label: category })),
   ];
 
@@ -124,8 +124,8 @@ export default function WorkModal({
     >
       <div className="modal">
         <div className="modal-header">
-          <h2>{isNew ? 'Nova obra' : 'Editar obra'}</h2>
-          <button className="modal-close" onClick={onClose} title="Fechar">
+          <h2>{isNew ? m.workModal.newTitle : m.workModal.editTitle}</h2>
+          <button className="modal-close" onClick={onClose} title={m.common.close}>
             <i className="fa-solid fa-xmark" />
           </button>
         </div>
@@ -136,16 +136,13 @@ export default function WorkModal({
           <div className="cover-editor">
             <div className="cover-preview">
               {url !== null ? (
-                <img src={url} alt="Prévia da capa" />
+                <img src={url} alt={m.workModal.coverAlt} />
               ) : (
                 <i className="fa-solid fa-book-open" />
               )}
             </div>
             <div className="cover-tools">
-              <p>
-                Adicione a imagem da capa da obra (JPG, PNG, WebP…). A imagem é copiada para a
-                biblioteca local.
-              </p>
+              <p>{m.workModal.coverHelp}</p>
               <div className="quick-row">
                 <button
                   className="btn small"
@@ -153,14 +150,14 @@ export default function WorkModal({
                     void chooseCover();
                   }}
                 >
-                  <i className="fa-regular fa-image" /> Escolher imagem
+                  <i className="fa-regular fa-image" /> {m.workModal.chooseImage}
                 </button>
                 {hasCover ? (
                   <button
                     className="btn small ghost"
                     onClick={() => patch({ coverFile: undefined })}
                   >
-                    Remover capa
+                    {m.workModal.removeCover}
                   </button>
                 ) : null}
               </div>
@@ -168,28 +165,28 @@ export default function WorkModal({
           </div>
 
           <div className="field">
-            <label>Título</label>
+            <label>{m.workModal.titleLabel}</label>
             <input
               type="text"
               value={draft.title}
-              placeholder="Ex.: Solo Leveling"
+              placeholder={m.workModal.titlePlaceholder}
               autoFocus
               onChange={(event) => patch({ title: event.target.value })}
             />
           </div>
 
           <div className="field">
-            <label>Descrição</label>
+            <label>{m.workModal.synopsisLabel}</label>
             <textarea
               value={draft.synopsis}
-              placeholder="Escreva a descrição da obra..."
+              placeholder={m.workModal.synopsisPlaceholder}
               onChange={(event) => patch({ synopsis: event.target.value })}
             />
           </div>
 
           <div className="form-row">
             <div className="field">
-              <label>Tipo</label>
+              <label>{m.workModal.typeLabel}</label>
               <Select
                 value={draft.type}
                 options={typeOptions}
@@ -197,11 +194,11 @@ export default function WorkModal({
               />
             </div>
             <div className="field">
-              <label>Status</label>
+              <label>{m.workModal.statusLabel}</label>
               <Select value={draft.status} options={statusOptions} onChange={setStatus} />
             </div>
             <div className="field">
-              <label>Categoria</label>
+              <label>{m.workModal.categoryLabel}</label>
               <Select
                 value={draft.category ?? ''}
                 options={categoryOptions}
@@ -209,11 +206,11 @@ export default function WorkModal({
               />
             </div>
             <div className="field">
-              <label>Marcação (opcional)</label>
+              <label>{m.workModal.markerLabel}</label>
               <input
                 type="text"
                 value={draft.marker ?? ''}
-                placeholder="Cap. 45 / Vol. 3"
+                placeholder={m.workModal.markerPlaceholder}
                 onChange={(event) => patch({ marker: event.target.value })}
               />
             </div>
@@ -221,7 +218,7 @@ export default function WorkModal({
 
           <div className="form-row progress-card">
             <div className="field">
-              <label>Progresso da leitura</label>
+              <label>{m.workModal.progressLabel}</label>
               <div className="progress-editor">
                 <input
                   className="progress-value"
@@ -232,32 +229,34 @@ export default function WorkModal({
                 />
                 <button
                   className="btn small"
-                  title="Diminuir 10"
+                  title={m.workModal.decrease10}
                   onClick={() => setProgress(draft.progress - 10)}
                 >
                   <i className="fa-solid fa-minus" /> 10
                 </button>
                 <button
                   className="btn small"
-                  title="Aumentar 10"
+                  title={m.workModal.increase10}
                   onClick={() => setProgress(draft.progress + 10)}
                 >
                   <i className="fa-solid fa-plus" /> 10
                 </button>
                 <span className="progress-percent">
-                  {draft.status === 'concluido' ? '100%' : `Cap. ${draft.progress}`}
+                  {draft.status === 'concluido'
+                    ? '100%'
+                    : m.workModal.progressValue(draft.progress)}
                 </span>
                 <button
                   className="btn small success"
                   onClick={() => patch({ status: 'concluido' })}
                 >
-                  <i className="fa-solid fa-check" /> Concluir
+                  <i className="fa-solid fa-check" /> {m.workModal.finish}
                 </button>
                 <button
                   className="btn small ghost"
                   onClick={() => patch({ progress: 0, status: 'planejado' })}
                 >
-                  <i className="fa-solid fa-rotate-left" /> Zerar
+                  <i className="fa-solid fa-rotate-left" /> {m.workModal.reset}
                 </button>
               </div>
             </div>
@@ -276,12 +275,12 @@ export default function WorkModal({
               <i
                 className={confirmDelete ? 'fa-solid fa-triangle-exclamation' : 'fa-solid fa-trash'}
               />{' '}
-              {confirmDelete ? 'Confirmar exclusão?' : 'Excluir'}
+              {confirmDelete ? m.workModal.confirmDelete : m.workModal.deleteAction}
             </button>
           ) : null}
           <span className="spacer" />
           <button className="btn ghost" onClick={onClose} disabled={saving}>
-            Cancelar
+            {m.common.cancel}
           </button>
           <button
             className="btn primary"
@@ -292,11 +291,11 @@ export default function WorkModal({
           >
             {saving ? (
               <>
-                <i className="fa-solid fa-spinner fa-spin" /> Salvando…
+                <i className="fa-solid fa-spinner fa-spin" /> {m.common.saving}
               </>
             ) : (
               <>
-                <i className="fa-solid fa-floppy-disk" /> Salvar
+                <i className="fa-solid fa-floppy-disk" /> {m.common.save}
               </>
             )}
           </button>

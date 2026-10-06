@@ -41,6 +41,7 @@ describe('preload (contextBridge)', () => {
       driveClientId: 'id',
       driveClientSecret: 'segredo',
       drivePassphrase: 'frase',
+      language: 'pt-BR',
     };
     await api.pickCover();
     await api.settings.get();

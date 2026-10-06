@@ -43,6 +43,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   driveClientId: '',
   driveClientSecret: '',
   drivePassphrase: '',
+  language: 'pt-BR',
 };
 
 const DEFAULT_STATUS: DriveStatus = {

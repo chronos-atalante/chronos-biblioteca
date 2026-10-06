@@ -26,8 +26,8 @@ achar que a integração já funciona.
 
 Enquanto os dois pontos não forem resolvidos, o provedor fica com
 `operational: false` e **toda operação é recusada** com o mesmo motivo que a
-interface exibe (mensagem única em `src/main/drive/providers/google-drive.ts`).
-Não há como “conectar” o Google Drive por engano.
+interface exibe (mensagem única em `src/messages/`, chave `providers.googleUnavailable`,
+no idioma corrente). Não há como “conectar” o Google Drive por engano.
 
 ### Pasta oculta no Google Drive (decisão de design)
 
@@ -67,7 +67,9 @@ flowchart TD
 
 O contrato é pequeno de propósito: `authorize()` + as 4 operações de arquivo
 (`listAppFiles`, `uploadFile`, `downloadFile`, `deleteFile`). Criptografia,
-manifesto e orquestração ficam fora, compartilhados por todos.
+manifesto e orquestração ficam fora, compartilhados por todos. Os textos da UI
+do catálogo (`label`, `unavailableReason`, `storageTarget`) são montados por
+`describe(messages)` no idioma corrente — ver [`messages.md`](messages.md).
 
 ## Como ativar o Google Drive (ou um terceiro provedor)
 

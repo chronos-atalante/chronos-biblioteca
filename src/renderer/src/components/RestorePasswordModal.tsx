@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
+import { richText, useMessages } from '@zero/renderer/i18n';
 
 interface RestorePasswordModalProps {
   onConfirm: (passphrase: string) => void;
@@ -10,6 +11,7 @@ export default function RestorePasswordModal({
   onConfirm,
   onCancel,
 }: RestorePasswordModalProps): JSX.Element {
+  const m = useMessages();
   const [passphrase, setPassphrase] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -27,26 +29,23 @@ export default function RestorePasswordModal({
       <div className="modal">
         <div className="modal-header">
           <h2>
-            <i className="fa-solid fa-key" /> Senha do backup
+            <i className="fa-solid fa-key" /> {m.restore.title}
           </h2>
-          <button className="modal-close" onClick={onCancel} title="Fechar">
+          <button className="modal-close" onClick={onCancel} title={m.common.close}>
             <i className="fa-solid fa-xmark" />
           </button>
         </div>
 
         <div className="modal-body">
-          <div className="banner info">
-            Informe a senha de criptografia usada ao <strong>fazer o backup</strong> no Dropbox. Ela
-            é obrigatória para decifrar os arquivos baixados.
-          </div>
+          <div className="banner info">{richText(m.restore.banner)}</div>
 
           <div className="field">
-            <label>Senha de criptografia</label>
+            <label>{m.restore.passphraseLabel}</label>
             <input
               ref={inputRef}
               type="password"
               value={passphrase}
-              placeholder="Senha usada no backup"
+              placeholder={m.restore.passphrasePlaceholder}
               onChange={(event) => setPassphrase(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') onConfirm(passphrase);
@@ -58,10 +57,10 @@ export default function RestorePasswordModal({
         <div className="modal-footer">
           <span className="spacer" />
           <button className="btn ghost" onClick={onCancel}>
-            Cancelar
+            {m.common.cancel}
           </button>
           <button className="btn primary" onClick={() => onConfirm(passphrase)}>
-            <i className="fa-solid fa-clock-rotate-left" /> Restaurar
+            <i className="fa-solid fa-clock-rotate-left" /> {m.restore.action}
           </button>
         </div>
       </div>

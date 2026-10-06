@@ -19,6 +19,7 @@ describe('settings', () => {
       driveClientId: '',
       driveClientSecret: '',
       drivePassphrase: '',
+      language: 'pt-BR',
     });
   });
 
@@ -29,6 +30,7 @@ describe('settings', () => {
       driveClientId: '',
       driveClientSecret: '',
       drivePassphrase: '',
+      language: 'pt-BR',
     });
   });
 
@@ -39,6 +41,7 @@ describe('settings', () => {
       driveClientId: 'id-1',
       driveClientSecret: '',
       drivePassphrase: '',
+      language: 'pt-BR',
     });
   });
 
@@ -47,13 +50,31 @@ describe('settings', () => {
       driveClientId: '  minha-app-key-123  ',
       driveClientSecret: '  segredo-legado  ',
       drivePassphrase: '  segredo de backup  ',
+      language: 'pt-BR',
     });
     expect(saved).toEqual({
       driveClientId: 'minha-app-key-123',
       driveClientSecret: 'segredo-legado',
       drivePassphrase: '  segredo de backup  ',
+      language: 'pt-BR',
     });
     expect(loadSettings()).toEqual(saved);
+  });
+
+  it('persiste o idioma e normaliza valores fora do catálogo', () => {
+    expect(
+      saveSettings({
+        driveClientId: '',
+        driveClientSecret: '',
+        drivePassphrase: '',
+        language: 'en',
+      }).language,
+    ).toBe('en');
+    expect(loadSettings().language).toBe('en');
+
+    fs.mkdirSync(path.dirname(settingsFile()), { recursive: true });
+    fs.writeFileSync(settingsFile(), JSON.stringify({ language: 'xx' }), 'utf-8');
+    expect(loadSettings().language).toBe('pt-BR');
   });
 
   it('grava settings.json com permissão 0600', () => {
@@ -61,6 +82,7 @@ describe('settings', () => {
       driveClientId: 'id',
       driveClientSecret: 'segredo',
       drivePassphrase: 'frase',
+      language: 'pt-BR',
     });
     const mode = fs.statSync(settingsFile()).mode & 0o777;
     expect(mode).toBe(0o600);
@@ -71,6 +93,7 @@ describe('settings', () => {
       driveClientId: 'id',
       driveClientSecret: 'segredo',
       drivePassphrase: 'frase-secreta',
+      language: 'pt-BR',
     });
     expect(saved.drivePassphrase).toBe('frase-secreta');
     expect(fs.readFileSync(settingsFile(), 'utf-8')).toContain('frase-secreta');
@@ -84,6 +107,7 @@ describe('settings', () => {
         driveClientId: 'id',
         driveClientSecret: 'segredo',
         drivePassphrase: 'frase-secreta',
+        language: 'pt-BR',
       });
       expect(saved.drivePassphrase).toBe('frase-secreta');
       const raw = fs.readFileSync(settingsFile(), 'utf-8');
@@ -113,7 +137,12 @@ describe('settings', () => {
   it('falha fechada quando o keyring some depois de cifrar', () => {
     safeStorage.isEncryptionAvailable.mockReturnValue(true);
     try {
-      saveSettings({ driveClientId: '', driveClientSecret: '', drivePassphrase: 'frase-secreta' });
+      saveSettings({
+        driveClientId: '',
+        driveClientSecret: '',
+        drivePassphrase: 'frase-secreta',
+        language: 'pt-BR',
+      });
     } finally {
       safeStorage.isEncryptionAvailable.mockReturnValue(false);
     }

@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { DriveStatus, Work, WorkStatus } from '@zero/types';
-import { FILTERS, STATUS_COLORS, clampProgress, type StatusFilter } from '@zero/renderer/constants';
+import type { DriveStatus, Language, Work, WorkStatus } from '@zero/types';
+import { messages } from '@zero/messages';
+import {
+  FILTER_OPTIONS,
+  STATUS_COLORS,
+  clampProgress,
+  type StatusFilter,
+} from '@zero/renderer/constants';
+import { MessagesProvider } from '@zero/renderer/i18n';
 import WorkCard from '@zero/renderer/components/WorkCard';
 import WorkModal from '@zero/renderer/components/WorkModal';
 import SettingsModal from '@zero/renderer/components/SettingsModal';
@@ -59,10 +66,13 @@ export default function App(): JSX.Element {
   const [showAttributions, setShowAttributions] = useState(false);
   const [showDonate, setShowDonate] = useState(false);
   const [drive, setDrive] = useState<DriveStatus | null>(null);
+  const [language, setLanguage] = useState<Language>('pt-BR');
   const [toast, setToast] = useState<{ message: string; kind: 'info' | 'error' } | null>(null);
 
   const saveTimers = useRef<Map<string, number>>(new Map());
   const toastTimer = useRef<number | undefined>(undefined);
+
+  const m = messages(language);
 
   const notify = useCallback((message: string, kind: 'info' | 'error' = 'info'): void => {
     setToast({ message, kind });
@@ -71,12 +81,14 @@ export default function App(): JSX.Element {
   }, []);
 
   const reload = useCallback(async (): Promise<void> => {
-    const [library, status] = await Promise.all([
+    const [library, status, settings] = await Promise.all([
       window.api.library.get(),
       window.api.drive.status(),
+      window.api.settings.get(),
     ]);
     setWorks(library);
     setDrive(status);
+    setLanguage(settings.language);
     setLoading(false);
   }, []);
 
@@ -100,11 +112,11 @@ export default function App(): JSX.Element {
       if (existing !== undefined) window.clearTimeout(existing);
       const handle = window.setTimeout(() => {
         timers.delete(work.id);
-        void persist(work).catch(() => notify('Não foi possível salvar a obra.', 'error'));
+        void persist(work).catch(() => notify(m.app.toastSaveError, 'error'));
       }, 450);
       timers.set(work.id, handle);
     },
-    [notify, persist],
+    [notify, persist, m],
   );
 
   useEffect(() => {
@@ -143,18 +155,18 @@ export default function App(): JSX.Element {
     async (work: Work): Promise<void> => {
       const saved = await window.api.library.save(work);
       setWorks(saved);
-      notify('Obra salva.');
+      notify(m.app.toastSaved);
     },
-    [notify],
+    [notify, m],
   );
 
   const deleteWork = useCallback(
     async (work: Work): Promise<void> => {
       const saved = await window.api.library.remove(work.id);
       setWorks(saved);
-      notify('Obra removida.');
+      notify(m.app.toastRemoved);
     },
-    [notify],
+    [notify, m],
   );
 
   const visible = useMemo(() => {
@@ -178,182 +190,182 @@ export default function App(): JSX.Element {
   const driveConnected = drive?.connected === true;
   const driveDotClass = driveSyncing ? 'dot busy' : driveConnected ? 'dot on' : 'dot';
   const driveLabel = driveSyncing
-    ? 'Sincronizando…'
+    ? m.app.drivePill.syncing
     : driveConnected
-      ? 'Dropbox conectado'
-      : 'Dropbox off';
+      ? m.app.drivePill.connected
+      : m.app.drivePill.off;
   const hasWorks = works.length !== 0;
 
   return (
-    <div className="app">
-      <header className="header">
-        <div className="brand">
-          <div className="brand-logo">
-            <i className="fa-solid fa-book-open" />
-          </div>
-          <div>
-            <h1>Chronos Biblioteca</h1>
-            <small>
-              {visibleStats.total} obra(s) · progresso médio {visibleStats.average}%
-            </small>
-          </div>
-        </div>
-
-        <div className="search">
-          <span>
-            <i className="fa-solid fa-magnifying-glass" />
-          </span>
-          <input
-            type="text"
-            value={query}
-            placeholder="Buscar por título…"
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-
-        <div className="filters">
-          {FILTERS.map((item) => (
-            <button
-              key={item.value}
-              className={`chip${filter === item.value ? ' active' : ''}`}
-              onClick={() => setFilter(item.value)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="header-actions">
-          <button
-            className="drive-pill"
-            onClick={() => setShowSettings(true)}
-            title="Configurações do backup no Dropbox"
-          >
-            <span className={driveDotClass} />
-            {driveLabel}
-          </button>
-          <button
-            className="btn ghost"
-            onClick={() => setShowAttributions(true)}
-            title="Ver atribuições e licenças das dependências"
-          >
-            <i className="fa-solid fa-clapperboard" /> Atribuições
-          </button>
-          <button
-            className="btn ghost"
-            onClick={() => setShowDonate(true)}
-            title="Apoie o projeto com uma doação"
-          >
-            <i className="fa-solid fa-heart" /> Doar
-          </button>
-          <button
-            className="btn ghost icon-only"
-            onClick={() => setShowSettings(true)}
-            title="Configurações"
-          >
-            <i className="fa-solid fa-gear" />
-          </button>
-          <button
-            className="btn primary"
-            onClick={() => setEditing({ work: blankWork(), isNew: true })}
-          >
-            <i className="fa-solid fa-plus" /> Nova obra
-          </button>
-        </div>
-      </header>
-
-      <main className="content">
-        <div className="summary">
-          <div className="stat">
-            <b>{stats.total}</b>
-            <span>Total de obras</span>
-          </div>
-          <div className="stat">
-            <b style={{ color: STATUS_COLORS.lendo }}>{stats.reading}</b>
-            <span>Lendo</span>
-          </div>
-          <div className="stat">
-            <b style={{ color: STATUS_COLORS.concluido }}>{stats.done}</b>
-            <span>Concluídas</span>
-          </div>
-          <div className="stat">
-            <b style={{ color: STATUS_COLORS.planejado }}>{stats.planned}</b>
-            <span>Planejadas</span>
-          </div>
-          <div className="stat">
-            <b style={{ color: STATUS_COLORS.pausado }}>{stats.paused}</b>
-            <span>Pausadas</span>
-          </div>
-          <div className="stat">
-            <b style={{ color: STATUS_COLORS.cancelado }}>{stats.cancelled}</b>
-            <span>Canceladas</span>
-          </div>
-          <div className="stat">
-            <b>{stats.average}%</b>
-            <span>Progresso médio</span>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="loading">
-            <i className="fa-solid fa-spinner fa-spin" /> Carregando biblioteca…
-          </div>
-        ) : visible.length === 0 ? (
-          <div className="empty">
-            <div className="icon">
+    <MessagesProvider language={language}>
+      <div className="app">
+        <header className="header">
+          <div className="brand">
+            <div className="brand-logo">
               <i className="fa-solid fa-book-open" />
             </div>
-            <h3>{hasWorks ? 'Nenhuma obra encontrada' : 'Sua biblioteca está vazia'}</h3>
-            <p>
-              {hasWorks
-                ? 'Tente outro filtro ou termo de busca.'
-                : 'Adicione sua primeira obra: capa, título e acompanhe o progresso.'}
-            </p>
-            {!hasWorks ? (
-              <button
-                className="btn primary"
-                onClick={() => setEditing({ work: blankWork(), isNew: true })}
-              >
-                <i className="fa-solid fa-plus" /> Adicionar primeira obra
-              </button>
-            ) : null}
+            <div>
+              <h1>Chronos Biblioteca</h1>
+              <small>{m.app.headerStats(visibleStats.total, visibleStats.average)}</small>
+            </div>
           </div>
-        ) : (
-          <div className="grid">
-            {visible.map((work) => (
-              <WorkCard
-                key={work.id}
-                work={work}
-                onOpen={(item) => setEditing({ work: item, isNew: false })}
-                onProgress={updateProgress}
-                onStatus={changeStatus}
-              />
+
+          <div className="search">
+            <span>
+              <i className="fa-solid fa-magnifying-glass" />
+            </span>
+            <input
+              type="text"
+              value={query}
+              placeholder={m.app.searchPlaceholder}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+
+          <div className="filters">
+            {FILTER_OPTIONS.map((item) => (
+              <button
+                key={item}
+                className={`chip${filter === item ? ' active' : ''}`}
+                onClick={() => setFilter(item)}
+              >
+                {m.app.filters[item]}
+              </button>
             ))}
           </div>
-        )}
-      </main>
 
-      {editing !== null ? (
-        <WorkModal
-          work={editing.work}
-          isNew={editing.isNew}
-          onClose={() => setEditing(null)}
-          onSave={saveEdited}
-          onDelete={deleteWork}
-        />
-      ) : null}
+          <div className="header-actions">
+            <button
+              className="drive-pill"
+              onClick={() => setShowSettings(true)}
+              title={m.app.openSettingsTitle}
+            >
+              <span className={driveDotClass} />
+              {driveLabel}
+            </button>
+            <button
+              className="btn ghost"
+              onClick={() => setShowAttributions(true)}
+              title={m.app.openAttributionsTitle}
+            >
+              <i className="fa-solid fa-clapperboard" /> {m.app.attributionsLabel}
+            </button>
+            <button
+              className="btn ghost"
+              onClick={() => setShowDonate(true)}
+              title={m.app.openDonateTitle}
+            >
+              <i className="fa-solid fa-heart" /> {m.app.donateLabel}
+            </button>
+            <button
+              className="btn ghost icon-only"
+              onClick={() => setShowSettings(true)}
+              title={m.app.settingsTitle}
+            >
+              <i className="fa-solid fa-gear" />
+            </button>
+            <button
+              className="btn primary"
+              onClick={() => setEditing({ work: blankWork(), isNew: true })}
+            >
+              <i className="fa-solid fa-plus" /> {m.app.newWork}
+            </button>
+          </div>
+        </header>
 
-      {showSettings ? (
-        <SettingsModal onClose={() => setShowSettings(false)} notify={notify} />
-      ) : null}
+        <main className="content">
+          <div className="summary">
+            <div className="stat">
+              <b>{stats.total}</b>
+              <span>{m.app.stats.total}</span>
+            </div>
+            <div className="stat">
+              <b style={{ color: STATUS_COLORS.lendo }}>{stats.reading}</b>
+              <span>{m.app.stats.reading}</span>
+            </div>
+            <div className="stat">
+              <b style={{ color: STATUS_COLORS.concluido }}>{stats.done}</b>
+              <span>{m.app.stats.done}</span>
+            </div>
+            <div className="stat">
+              <b style={{ color: STATUS_COLORS.planejado }}>{stats.planned}</b>
+              <span>{m.app.stats.planned}</span>
+            </div>
+            <div className="stat">
+              <b style={{ color: STATUS_COLORS.pausado }}>{stats.paused}</b>
+              <span>{m.app.stats.paused}</span>
+            </div>
+            <div className="stat">
+              <b style={{ color: STATUS_COLORS.cancelado }}>{stats.cancelled}</b>
+              <span>{m.app.stats.cancelled}</span>
+            </div>
+            <div className="stat">
+              <b>{stats.average}%</b>
+              <span>{m.app.stats.average}</span>
+            </div>
+          </div>
 
-      {showAttributions ? <AttributionsModal onClose={() => setShowAttributions(false)} /> : null}
+          {loading ? (
+            <div className="loading">
+              <i className="fa-solid fa-spinner fa-spin" /> {m.app.loadingLibrary}
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="empty">
+              <div className="icon">
+                <i className="fa-solid fa-book-open" />
+              </div>
+              <h3>{hasWorks ? m.app.emptyFoundTitle : m.app.emptyLibraryTitle}</h3>
+              <p>{hasWorks ? m.app.emptyFoundText : m.app.emptyLibraryText}</p>
+              {!hasWorks ? (
+                <button
+                  className="btn primary"
+                  onClick={() => setEditing({ work: blankWork(), isNew: true })}
+                >
+                  <i className="fa-solid fa-plus" /> {m.app.addFirstWork}
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="grid">
+              {visible.map((work) => (
+                <WorkCard
+                  key={work.id}
+                  work={work}
+                  onOpen={(item) => setEditing({ work: item, isNew: false })}
+                  onProgress={updateProgress}
+                  onStatus={changeStatus}
+                />
+              ))}
+            </div>
+          )}
+        </main>
 
-      {showDonate ? <DonateModal onClose={() => setShowDonate(false)} /> : null}
+        {editing !== null ? (
+          <WorkModal
+            work={editing.work}
+            isNew={editing.isNew}
+            onClose={() => setEditing(null)}
+            onSave={saveEdited}
+            onDelete={deleteWork}
+          />
+        ) : null}
 
-      {toast !== null ? (
-        <div className={`toast${toast.kind === 'error' ? ' error' : ''}`}>{toast.message}</div>
-      ) : null}
-    </div>
+        {showSettings ? (
+          <SettingsModal
+            onClose={() => setShowSettings(false)}
+            notify={notify}
+            onLanguageChange={setLanguage}
+          />
+        ) : null}
+
+        {showAttributions ? <AttributionsModal onClose={() => setShowAttributions(false)} /> : null}
+
+        {showDonate ? <DonateModal onClose={() => setShowDonate(false)} /> : null}
+
+        {toast !== null ? (
+          <div className={`toast${toast.kind === 'error' ? ' error' : ''}`}>{toast.message}</div>
+        ) : null}
+      </div>
+    </MessagesProvider>
   );
 }

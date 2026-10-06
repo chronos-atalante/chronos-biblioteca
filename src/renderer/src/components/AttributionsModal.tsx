@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { ATTRIBUTIONS } from '@zero/renderer/attributions';
+import { richText, useMessages } from '@zero/renderer/i18n';
 
 interface AttributionsModalProps {
   onClose: () => void;
 }
 
 export default function AttributionsModal({ onClose }: AttributionsModalProps): JSX.Element {
+  const m = useMessages();
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
@@ -34,33 +36,31 @@ export default function AttributionsModal({ onClose }: AttributionsModalProps): 
         className="modal wide credits-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Atribuições"
+        aria-label={m.attributions.ariaLabel}
       >
         <div className="modal-header">
           <h2>
-            <i className="fa-solid fa-clapperboard" /> Atribuições
+            <i className="fa-solid fa-clapperboard" /> {m.attributions.title}
           </h2>
-          <button className="modal-close" onClick={onClose} title="Fechar">
+          <button className="modal-close" onClick={onClose} title={m.common.close}>
             <i className="fa-solid fa-xmark" />
           </button>
         </div>
 
         <div className="modal-body">
           <div className="banner info">
-            <strong>Créditos do projeto.</strong> Estas são as dependências de código aberto usadas
-            no Chronos Biblioteca todas com licenças permissivas aprovadas pela OSI. As versões
-            exatas estão em <code>package.json</code> / <code>package-lock.json</code>.
+            <strong>{m.attributions.bannerTitle}</strong> {richText(m.attributions.bannerBody)}
           </div>
 
           <div className="credits-controls">
             <button className="btn small ghost" onClick={togglePaused}>
               <i className={`fa-solid ${paused ? 'fa-play' : 'fa-pause'}`} />
-              {paused ? 'Continuar' : 'Pausar'}
+              {paused ? m.attributions.resume : m.attributions.pause}
             </button>
-            <span className="help">Passe o mouse sobre os créditos para pausar.</span>
+            <span className="help">{m.attributions.hoverHint}</span>
           </div>
 
-          <div className="credits-viewport" tabIndex={0} aria-label="Créditos em rolagem">
+          <div className="credits-viewport" tabIndex={0} aria-label={m.attributions.creditsAria}>
             <div className={`credits-track${paused ? ' paused' : ''}`}>
               {[false, true].map((hidden) => (
                 <div
@@ -69,7 +69,7 @@ export default function AttributionsModal({ onClose }: AttributionsModalProps): 
                   aria-hidden={hidden ? 'true' : undefined}
                 >
                   <p className="credits-title">Chronos Biblioteca</p>
-                  <p className="credits-subtitle">agradece a estas dependências</p>
+                  <p className="credits-subtitle">{m.attributions.creditsSubtitle}</p>
                   {ATTRIBUTIONS.map((item) => (
                     <article key={`${hidden ? 'copy-' : ''}${item.name}`} className="credits-item">
                       <h3>{item.name}</h3>
@@ -78,8 +78,8 @@ export default function AttributionsModal({ onClose }: AttributionsModalProps): 
                       <span className="credit-url">{item.url}</span>
                     </article>
                   ))}
-                  <p className="credits-title">Fim</p>
-                  <p className="credits-subtitle">os créditos recomeçam em loop</p>
+                  <p className="credits-title">{m.attributions.creditsEnd}</p>
+                  <p className="credits-subtitle">{m.attributions.creditsLoop}</p>
                 </div>
               ))}
             </div>
@@ -89,7 +89,7 @@ export default function AttributionsModal({ onClose }: AttributionsModalProps): 
         <div className="modal-footer">
           <span className="spacer" />
           <button className="btn primary" onClick={onClose}>
-            <i className="fa-solid fa-check" /> Fechar
+            <i className="fa-solid fa-check" /> {m.common.close}
           </button>
         </div>
       </div>

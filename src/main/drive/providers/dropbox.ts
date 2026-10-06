@@ -1,6 +1,6 @@
+import type { BackupProvider } from '@zero/main/drive/provider';
 import { authorize } from '@zero/main/drive/oauth';
 import { deleteFile, downloadFile, listAppFiles, uploadFile } from '@zero/main/drive/rest';
-import type { BackupProvider } from '@zero/main/drive/provider';
 
 /**
  * Provedor Dropbox: só adapta o OAuth PKCE e o REST já existentes ao contrato
@@ -9,14 +9,17 @@ import type { BackupProvider } from '@zero/main/drive/provider';
  */
 export const dropboxProvider: BackupProvider = {
   id: 'dropbox',
-  info: {
+  label: 'Dropbox',
+  operational: true,
+  storageHidden: false,
+  describe: (m) => ({
     id: 'dropbox',
     label: 'Dropbox',
     operational: true,
     unavailableReason: null,
-    storageTarget: '/Apps/Chronos Biblioteca (pasta visível na sua conta)',
+    storageTarget: m.providers.dropboxStorageTarget,
     storageHidden: false,
-  },
+  }),
   authorize,
   listAppFiles,
   uploadFile,

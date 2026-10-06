@@ -3,6 +3,7 @@ import path from 'path';
 import type { DriveStatus } from '@zero/types';
 import { EMBEDDED_APP_KEY, SCOPE_VERSION } from '@zero/main/drive/constants';
 import { configDir } from '@zero/main/library';
+import { currentMessages } from '@zero/main/i18n';
 import { loadSettings } from '@zero/main/settings';
 
 export interface Tokens {
@@ -55,7 +56,7 @@ export function loadState(): void {
       if (isTokens(parsed) && parsed.scopeVersion === SCOPE_VERSION) {
         state.tokens = parsed;
       } else {
-        state.lastError = 'Permissões do Dropbox atualizadas. Reconecte a conta Dropbox.';
+        state.lastError = currentMessages().driveErrors.permissionsUpdated;
       }
     }
   } catch {

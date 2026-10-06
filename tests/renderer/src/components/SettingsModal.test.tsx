@@ -27,6 +27,7 @@ interface SetupResult {
   mock: ApiMock;
   onClose: Mock<() => void>;
   notify: Mock<(message: string, kind?: 'info' | 'error') => void>;
+  onLanguageChange: Mock<(language: AppSettings['language']) => void>;
 }
 
 function setup(options: Parameters<typeof createApiMock>[0] = {}): SetupResult {
@@ -34,8 +35,9 @@ function setup(options: Parameters<typeof createApiMock>[0] = {}): SetupResult {
   installApiMock(mock);
   const onClose = vi.fn();
   const notify = vi.fn<(message: string, kind?: 'info' | 'error') => void>();
-  render(<SettingsModal onClose={onClose} notify={notify} />);
-  return { mock, onClose, notify };
+  const onLanguageChange = vi.fn<(language: AppSettings['language']) => void>();
+  render(<SettingsModal onClose={onClose} notify={notify} onLanguageChange={onLanguageChange} />);
+  return { mock, onClose, notify, onLanguageChange };
 }
 
 async function typeCredentials(): Promise<void> {
@@ -118,7 +120,9 @@ describe('SettingsModal: carregamento', () => {
     installApiMock(mock);
     const unsubscribe = vi.fn();
     mock.driveOnStatus.mockReturnValueOnce(unsubscribe);
-    const view = render(<SettingsModal onClose={vi.fn()} notify={vi.fn()} />);
+    const view = render(
+      <SettingsModal onClose={vi.fn()} notify={vi.fn()} onLanguageChange={vi.fn()} />,
+    );
 
     await screen.findByText('Desconectado');
     expect(mock.driveOnStatus).toHaveBeenCalledTimes(1);
@@ -138,6 +142,7 @@ describe('SettingsModal: credenciais', () => {
       driveClientId: '',
       driveClientSecret: '',
       drivePassphrase: 'frase',
+      language: 'pt-BR',
     });
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Configurações salvas.'));
   });
@@ -163,6 +168,7 @@ describe('SettingsModal: credenciais', () => {
       driveClientId: 'minha-app-key',
       driveClientSecret: '',
       drivePassphrase: '',
+      language: 'pt-BR',
     });
   });
 });
@@ -174,6 +180,7 @@ describe('SettingsModal: ações do Dropbox', () => {
         driveClientId: 'id',
         driveClientSecret: 'segredo',
         drivePassphrase: 'frase',
+        language: 'pt-BR',
       },
       status: CONNECTED,
     });
@@ -193,6 +200,7 @@ describe('SettingsModal: ações do Dropbox', () => {
         driveClientId: 'id',
         driveClientSecret: 'segredo',
         drivePassphrase: 'frase',
+        language: 'pt-BR',
       },
     });
     mock.driveAuth.mockResolvedValueOnce({ ok: false, error: 'Usuário recusou.' });
@@ -208,6 +216,7 @@ describe('SettingsModal: ações do Dropbox', () => {
         driveClientId: 'id',
         driveClientSecret: 'segredo',
         drivePassphrase: 'frase',
+        language: 'pt-BR',
       },
     });
     let release: () => void = () => undefined;
@@ -302,6 +311,7 @@ describe('SettingsModal: configurações exibidas', () => {
       driveClientId: 'id-salvo',
       driveClientSecret: 'segredo-salvo',
       drivePassphrase: 'frase-salva',
+      language: 'pt-BR',
     };
     setup({ settings: saved });
     await screen.findByText('Desconectado');
@@ -313,5 +323,23 @@ describe('SettingsModal: configurações exibidas', () => {
   it('mostra a data do último backup formatada', async () => {
     setup({ status: CONNECTED });
     expect(await screen.findByText(/03\/02\/2026/)).toBeInTheDocument();
+  });
+});
+
+describe('SettingsModal: idioma', () => {
+  it('escolhe o idioma, salva e aplica o novo idioma na UI', async () => {
+    const { mock, notify, onLanguageChange } = setup();
+    await screen.findByText('Desconectado');
+    expect(screen.getByText('Idioma')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Português (Brasil)' }));
+    await user.click(await screen.findByRole('option', { name: /English/ }));
+
+    await user.click(screen.getByRole('button', { name: /^Salvar$/ }));
+    expect(mock.settingsSet).toHaveBeenCalledWith(expect.objectContaining({ language: 'en' }));
+    await waitFor(() => expect(onLanguageChange).toHaveBeenCalledWith('en'));
+    // Toast já no idioma salvo, mesmo antes do provider do App trocar.
+    await waitFor(() => expect(notify).toHaveBeenCalledWith('Settings saved.'));
   });
 });

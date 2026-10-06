@@ -5,13 +5,16 @@ import { resolve } from 'path';
 const root = import.meta.dirname;
 
 /** Espelha `paths` de tsconfig.base.json e o mapa de `node.loader.ts`. */
-const typesAlias = { '@zero/types': resolve(root, 'src/types') } as const;
+const sharedAliases = {
+  '@zero/types': resolve(root, 'src/types'),
+  '@zero/messages': resolve(root, 'src/messages'),
+} as const;
 
 export default defineConfig({
   main: {
     resolve: {
       alias: {
-        ...typesAlias,
+        ...sharedAliases,
         '@zero/main': resolve(root, 'src/main'),
       },
     },
@@ -24,7 +27,7 @@ export default defineConfig({
   preload: {
     resolve: {
       alias: {
-        ...typesAlias,
+        ...sharedAliases,
         '@zero/preload': resolve(root, 'src/preload'),
       },
     },
@@ -45,7 +48,7 @@ export default defineConfig({
     root: resolve(root, 'src/renderer'),
     resolve: {
       alias: {
-        ...typesAlias,
+        ...sharedAliases,
         '@zero/renderer': resolve(root, 'src/renderer/src'),
       },
     },

@@ -5,5 +5,5 @@ export type {
   BackupSummary,
   DriveStatus,
 } from '@zero/types/drive';
-export type { AppSettings } from '@zero/types/settings';
+export type { AppSettings, Language } from '@zero/types/settings';
 export type { Work, WorkStatus, WorkType } from '@zero/types/work';
