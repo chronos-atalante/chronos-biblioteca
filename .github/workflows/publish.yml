@@ -1,8 +1,12 @@
 name: Publicar .deb
 
-# Publica o .deb na GitHub Release correspondente:
+# Publica o .deb na GitHub Release correspondente e, junto, o repositório
+# APT flat (índices assinados + alias estável do .deb) como assets da mesma
+# Release — base: .../releases/latest/download/ (suite ./).
+# Gatilhos:
 # - tag v* enviada manualmente (ex.: git push origin v1.0.3), ou
-# - Release criada pelo bot do release-please ao mesclar o PR de release.
+# - Release criada pelo bot do release-please ao mesclar o PR de release, ou
+# - execução manual na UI (workflow_dispatch).
 # Sem loop: releases criadas com GITHUB_TOKEN não disparam novos runs.
 on:
   push:
@@ -10,6 +14,7 @@ on:
       - 'v*'
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,6 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # tags completas para o fallback `git describe` do workflow_dispatch
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -39,13 +47,79 @@ jobs:
         # sozinho por causa da tag ("Implicit publishing") e falha sem token.
         run: npm run build && npx electron-builder --linux deb --publish never
 
+      - name: Resolver tag da Release
+        id: tag
+        run: |
+          TAG="${{ github.ref_type == 'tag' && github.ref_name || github.event.release.tag_name }}"
+          if [ -z "$TAG" ]; then TAG="$(git describe --tags --abbrev=0)"; fi
+          echo "Tag: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
       - name: Anexar .deb à Release
         uses: softprops/action-gh-release@v2
         with:
           files: release/chronos-biblioteca_*_amd64.deb
           # Se a Release ainda não existe (tag manual), ela é criada aqui.
           generate_release_notes: true
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.event.release.tag_name }}
+          tag_name: ${{ steps.tag.outputs.tag }}
+
+      - name: Gerar repo APT flat assinado (assets estáveis)
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "::error::Secret GPG_PRIVATE_KEY ausente em Settings → Secrets → Actions (repo chronos-biblioteca)."
+            exit 1
+          fi
+          sudo apt-get install -y --no-install-recommends dpkg-dev apt-utils gnupg
+          mkdir -p apt
+          # Alias estável SEM versão: o APT resolve Filename relativo à base
+          # .../releases/latest/download/, que só redireciona nomes exatos.
+          cp release/chronos-biblioteca_*_amd64.deb apt/chronos-biblioteca_amd64.deb
+          printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          cd apt
+          dpkg-scanpackages . /dev/null > Packages.raw
+          # Filename precisa ser o nome puro do asset (sem ./ nem pool/).
+          sed 's#^\(\s*Filename:\s*\)\./#\1#' Packages.raw > Packages
+          grep -qx 'Filename: chronos-biblioteca_amd64.deb' Packages
+          gzip -9nc Packages > Packages.gz
+          rm Packages.raw
+          # Release é gerado FORA da árvore e só então movido para dentro,
+          # senão ele hash a si mesmo (arquivo meio escrito) e ao .raw.
+          apt-ftparchive release \
+            -o APT::FTPArchive::Release::Origin=Chronos \
+            -o APT::FTPArchive::Release::Label=Chronos \
+            -o APT::FTPArchive::Release::Suite=stable \
+            -o APT::FTPArchive::Release::Codename=stable \
+            -o APT::FTPArchive::Release::Architectures=amd64 \
+            -o APT::FTPArchive::Release::Components=main \
+            -o APT::FTPArchive::Release::Description="Chronos Biblioteca" \
+            . > ../Release.tmp
+          mv ../Release.tmp Release
+          if [ -n "${GPG_PASSPHRASE:-}" ]; then
+            GPG_OPTS=(--batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE")
+          else
+            GPG_OPTS=(--batch --yes)
+          fi
+          gpg "${GPG_OPTS[@]}" --clearsign -o InRelease Release
+          gpg "${GPG_OPTS[@]}" -abs -o Release.gpg Release
+          gpg --armor --export > public.key
+          echo "Repo APT flat gerado:" && ls -l
+
+      - name: Anexar repo APT à Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apt/chronos-biblioteca_amd64.deb
+            apt/Packages
+            apt/Packages.gz
+            apt/Release
+            apt/Release.gpg
+            apt/InRelease
+            apt/public.key
+          tag_name: ${{ steps.tag.outputs.tag }}
 
       - name: Disparar redeploy da landing (Vercel Deploy Hook)
         # Sem hook configurado, pula em silêncio; a Release funciona igual.

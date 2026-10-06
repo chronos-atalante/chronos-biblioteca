@@ -1,6 +1,8 @@
 node_modules
 out
 release
+# workspace temporário do repo APT flat gerado no CI (publish.yml)
+apt
 # bin/osv-scanner é um binário vendored (57 MB, só uso local). Não versionar;
 # scripts em bin/ SÃO versionados.
 bin/osv-scanner

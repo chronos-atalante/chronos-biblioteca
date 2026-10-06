@@ -42,13 +42,40 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 
 ## Instalação
 
+### Via repositório APT (recomendado — recebe `sudo apt upgrade`)
+
+O repositório é a própria GitHub Release do projeto (índices assinados como
+assets; nada de binário no git). Na primeira instalação:
+
+```bash
+curl -fsSL https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download/public.key \
+  | sudo gpg --dearmor --yes -o /usr/share/keyrings/chronos.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/chronos.gpg] \
+https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download/ ./" \
+  | sudo tee /etc/apt/sources.list.d/chronos.list
+sudo apt update && sudo apt install chronos-biblioteca
+```
+
+### Download direto
+
+Baixe o `.deb` da [página de Releases](https://github.com/chronos-atalante/chronos-biblioteca/releases)
+(baixar direto:
+`https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download/chronos-biblioteca_amd64.deb`)
+e instale:
+
+```bash
+sudo apt install ./chronos-biblioteca_amd64.deb
+```
+
+### Compilando localmente
+
 ```bash
 # gere o pacote (uma vez)
 npm install
 npm run dist
 
 # instale
-sudo apt install ./release/chronos-biblioteca_1.0.1_amd64.deb
+sudo apt install ./release/chronos-biblioteca_1.1.1_amd64.deb
 ```
 
 O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
