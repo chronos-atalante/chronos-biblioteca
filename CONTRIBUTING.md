@@ -97,21 +97,28 @@ título do commit vindo da `developer` para a `main`:
 - `fix: ...` → correção de bug (sobe `PATCH`, ex.: 1.0.2 → 1.0.3);
 - `docs: ...`, `test: ...`, `chore: ...`, `refactor: ...` → sem lançamento.
 
-Para publicar uma versão (manualmente, a partir da `main`):
+Para publicar uma versão (a partir da `main`):
 
 1. Bump em `package.json` → `version` + entrada nova no `CHANGELOG.md`
    (o tipo dos commits desde a última release indica MINOR/PATCH);
 2. Commit (`chore: release x.y.z`) e push na `main`;
-3. `git tag vX.Y.Z && git push origin vX.Y.Z` — a tag dispara o workflow
-   **Publicar .deb**, que compila (`npm run dist`), anexa o `.deb`
+3. O push dispara o workflow **Publicar .deb**: o job **Verificar versão**
+   compara `package.json` com as Releases existentes e, sendo uma versão
+   nova, cria a tag `vX.Y.Z`, compila (`npm run dist`), anexa o `.deb`
    **e o repo APT flat assinado** (`Packages`, `Release`, `InRelease`,
    `public.key` + alias `chronos-biblioteca_amd64.deb`) à Release, e dispara
    o redeploy da landing (via Deploy Hook). Requer os secrets
    `GPG_PRIVATE_KEY` (+ `GPG_PASSPHRASE`, se houver) em
-   Settings → Secrets → Actions;
+   Settings → Secrets → Actions. Push repetido sem bump de versão vira
+   execução verde e rápida (nada a publicar);
 4. Confira a sincronia das 4 vias (ver `AGENTS.md` da raiz, §2):
    `package.json` ≡ tag ≡ `Packages` (`Version:`) ≡ `release-info.json`
    da landing.
+
+Para reanexar os assets de uma Release que falhou no meio, rode o workflow
+na UI (**Run workflow**, `workflow_dispatch`) — ele publica de novo sem
+conferir a versão. Também dá para empurrar a tag à mão
+(`git tag vX.Y.Z && git push origin vX.Y.Z`), que dispara o mesmo workflow.
 
 A landing lê essa Release na API pública e atualiza versão, botão de
 download e os comandos APT (`…/releases/latest/download/`, suite `./`) —

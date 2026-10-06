@@ -113,9 +113,12 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
 
 ## Distribuição e release (resumo)
 
-- Tag `vX.Y.Z` dispara o `publish.yml`: gera o `.deb`, anexa a ele e ao repo
-  APT flat assinado na GitHub Release e notifica o Vercel; a landing lê
-  `releases/latest` no build.
+- Push na `main` dispara o `publish.yml`: o job **Verificar versão** compara
+  `package.json` com as Releases existentes e, se for uma versão nova, cria a
+  tag, gera o `.deb`, anexa a ele e ao repo APT flat assinado na GitHub
+  Release e notifica o Vercel; a landing lê `releases/latest` no build.
+  (Tag `v*` manual, `release: published` e `workflow_dispatch` seguem
+  funcionando como gatilhos de reserva.)
 - Nunca renomear os assets estáveis da Release (`Packages`, `Packages.gz`,
   `Release`, `Release.gpg`, `InRelease`, `public.key` e o alias
   `chronos-biblioteca_amd64.deb`).

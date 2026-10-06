@@ -4,12 +4,20 @@ name: Publicar .deb
 # APT flat (índices assinados + alias estável do .deb) como assets da mesma
 # Release — base: .../releases/latest/download/ (suite ./).
 # Gatilhos:
+# - push na main: lê package.json → se ainda não existir Release para
+#   v<versão>, publica automaticamente (é assim que a versão nova sai);
 # - tag v* enviada manualmente (ex.: git push origin v1.0.3), ou
 # - Release criada na UI do GitHub, ou
-# - execução manual na UI (workflow_dispatch).
-# Sem loop: releases criadas com GITHUB_TOKEN não disparam novos runs.
+# - execução manual na UI (workflow_dispatch — também serve para reanexar
+#   assets de uma Release que falhou no meio).
+# Sem loop: pushes de tag/Release feitos com o GITHUB_TOKEN desta execução
+# não disparam novos runs, e a tag só é criada antes do upload dos assets.
+# `concurrency` serializa as publicações para duas corridas na main não
+# publicarem a mesma versão duas vezes.
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   release:
@@ -19,17 +27,89 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: publicar-deb
+  cancel-in-progress: false
+
 # secrets não pode ser usado em `if:`; copia para env (padrão do GitHub).
 env:
   VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
 
 jobs:
+  resolver-versao:
+    name: Verificar versão
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      publicar: ${{ steps.version.outputs.publicar }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Comparar package.json com as Releases existentes
+        id: version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v$VERSION"
+          PUBLICAR=true
+
+          # Ref explícita (tag manual, Release da UI ou dispatch numa tag)
+          # manda mais que o package.json.
+          if [ "$REF_TYPE" = "tag" ]; then
+            TAG="$REF_NAME"
+          elif [ "$EVENT_NAME" = "release" ] && [ -n "$RELEASE_TAG" ]; then
+            TAG="$RELEASE_TAG"
+          fi
+
+          echo "package.json: $VERSION"
+          echo "Tag da Release: $TAG"
+
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::warning::Tag $TAG não confere com v$VERSION do package.json."
+          fi
+          if ! grep -qF "## [$VERSION]" CHANGELOG.md; then
+            echo "::warning::CHANGELOG.md não tem a entrada '## [$VERSION]'."
+          fi
+
+          # Push na main: só interessa publicar se ainda não houver Release.
+          # (Se a tag existe mas a Release não, publica mesmo assim — é o
+          # caso de um run anterior que morreu antes do upload.)
+          if [ "$EVENT_NAME" = "push" ] && [ "$REF_TYPE" = "branch" ]; then
+            CODE="$(curl -sS -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG" || true)"
+            if [ "$CODE" = "200" ]; then
+              PUBLICAR=false
+              echo "::notice::Release $TAG já existe — nada a publicar nesta execução."
+            elif [ "$CODE" != "404" ]; then
+              echo "::warning::Não deu para conferir a Release $TAG (HTTP ${CODE:-erro}) — seguirei publicando."
+            fi
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "publicar=$PUBLICAR" >> "$GITHUB_OUTPUT"
+          echo "Resultado: tag=$TAG publicar=$PUBLICAR"
+
   build-deb:
+    name: Gerar e publicar
+    needs: resolver-versao
+    if: needs.resolver-versao.outputs.publicar == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          # tags completas para o fallback `git describe` do workflow_dispatch
+          # tags completas para conferir/criar a tag da Release
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
@@ -47,13 +127,22 @@ jobs:
         # sozinho por causa da tag ("Implicit publishing") e falha sem token.
         run: npm run build && npx electron-builder --linux deb --publish never
 
-      - name: Resolver tag da Release
-        id: tag
+      - name: Criar tag da Release (se ainda não existir)
+        env:
+          TAG: ${{ needs.resolver-versao.outputs.tag }}
         run: |
-          TAG="${{ github.ref_type == 'tag' && github.ref_name || github.event.release.tag_name }}"
-          if [ -z "$TAG" ]; then TAG="$(git describe --tags --abbrev=0)"; fi
-          echo "Tag: $TAG"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if [ -z "$TAG" ]; then
+            echo "::error::Tag vazia — o job 'Verificar versão' não rodou?"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "Tag $TAG já existe — vou anexar os assets nela."
+          else
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "refs/tags/$TAG"
+            echo "Tag $TAG criada no commit $(git rev-parse --short HEAD)."
+          fi
 
       - name: Anexar .deb à Release
         uses: softprops/action-gh-release@v2
@@ -61,7 +150,7 @@ jobs:
           files: release/chronos-biblioteca_*_amd64.deb
           # Se a Release ainda não existe (tag manual), ela é criada aqui.
           generate_release_notes: true
-          tag_name: ${{ steps.tag.outputs.tag }}
+          tag_name: ${{ needs.resolver-versao.outputs.tag }}
 
       - name: Gerar repo APT flat assinado (assets estáveis)
         env:
@@ -133,7 +222,7 @@ jobs:
             apt/Release.gpg
             apt/InRelease
             apt/public.key
-          tag_name: ${{ steps.tag.outputs.tag }}
+          tag_name: ${{ needs.resolver-versao.outputs.tag }}
 
       - name: Disparar redeploy da landing (Vercel Deploy Hook)
         # Sem hook configurado, pula em silêncio; a Release funciona igual.

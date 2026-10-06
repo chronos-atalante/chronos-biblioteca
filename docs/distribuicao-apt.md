@@ -66,7 +66,9 @@ Comparação dos caminhos avaliados:
 
 ```mermaid
 flowchart TD
-    A["git tag v* na Biblioteca"] --> B["publish.yml (CI)"]
+    A["push na main (versão nova) / tag v*"] --> B0["job Verificar versão: package.json vs Releases"]
+    B0 -->|"Release ainda não existe"| B["publish.yml: gera e anexa os assets"]
+    B0 -->|"Release já existe"| P["fim: execução verde e rápida"]
     B --> C["Release: .deb com versão + alias chronos-biblioteca_amd64.deb"]
     B --> D["Índices assinados: Packages, Packages.gz, Release, Release.gpg, InRelease, public.key"]
     C --> E["releases/latest/download/ (suite ./)"]
@@ -79,8 +81,9 @@ flowchart TD
 
 Onde vive cada parte:
 
-- `Biblioteca/.github/workflows/publish.yml`: gera o `.deb`, anexa os assets
-  da Release, monta e assina o repo APT flat e dispara o redeploy da landing.
+- `Biblioteca/.github/workflows/publish.yml`: decide se há versão nova,
+  gera o `.deb`, anexa os assets da Release, monta e assina o repo APT flat
+  e dispara o redeploy da landing.
 - `Biblioteca/build/after-pack.cjs`: slim do pacote (idiomas e SwiftShader).
 - `Landing page/scripts/fetch-release.mjs`: lê a Release a cada build e grava
   `src/app/release-info.json` (`version`, `fileName`, `debUrl`), com
@@ -168,30 +171,48 @@ prioridade 500 e a assinatura precisa passar sem avisos.
 
 ### 6. Publicação
 
-A tag `vX.Y.Z` dispara o workflow **Publicar .deb**, que compila, anexa o
-`.deb` e o repo APT flat assinado e dispara o Deploy Hook da Vercel. O build
-da landing então lê a Release nova e publica a versão atualizada. O ciclo é:
+O push na `main` dispara o workflow **Publicar .deb**, que no job
+**Verificar versão** lê `package.json` e checa se já existe Release para
+`v<versão>`: se existe, encerra ali (execução verde e rápida); se não
+existe, cria a tag, compila, anexa o `.deb` e o repo APT flat assinado e
+dispara o Deploy Hook da Vercel. O build da landing então lê a Release nova
+e publica a versão atualizada. O ciclo é:
 
 ```text
-tag v* → publish.yml → .deb + APT assinados na Release → deploy hook → build da landing → versão nova no site
+push na main (versão nova) → Verificar versão (package.json vs Releases) → cria tag → .deb + APT assinados na Release → deploy hook → build da landing → versão nova no site
 ```
 
-## Publicação de uma nova versão (fluxo manual)
+A tag é criada **pelo próprio CI, no commit do push**, então o workflow que
+roda é o da `main` e a tag nunca aponta para um commit antigo (lição da
+v1.1.1, abaixo). Como o push de tag sai do `GITHUB_TOKEN` da mesma execução,
+ele não dispara um segundo run — não há loop nem build duplicado.
 
-Desde a remoção do release-please (motivo na próxima seção), o fluxo é
-manual:
+## Publicação de uma nova versão (fluxo semanal)
+
+Desde a remoção do release-please (motivo na próxima seção), o bump de
+versão é manual e a **publicação é automática**:
 
 1. Bump em `Biblioteca/package.json` → `version` e entrada nova no
    `CHANGELOG.md`. Os Conventional Commits desde a última release indicam se
    sobe MINOR ou PATCH.
 2. Commit (`chore: release x.y.z`) e push na `main`.
-3. `git tag vX.Y.Z && git push origin vX.Y.Z`.
-4. Aguardar o workflow ficar verde (compila, anexa, assina, notifica o
-   Vercel).
+3. O workflow **Verificar versão** detecta que `v<versão>` ainda não tem
+   Release e publica sozinho (cria a tag, compila, anexa, assina, notifica o
+   Vercel). Sem bump, ele só confirma que a Release já existe e sai verde.
+4. Aguardar o workflow ficar verde.
 5. Conferir a sincronia das quatro vias:
    `package.json` (`version`) ≡ tag `v*` ≡ `Packages` (`Version:`) ≡
    `Landing page/src/app/release-info.json` (`version`).
 6. Pedir aos usuários que rodem `sudo apt update && sudo apt upgrade`.
+
+Casos de exceção (o mesmo workflow, sem checar a versão):
+
+- `workflow_dispatch` na UI do Actions: reanexa os assets de uma Release
+  que falhou no meio do caminho;
+- `git tag vX.Y.Z && git push origin vX.Y.Z`: publica uma tag criada à mão
+  (o job avisa, como `::warning::`, se a tag não bater com o
+  `package.json`);
+- Release criada na UI do GitHub (`release: published`).
 
 ## Lições da implantação (o que deu errado no caminho)
 
@@ -208,7 +229,9 @@ manual:
   `403 Resource not accessible by integration` ao criar a Release porque a
   plataforma rejeita `target_commitish` com SHA para `GITHUB_TOKEN`
   (bug conhecido, `cli/cli#9514`). Nada de configuração local resolve; a
-  solução foi adotar o fluxo manual descrito acima.
+  solução foi o bump manual de versão com publicação automática pelo
+  `publish.yml` (descrito acima) — ele cria a **tag via `git push`** antes
+  de chamar a API da Release, então o `target_commitish` nunca é preciso.
 - **A v1.1.1 não abria (só o ícone).** O `after-pack.cjs` removia o
   `libffmpeg.so`, mas o binário do Electron o declara como `DT_NEEDED` e o
   loader exige o arquivo na hora do exec. Corrigido na v1.1.2: o slim só
