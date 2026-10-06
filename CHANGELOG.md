@@ -4,6 +4,26 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.2.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.2...v1.2.0) (2026-10-06)
+
+### Features
+
+- backup: contrato `BackupProvider` com catálogo de provedores na seção
+  "Provedores de backup" das Configurações (canal IPC `drive:providers`):
+  Dropbox operante e Google Drive documentado como não operante (destino
+  `appDataFolder`; ver `docs/backup-providers.md`).
+- backup: formato de arquivo único `WTENC3` (scrypt `N=2¹⁷`, `r=8`, `p=1`)
+  no lugar dos legados `WTENC1`/`WTENC2` e da função `encryptIfNeeded`.
+- idioma: interface em português (Brasil) ou inglês, escolhido em
+  Configurações e persistido em `language`; textos centralizados em
+  `src/messages/` (ver `docs/messages.md`).
+- configurações: botão **Fechar** no rodapé do modal.
+
+### Bug Fixes
+
+- dev: os webfonts do FontAwesome deixam de ser recusados (HTTP 403) pelo
+  servidor do Vite no `npm run dev` (`server.fs.allow` no renderer).
+
 ## [1.1.2](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.1...v1.1.2) (2026-10-06)
 
 ### Bug Fixes

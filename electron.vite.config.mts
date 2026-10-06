@@ -46,6 +46,13 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(root, 'src/renderer'),
+    server: {
+      fs: {
+        // O root do renderer é `src/renderer`; sem liberar a raiz do projeto o
+        // Vite recusa (403) os webfonts do FontAwesome em `node_modules` no dev.
+        allow: [root],
+      },
+    },
     resolve: {
       alias: {
         ...sharedAliases,
