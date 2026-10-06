@@ -10,7 +10,6 @@ import {
   ipcMain,
   nativeImage,
   protocol,
-  shell,
 } from 'electron';
 import {
   cacheDir,
@@ -36,6 +35,7 @@ import {
   restoreNow,
 } from '@zero/main/drive';
 import { currentMessages } from '@zero/main/i18n';
+import { openExternalSafe } from '@zero/main/external';
 import type { AppSettings, DriveStatus, Work } from '@zero/types';
 
 protocol.registerSchemesAsPrivileged([
@@ -117,7 +117,7 @@ function createWindow(): void {
   mainWindow.once('ready-to-show', () => mainWindow?.show());
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    openExternalSafe(url);
     return { action: 'deny' };
   });
 

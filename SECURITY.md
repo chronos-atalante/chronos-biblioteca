@@ -33,6 +33,11 @@ contrário).
 - **Nomes remotos opacos**: HMAC-SHA256 com chave de nomes derivada da senha
   - mesmo custo da cifra (`N=2¹⁷`): o nome do `library.json` é adivinhável e
     permite testar senhas candidatas offline sem decifrar nada.
+  - os nomes de conteúdo usam um **salt aleatório por cadeia de backup**,
+    gravado no manifesto cifrado (formato v2); o próprio manifesto é
+    localizado por uma chave com salt fixo, porque precisa ser encontrável em
+    qualquer máquina sem estado prévio. Manifestos v1 (sem salt) são legíveis
+    e migram sozinhos no próximo backup.
   - manifesto cifrado (nome remoto → nome local). Ao Dropbox restam visíveis
     só a quantidade aproximada e o tamanho dos blobs (limitação da API;
     tamanhos exatos não têm como ser ocultados sem padding).
@@ -47,8 +52,26 @@ contrário).
 - **Sem servidor intermediário**: do PC direto para o Dropbox (`fetch` nativo).
 - **Credenciais embutidas**: a proteção vem do PKCE + loopback (não há
   `client_secret` em uso); não reporte isso como falha.
+- **URLs externas só por `https:`**: o `shell.openExternal` é acionado pelo
+  helper `openExternalSafe` (`src/main/external.ts`), que recusa qualquer
+  protocolo fora de `https:` vindo do renderer ou do fluxo OAuth.
 - **Dependências auditadas**: `npm run security:audit` (OSV Scanner) roda em
   todo `npm run check`.
+
+## Riscos aceitos (com justificativa)
+
+- **Porta fixa do callback OAuth (`localhost:17431`)**: exigência do App
+  Console do Dropbox (redirect URI cadastrada). Um processo malicioso na
+  mesma máquina poderia escutar nessa porta, mas isso exige acesso local ao
+  PC — fora de escopo (ver abaixo).
+- **Senha de backup em claro sem keyring**: quando
+  `safeStorage.isEncryptionAvailable()` é `false` (containers, WSL sem
+  cofre), a `drivePassphrase` vai para `settings.json` com permissão `0600`
+  e migra sozinha para o keyring no próximo save. Não há alternativa viável
+  nesses ambientes.
+- **Dependências sem fix upstream**: problemas reportados em dependências de
+  desenvolvimento sem versão corrigida publicada são documentados no README
+  da parte correspondente e monitorados (ex.: `braces` na landing).
 
 ## Fora de escopo
 

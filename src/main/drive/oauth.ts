@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import http from 'http';
 import { URLSearchParams } from 'url';
-import { shell } from 'electron';
 import {
   API_ENDPOINT,
   AUTH_ENDPOINT,
@@ -13,6 +12,7 @@ import {
   TOKEN_ENDPOINT,
 } from '@zero/main/drive/constants';
 import { parseJson } from '@zero/main/drive/json';
+import { openExternalSafe } from '@zero/main/external';
 import { currentMessages } from '@zero/main/i18n';
 import { appKey, emit, persistState, setError, state, toMessage } from '@zero/main/drive/state';
 import type { Tokens } from '@zero/main/drive/state';
@@ -88,7 +88,9 @@ async function openBrowser(params: URLSearchParams): Promise<{
   }
   params.set('redirect_uri', redirectUri);
 
-  await shell.openExternal(`${AUTH_ENDPOINT}?${params.toString()}`);
+  // URL montada pelo app (AUTH_ENDPOINT fixo + params do PKCE); o helper
+  // recusa qualquer protocolo fora de `https:`.
+  openExternalSafe(`${AUTH_ENDPOINT}?${params.toString()}`);
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<AuthOutcome>((resolve) => {
@@ -131,29 +133,18 @@ async function exchangeCode(
     body: body.toString(),
   });
   if (!res.ok) throw new Error(currentMessages().driveErrors.tokenFailed(res.status));
-  const data = await parseJson<{
-    access_token: string;
-    refresh_token?: string | undefined;
-    expires_in: number;
-    scope?: string | undefined;
-  }>(res);
+  const data: unknown = await parseJson(res);
   if (!isTokenResponse(data)) {
     throw new Error(currentMessages().driveErrors.invalidTokenResponse(res.status));
   }
   return {
     accessToken: data.access_token,
-    refreshToken:
-      'refresh_token' in data && typeof data.refresh_token === 'string'
-        ? data.refresh_token
-        : undefined,
+    refreshToken: data.refresh_token,
     expiresAt: Date.now() + data.expires_in * 1000,
     accountEmail: null,
     lastSync: null,
     scopeVersion: SCOPE_VERSION,
-    grantedScopes:
-      'scope' in data && typeof data.scope === 'string' && data.scope !== ''
-        ? data.scope
-        : undefined,
+    grantedScopes: data.scope !== undefined && data.scope !== '' ? data.scope : undefined,
   };
 }
 
@@ -167,10 +158,18 @@ export function missingScopes(granted: string | undefined): string[] {
 /** Valida a forma mínima da resposta de tokens antes de usar (falha fechada). */
 function isTokenResponse(
   data: unknown,
-): data is { access_token: string; refresh_token?: string | undefined; expires_in: number } {
+): data is {
+  access_token: string;
+  refresh_token?: string | undefined;
+  expires_in: number;
+  scope?: string | undefined;
+} {
   if (typeof data !== 'object' || data === null) return false;
   if (!('access_token' in data && 'expires_in' in data)) return false;
   if (typeof data.access_token !== 'string' || typeof data.expires_in !== 'number') {
+    return false;
+  }
+  if ('scope' in data && data.scope !== undefined && typeof data.scope !== 'string') {
     return false;
   }
   return (
@@ -178,6 +177,12 @@ function isTokenResponse(
     data.refresh_token === undefined ||
     typeof data.refresh_token === 'string'
   );
+}
+
+/** Valida a resposta de `users/get_current_account` (só o e-mail interessa). */
+function isAccountEmail(data: unknown): data is { email: string } {
+  if (typeof data !== 'object' || data === null || !('email' in data)) return false;
+  return typeof data.email === 'string';
 }
 
 async function fetchAccountEmail(token: string): Promise<string | null> {
@@ -189,8 +194,8 @@ async function fetchAccountEmail(token: string): Promise<string | null> {
       body: 'null',
     });
     if (!res.ok) return null;
-    const data = await parseJson<{ email?: string | undefined }>(res);
-    return data.email ?? null;
+    const data: unknown = await parseJson(res);
+    return isAccountEmail(data) ? data.email : null;
   } catch {
     return null;
   }
@@ -256,7 +261,7 @@ export async function refreshAccessToken(): Promise<string> {
     body: body.toString(),
   });
   if (!res.ok) throw new Error(m.driveErrors.refreshFailed);
-  const data = await parseJson<{ access_token: string; expires_in: number }>(res);
+  const data: unknown = await parseJson(res);
   if (!isTokenResponse(data)) throw new Error(m.driveErrors.refreshFailed);
   const tokens = state.tokens;
   if (tokens === null) throw new Error(m.driveErrors.noAccount);

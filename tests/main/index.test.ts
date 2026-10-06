@@ -412,6 +412,18 @@ describe('ciclo de vida da janela', () => {
     expect(shell.openExternal).toHaveBeenCalledWith('https://exemplo.com/docs');
   });
 
+  it('não abre URLs externas fora de https', () => {
+    const win = BrowserWindow.instances[0];
+    if (win === undefined) throw new Error('Janela não criada.');
+    shell.openExternal.mockClear();
+    const opener = win.webContents.setWindowOpenHandler.mock.calls[0]?.[0];
+    if (opener === undefined) throw new Error('Window open handler ausente.');
+    for (const url of ['javascript:alert(1)', 'file:///etc/passwd', 'http://exemplo.com/', '']) {
+      expect(opener({ url }).action).toBe('deny');
+    }
+    expect(shell.openExternal).not.toHaveBeenCalled();
+  });
+
   it('foca (e restaura) a janela na segunda instância', () => {
     const win = BrowserWindow.instances[0];
     if (win === undefined) throw new Error('Janela não criada.');

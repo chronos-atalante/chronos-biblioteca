@@ -24,6 +24,42 @@ interface ListFolderResponse {
   has_more?: boolean | undefined;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Valida a página de `list_folder` antes de ler campo algum.
+ *
+ * Os elementos de `entries` são checados campo a campo em `toRemoteFile`
+ * (id/nome/tipos); aqui só se garante a forma da resposta como um todo —
+ * corpo malformado vira erro explícito em vez de listagem vazia silenciosa.
+ */
+function isListFolderResponse(value: unknown): value is ListFolderResponse {
+  if (!isRecord(value)) return false;
+  if ('entries' in value && !(Array.isArray(value.entries) && value.entries.every(isRecord))) {
+    return false;
+  }
+  if ('cursor' in value && typeof value.cursor !== 'string') return false;
+  if ('has_more' in value && typeof value.has_more !== 'boolean') return false;
+  return true;
+}
+
+/** Lê a página de `list_folder` validada; corpo inválido é falha fechada. */
+async function listFolderPage(res: Response): Promise<ListFolderResponse> {
+  const data: unknown = await parseJson(res);
+  if (!isListFolderResponse(data)) {
+    throw new Error(currentMessages().driveErrors.invalidListResponse);
+  }
+  return data;
+}
+
+/** `error_summary` é legível como está; corpo de outro formato é ignorado. */
+function isErrorSummary(value: unknown): value is { error_summary: string } {
+  if (!isRecord(value) || !('error_summary' in value)) return false;
+  return typeof value.error_summary === 'string';
+}
+
 function toRemoteFile(entry: DropboxEntry): RemoteFile | null {
   if (entry['.tag'] !== 'file') return null;
   const { id, name } = entry;
@@ -57,8 +93,8 @@ async function toDropboxError(res: Response): Promise<Error> {
   let raw = '';
   try {
     // `error_summary` já é legível (ex.: "insufficient_space/..."); usa cru.
-    const data = (await res.clone().json()) as { error_summary?: string | undefined };
-    detail = data.error_summary ?? '';
+    const data: unknown = await parseJson(res.clone());
+    if (isErrorSummary(data)) detail = data.error_summary;
   } catch {
     // resposta sem corpo JSON aproveitável
   }
@@ -92,7 +128,7 @@ export async function listAppFiles(): Promise<RemoteFile[]> {
     recursive: false,
     limit: 2000,
   });
-  let data = await parseJson<ListFolderResponse>(first);
+  let data = await listFolderPage(first);
   for (const entry of data.entries ?? []) {
     const file = toRemoteFile(entry);
     if (file !== null) files.push(file);
@@ -101,7 +137,7 @@ export async function listAppFiles(): Promise<RemoteFile[]> {
   let hasMore = data.has_more ?? false;
   while (hasMore) {
     const res = await apiFetch('/files/list_folder/continue', { cursor });
-    data = await parseJson<ListFolderResponse>(res);
+    data = await listFolderPage(res);
     for (const entry of data.entries ?? []) {
       const file = toRemoteFile(entry);
       if (file !== null) files.push(file);

@@ -257,6 +257,7 @@ export const ptBR = {
     noBackupFound: (provider: string): string =>
       `Nenhum backup encontrado na pasta do app no ${provider}.`,
     invalidLibrary: 'Backup inválido (library.json corrompido).',
+    invalidListResponse: 'Resposta inválida da API do Dropbox (listagem de arquivos).',
     tokenTimeout: 'Tempo esgotado aguardando autorização.',
     authCancelled: 'Autorização cancelada.',
     tokenFailed: (status: number): string => `Falha ao obter tokens (${status}).`,

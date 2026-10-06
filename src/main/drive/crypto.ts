@@ -16,7 +16,7 @@ const HEADER_BYTES = MAGIC_BYTES + SALT_BYTES + IV_BYTES + TAG_BYTES;
  * força bruta paralela (ASIC/GPU) contra a senha, sem travar o backup manual
  * (típico: <1s por arquivo em desktop).
  */
-function deriveKey(passphrase: string, salt: Buffer): Buffer {
+function deriveKey(passphrase: string, salt: Buffer | string): Buffer {
   return crypto.scryptSync(passphrase, salt, 32, {
     N: 131072,
     r: 8,
@@ -98,21 +98,38 @@ export function decryptWith(data: Buffer, passphrase: string): Buffer {
 export const MANIFEST_FILE = 'manifest.json';
 
 /**
- * Chave que opacifica nomes remotos. Determinística (mesma senha, mesmos
- * nomes, necessário para atualizar no lugar e para restaurar em outra
- * máquina) e com domínio separado da chave de conteúdo dos arquivos.
+ * Salt fixo da chave que **localiza** o manifesto.
  *
- * O custo acompanha o da chave de conteúdo (`N=2^17`): o nome do
- * `library.json` é adivinhável, então um atacante testa senhas candidatas
- * offline pelo HMAC sem decifrar nada — mesma força da cifra.
+ * Precisa ser estável entre máquinas: sem ler o manifesto não há como descobrir
+ * o salt aleatório dos nomes de conteúdo, e o manifesto precisa ser encontrável
+ * justamente para isso (peixe e balde). Por isso só o locator é determinístico;
+ * os nomes de conteúdo usam `nameKeyFor` com o salt que vem do manifesto.
  */
-export function nameKeyFor(passphrase: string): Buffer {
-  return crypto.scryptSync(passphrase, 'webtoons-remote-names-v1', 32, {
-    N: 131072,
-    r: 8,
-    p: 1,
-    maxmem: 256 * 1024 * 1024,
-  });
+const MANIFEST_KEY_SALT = 'webtoons-remote-names-v1';
+
+/**
+ * Chave que localiza o manifesto cifrado. Determinística (mesma senha, mesmo
+ * nome em qualquer máquina) e com domínio separado da chave de conteúdo.
+ */
+export function manifestKeyFor(passphrase: string): Buffer {
+  return deriveKey(passphrase, MANIFEST_KEY_SALT);
+}
+
+/**
+ * Chave que opacifica nomes remotos de conteúdo. O salt vem do manifesto
+ * cifrado (aleatório por cadeia de backup), então tabelas pré-computadas com o
+ * salt fixo não servem contra um backup real. O custo acompanha o da chave de
+ * conteúdo (`N=2^17`): o nome do `library.json` é adivinhável, então um
+ * atacante testa senhas candidatas offline pelo HMAC sem decifrar nada — mesma
+ * força da cifra.
+ */
+export function nameKeyFor(passphrase: string, salt: Buffer): Buffer {
+  return deriveKey(passphrase, salt);
+}
+
+/** Salt novo (16 bytes aleatórios) para uma cadeia de backup sem manifesto v2. */
+export function newNameSalt(): Buffer {
+  return crypto.randomBytes(SALT_BYTES);
 }
 
 /** Nome remoto opaco e estável para um arquivo local (HMAC-SHA256 em hexa). */
@@ -120,25 +137,72 @@ export function remoteName(localName: string, key: Buffer): string {
   return crypto.createHmac('sha256', key).update(localName, 'utf-8').digest('hex');
 }
 
-/** Serializa o manifesto `{ nomeRemoto: nomeLocal }` (cifrar antes de subir). */
-export function buildManifest(mapping: Record<string, string>): Buffer {
-  return Buffer.from(JSON.stringify(mapping), 'utf-8');
+/** Manifesto decifrado: mapeamento + salt da chave de nomes (nulo no formato v1). */
+export interface Manifest {
+  files: Record<string, string>;
+  nameSalt: Buffer | null;
 }
 
-/** Valida o manifesto decifrado; qualquer forma estranha é rejeitada. */
-export function parseManifest(data: Buffer): Record<string, string> {
-  const invalid = new Error(currentMessages().driveErrors.invalidManifest);
-  const parsed: unknown = JSON.parse(data.toString('utf-8'));
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw invalid;
-  }
+/** Versão do formato de manifesto que embute o salt da chave de nomes. */
+const MANIFEST_V2 = 2;
+
+/**
+ * Serializa o manifesto `{ nomeRemoto: nomeLocal }` com o salt da chave de
+ * nomes embutido (cifrar antes de subir). O `v2` é o formato atual; backups
+ * antigos (v1, sem salt) continuam legíveis via `parseManifest`.
+ */
+export function buildManifest(mapping: Record<string, string>, nameSalt: Buffer): Buffer {
+  const payload = { v: MANIFEST_V2, salt: nameSalt.toString('base64'), files: mapping };
+  return Buffer.from(JSON.stringify(payload), 'utf-8');
+}
+
+/** Valida o mapa nomeRemoto → nomeLocal; qualquer forma estranha é rejeitada. */
+function parseFiles(value: unknown, invalid: Error): Record<string, string> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) throw invalid;
   const mapping: Record<string, string> = {};
-  for (const remote of Object.keys(parsed)) {
-    const local: unknown = Reflect.get(parsed, remote);
-    if (remote === '' || typeof local !== 'string' || local === '') {
-      throw invalid;
-    }
+  for (const remote of Object.keys(value)) {
+    const local: unknown = Reflect.get(value, remote);
+    if (remote === '' || typeof local !== 'string' || local === '') throw invalid;
     mapping[remote] = local;
   }
   return mapping;
+}
+
+/** Lê um salt base64 de 16 bytes; qualquer outra coisa é manifesto inválido. */
+function parseNameSalt(value: unknown, invalid: Error): Buffer {
+  if (typeof value !== 'string') throw invalid;
+  const salt = Buffer.from(value, 'base64');
+  if (salt.length !== SALT_BYTES) throw invalid;
+  return salt;
+}
+
+/**
+ * Valida o manifesto decifrado; qualquer forma estranha é rejeitada.
+ *
+ * - **v2** (`{ v, salt, files }`): formato atual, com o salt da chave de nomes.
+ * - **v1** (mapa puro): backups antigos, legados sem salt próprio (`nameSalt`
+ *   fica `null` — o próximo backup sorteia um e migra para v2).
+ */
+export function parseManifest(data: Buffer): Manifest {
+  const invalid = new Error(currentMessages().driveErrors.invalidManifest);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(data.toString('utf-8'));
+  } catch {
+    throw invalid;
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw invalid;
+  }
+  const version: unknown = 'v' in parsed ? Reflect.get(parsed, 'v') : undefined;
+  if (version !== undefined) {
+    if (version !== MANIFEST_V2) throw invalid;
+    const salt: unknown = 'salt' in parsed ? Reflect.get(parsed, 'salt') : undefined;
+    const files: unknown = 'files' in parsed ? Reflect.get(parsed, 'files') : undefined;
+    return {
+      files: parseFiles(files, invalid),
+      nameSalt: parseNameSalt(salt, invalid),
+    };
+  }
+  return { files: parseFiles(parsed, invalid), nameSalt: null };
 }

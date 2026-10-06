@@ -6,7 +6,9 @@ import {
   buildManifest,
   decryptWith,
   encryptWith,
+  manifestKeyFor,
   maybeEncrypt,
+  newNameSalt,
   nameKeyFor,
   parseManifest,
   remoteName,
@@ -66,15 +68,15 @@ async function resolveLocalNames(
   passphrase: string,
 ): Promise<{ localOf: Map<string, string>; manifestId: string | null }> {
   const provider = currentProvider();
-  const manifestRemote = remoteName(MANIFEST_FILE, nameKeyFor(passphrase));
+  const manifestRemote = remoteName(MANIFEST_FILE, manifestKeyFor(passphrase));
   const localOf = new Map<string, string>();
   const manifestFile = remote.find((file) => file.name === manifestRemote);
   let manifestId: string | null = null;
   if (manifestFile !== undefined) {
     manifestId = manifestFile.id;
     const manifestBuffer = await provider.downloadFile(manifestFile.id);
-    const mapping = parseManifest(decryptWith(manifestBuffer, passphrase));
-    for (const [remoteName_, localName] of Object.entries(mapping)) {
+    const { files } = parseManifest(decryptWith(manifestBuffer, passphrase));
+    for (const [remoteName_, localName] of Object.entries(files)) {
       localOf.set(remoteName_, localName);
     }
   }
@@ -84,6 +86,30 @@ async function resolveLocalNames(
     }
   }
   return { localOf, manifestId };
+}
+
+/**
+ * Salt da chave de nomes do backup anterior, para manter os nomes remotos
+ * estáveis entre backups (mesmo `library.json`, resumo com id real).
+ *
+ * Devolve `null` quando não dá para aproveitar: primeiro backup (sem
+ * manifesto), manifesto v1 (sem salt — o próximo migra para v2) ou manifesto
+ * ilegível com a senha atual. O chamador sorteia um salt novo nesses casos.
+ */
+async function previousNameSalt(
+  remote: RemoteFile[],
+  manifestRemote: string,
+  passphrase: string,
+): Promise<Buffer | null> {
+  const manifestFile = remote.find((file) => file.name === manifestRemote);
+  if (manifestFile === undefined) return null;
+  try {
+    const buffer = await currentProvider().downloadFile(manifestFile.id);
+    return parseManifest(decryptWith(buffer, passphrase)).nameSalt;
+  } catch {
+    // Manifesto v1, cifrado com outra senha ou corrompido: salt novo.
+    return null;
+  }
 }
 
 export async function backupNow(): Promise<{
@@ -111,12 +137,17 @@ export async function backupNow(): Promise<{
       throw new Error(currentMessages().driveErrors.emptyLibrary);
     }
 
-    const key = nameKeyFor(passphrase);
-    const toRemote = (local: string): string => remoteName(local, key);
-    const manifestRemote = toRemote(MANIFEST_FILE);
+    const manifestRemote = remoteName(MANIFEST_FILE, manifestKeyFor(passphrase));
 
     const remote = await provider.listAppFiles();
     const remoteByName = new Map(remote.map((file) => [file.name, file]));
+
+    // O salt vem do manifesto anterior (nomes estáveis entre backups); sem
+    // manifesto legível, um salt aleatório novo inicia uma cadeia v2.
+    const nameSalt =
+      (await previousNameSalt(remote, manifestRemote, passphrase)) ?? newNameSalt();
+    const key = nameKeyFor(passphrase, nameSalt);
+    const toRemote = (local: string): string => remoteName(local, key);
 
     // `mode: overwrite` no upload: sem id prévio, sem multipart.
     for (const file of files) {
@@ -126,7 +157,10 @@ export async function backupNow(): Promise<{
     // Manifesto por último: ele é o "commit" que descreve o backup.
     const manifest: Record<string, string> = {};
     for (const file of files) manifest[toRemote(file.name)] = file.name;
-    await provider.uploadFile(manifestRemote, encryptWith(buildManifest(manifest), passphrase));
+    await provider.uploadFile(
+      manifestRemote,
+      encryptWith(buildManifest(manifest, nameSalt), passphrase),
+    );
 
     // Tudo que não é esperado some: órfãos de backups interrompidos.
     const expected = new Set([...files.map((file) => toRemote(file.name)), manifestRemote]);

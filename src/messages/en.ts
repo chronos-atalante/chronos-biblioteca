@@ -251,6 +251,7 @@ export const en: Messages = {
     noBackupFound: (provider: string): string =>
       `No backup found in the app folder on ${provider}.`,
     invalidLibrary: 'Invalid backup (library.json corrupted).',
+    invalidListResponse: 'Invalid Dropbox API response (file listing).',
     tokenTimeout: 'Timed out waiting for authorization.',
     authCancelled: 'Authorization cancelled.',
     tokenFailed: (status: number): string => `Failed to obtain tokens (${status}).`,

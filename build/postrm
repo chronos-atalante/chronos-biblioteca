@@ -1,14 +1,18 @@
 #!/bin/sh
 set -e
+# Purge remove os dados do usuário nos diretórios que o app realmente usa
+# (XDG, minúsculo — filesystem do Linux é case-sensitive) e as marcas antigas.
 if [ "$1" = "purge" ]; then
   for home in /home/* /root; do
     [ -d "$home" ] || continue
     rm -rf \
-      "$home/.config/Chronos-biblioteca" \
-      "$home/.local/share/Chronos-biblioteca" \
-      "$home/.cache/Chronos-biblioteca" \
-      "$home/.local/state/Chronos-biblioteca" \
-      "$home/.config/Chronos Biblioteca"
+      "$home/.config/chronos-biblioteca" \
+      "$home/.local/share/chronos-biblioteca" \
+      "$home/.cache/chronos-biblioteca" \
+      "$home/.local/state/chronos-biblioteca" \
+      "$home/.config/Chronos Biblioteca" \
+      "$home/.config/Webtoons Biblioteca" \
+      "$home/.config/webtoons-biblioteca"
   done
 fi
 exit 0

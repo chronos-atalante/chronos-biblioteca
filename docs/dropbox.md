@@ -134,9 +134,10 @@ sequenceDiagram
   configurações.”.
 - **O que fica na nuvem**: como a pasta do app é visível na sua conta, nada nela
   entrega o conteúdo: nomes **opacos** (HMAC-SHA256 com chave de nomes derivada
-  da senha; nem `library.json` aparece em claro) + um **manifesto cifrado** que
-  mapeia nome remoto → nome local + conteúdos sempre cifrados (AES-256-GCM com
-  chave derivada por scrypt). Para o Dropbox (e para quem bisbilhotar sua conta)
+  da senha e de um **salt aleatório guardado no manifesto cifrado**; nem
+  `library.json` aparece em claro) + um **manifesto cifrado** que mapeia nome
+  remoto → nome local + conteúdos sempre cifrados (AES-256-GCM com chave
+  derivada por scrypt). Para o Dropbox (e para quem bisbilhotar sua conta)
   restam só a quantidade aproximada e o tamanho dos blobs.
 - **Espaço**: o backup típico (um JSON + capas) ocupa poucos megabytes e cabe com
   folga até no plano gratuito do Dropbox.

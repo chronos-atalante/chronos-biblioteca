@@ -1,7 +1,14 @@
 import fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { backupInfo, backupNow, getStatus, restoreNow } from '@zero/main/drive';
-import { encryptWith, nameKeyFor, remoteName } from '@zero/main/drive/crypto';
+import {
+  MANIFEST_FILE,
+  buildManifest,
+  encryptWith,
+  manifestKeyFor,
+  nameKeyFor,
+  remoteName,
+} from '@zero/main/drive/crypto';
 import { loadLibrary, saveLibrary } from '@zero/main/library';
 import { makeWork } from '../helpers/fixtures.ts';
 import {
@@ -127,12 +134,18 @@ describe('backupNow', { timeout: 60_000 }, () => {
     await connect();
     saveLibrary([makeWork({ id: 'obra-4' })]);
     const drive = new FakeDropbox();
-    const key = nameKeyFor(PASSPHRASE);
+    // Manifesto v2 com salt conhecido: os nomes do backup anterior são estáveis.
+    const nameSalt = Buffer.alloc(16, 7);
+    const key = nameKeyFor(PASSPHRASE, nameSalt);
     const libraryRemote = remoteName('library.json', key);
     const orphanRemote = remoteName('capa-antiga.png', key);
     const libraryId = drive.seed(libraryRemote, Buffer.from('[]'));
     const orphanId = drive.seed(orphanRemote, Buffer.from('png'));
     const legacyId = drive.seed('capa-legada.png', Buffer.from('png'));
+    drive.seed(
+      remoteName(MANIFEST_FILE, manifestKeyFor(PASSPHRASE)),
+      encryptWith(buildManifest({ [libraryRemote]: 'library.json' }, nameSalt), PASSPHRASE),
+    );
     const deleted: string[] = [];
     const original = drive.handle.bind(drive);
     stubFetch((call) => {

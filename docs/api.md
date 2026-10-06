@@ -185,9 +185,13 @@ publicado para usuários).
 
 Nomes remotos opacos: a pasta do app é visível na conta do usuário, então nada nela
 pode entregar o conteúdo. Cada upload usa `HMAC-SHA256(chaveDeNomes, nomeLocal)` como
-nome remoto (chave determinística derivada da senha por scrypt, só para nomes; o conteúdo usa
-outra chave), mais um **manifesto cifrado** (`manifest.json` → HMAC)
-`{ nomeRemoto: nomeLocal }` gravado por último como "commit" do backup. A
+nome remoto, onde a chave de nomes deriva da senha por scrypt com um **salt
+aleatório por cadeia de backup** (só para nomes; o conteúdo usa outra chave). O
+salt mora no **manifesto cifrado** (`manifest.json` → HMAC), no formato
+`{ v: 2, salt, files: { nomeRemoto: nomeLocal } }`, gravado por último como
+"commit" do backup; o manifesto em si é localizado por uma chave com salt fixo,
+para ser encontrável em qualquer máquina sem estado prévio. Manifesto v1 (mapa
+puro, sem salt) continua legível e migra para v2 no próximo backup. A
 restauração e o `backupInfo` resolvem os nomes pelo manifesto, com fallback
 para arquivos em claro; manifesto ausente sem arquivos = "nenhum
 backup"; manifesto corrompido/senha errada = falha fechada.

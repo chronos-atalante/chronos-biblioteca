@@ -14,6 +14,8 @@ name: Publicar .deb
 # não disparam novos runs, e a tag só é criada antes do upload dos assets.
 # `concurrency` serializa as publicações para duas corridas na main não
 # publicarem a mesma versão duas vezes.
+# Actions fixadas por SHA completo (com a tag na comentário) para não depender
+# da segurança da tag movível; o Dependabot (`github-actions`) atualiza os pins.
 on:
   push:
     branches:
@@ -43,9 +45,9 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       publicar: ${{ steps.version.outputs.publicar }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 
@@ -107,12 +109,12 @@ jobs:
     if: needs.resolver-versao.outputs.publicar == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # tags completas para conferir/criar a tag da Release
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -145,7 +147,7 @@ jobs:
           fi
 
       - name: Anexar .deb à Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: release/chronos-biblioteca_*_amd64.deb
           # Se a Release ainda não existe (tag manual), ela é criada aqui.
@@ -212,7 +214,7 @@ jobs:
           echo "Repo APT flat gerado:" && ls -l
 
       - name: Anexar repo APT à Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: |
             apt/chronos-biblioteca_amd64.deb
