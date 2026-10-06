@@ -138,6 +138,10 @@ jobs:
             echo "::error::Tag vazia — o job 'Verificar versão' não rodou?"
             exit 1
           fi
+          # Identidade do autor: sem user.name/user.email no runner o
+          # `git tag -a` aborta com "Please tell me who you are".
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
             echo "Tag $TAG já existe — vou anexar os assets nela."
           else
