@@ -72,6 +72,16 @@ describe('settings', () => {
     ).toBe('en');
     expect(loadSettings().language).toBe('en');
 
+    expect(
+      saveSettings({
+        driveClientId: '',
+        driveClientSecret: '',
+        drivePassphrase: '',
+        language: 'ko',
+      }).language,
+    ).toBe('ko');
+    expect(loadSettings().language).toBe('ko');
+
     fs.mkdirSync(path.dirname(settingsFile()), { recursive: true });
     fs.writeFileSync(settingsFile(), JSON.stringify({ language: 'xx' }), 'utf-8');
     expect(loadSettings().language).toBe('pt-BR');

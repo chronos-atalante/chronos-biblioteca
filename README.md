@@ -36,7 +36,7 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 - **Doações**: botão **Doar** no cabeçalho abre a página de apoio ao projeto, com link do
   Mercado Pago (abre no navegador), botão de copiar e QR Code Pix; detalhes em
   [`docs/doacoes.md`](docs/doacoes.md).
-- **Idioma**: interface em **português (Brasil)** ou **inglês**, escolhido em Configurações e
+- **Idioma**: interface em **português (Brasil)**, **inglês** ou **coreano**, escolhido em Configurações e
   persistido; todo texto fixo mora em `src/messages/` (ver [`docs/messages.md`](docs/messages.md)).
 - Tema escuro com fundo preto (`#000`) e paleta sólida azul; ícones **Font Awesome**.
 
@@ -296,7 +296,7 @@ Webtoons/
 │   ├── dropbox.md              # guia do backup + diagramas
 │   ├── backup-providers.md     # provedores de nuvem (Dropbox · Google Drive)
 │   ├── distribuicao-apt.md     # distribuição: Release + repo APT flat assinado
-│   ├── messages.md             # i18n: bundles pt-BR/en e o que não se traduz
+│   ├── messages.md             # i18n: bundles pt-BR/en/ko e o que não se traduz
 │   ├── atribuicoes.md        # página de Atribuições (créditos em loop)
 │   ├── doacoes.md            # página de Doações (Mercado Pago + QR Pix)
 │   └── api.md                # referência da API interna
@@ -317,10 +317,11 @@ Webtoons/
 │   │       ├── json.ts       # leitura tipada de corpos JSON (`parseJson`)
 │   │       ├── crypto.ts     # AES-256-GCM do backup
 │   │       └── backup.ts     # backup, restauração e desconexão
-│   ├── messages/             # textos do app (i18n): pt-BR (canônico) + en
+│   ├── messages/             # textos do app (i18n): pt-BR (canônico) + en + ko
 │   │   ├── index.ts          # LANGUAGES, LANGUAGE_LABELS, messages()
 │   │   ├── pt-BR.ts          # bundle canônico + tipo Messages
-│   │   └── en.ts             # tradução tipada contra Messages
+│   │   ├── en.ts             # tradução tipada contra Messages
+│   │   └── ko.ts             # tradução tipada contra Messages
 │   ├── preload/index.ts      # contextBridge (window.api)
 │   ├── renderer/             # React + Vite
 │   │   ├── index.html        # CSP com scheme cover:
@@ -453,7 +454,7 @@ Guias e referências (tudo em pt-BR):
 | [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md) | Distribuição: Release, repo APT flat assinado e fluxo de release |
 | [`docs/atribuicoes.md`](docs/atribuicoes.md)           | Página de Atribuições: créditos em loop e licenças               |
 | [`docs/doacoes.md`](docs/doacoes.md)                   | Página de Doações: Mercado Pago + QR Pix                         |
-| [`docs/messages.md`](docs/messages.md)                 | i18n: bundles de mensagens (pt-BR/en) e regras de tradução       |
+| [`docs/messages.md`](docs/messages.md)                 | i18n: bundles de mensagens (pt-BR/en/ko) e regras de tradução    |
 | [`docs/api.md`](docs/api.md)                           | Referência da API interna (`window.api` + canais IPC)            |
 | [`docs/openapi.yaml`](docs/openapi.yaml)               | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)              |
 | [`CHANGELOG.md`](CHANGELOG.md)                         | Histórico de mudanças por versão                                 |

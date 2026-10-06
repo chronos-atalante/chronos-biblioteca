@@ -10,7 +10,7 @@ import type { AppSettings, Language } from '@zero/types';
  * - `driveClientId`: App key alternativa (override da embutida; sem UI);
  * - `driveClientSecret`: legado do provedor anterior, ignorado;
  * - `drivePassphrase`: senha de criptografia do backup;
- * - `language`: idioma da interface (`pt-BR` ou `en`).
+ * - `language`: idioma da interface (`pt-BR`, `en` ou `ko`).
  */
 const DEFAULTS: AppSettings = {
   driveClientId: '',
@@ -37,7 +37,7 @@ function field(record: object, key: keyof AppSettings): string {
 /** Lê o idioma; qualquer valor fora do catálogo cai no padrão. */
 function languageField(record: object): Language {
   const value: unknown = Reflect.get(record, 'language');
-  return value === 'pt-BR' || value === 'en' ? value : DEFAULTS.language;
+  return value === 'pt-BR' || value === 'en' || value === 'ko' ? value : DEFAULTS.language;
 }
 
 const ENC_PREFIX = 'enc:';
@@ -93,7 +93,8 @@ export function saveSettings(settings: AppSettings): AppSettings {
     driveClientId: settings.driveClientId.trim(),
     driveClientSecret: settings.driveClientSecret.trim(),
     drivePassphrase: settings.drivePassphrase,
-    language: settings.language === 'en' ? 'en' : 'pt-BR',
+    language:
+      settings.language === 'en' || settings.language === 'ko' ? settings.language : 'pt-BR',
   };
   // Em disco a senha vai protegida (keyring) ou em claro (fallback); o
   // retorno é sempre a forma utilizável, que o renderer exibe no formulário.

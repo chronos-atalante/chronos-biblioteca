@@ -2,7 +2,7 @@
 
 Todo texto fixo da interface (e das mensagens de erro do processo main) vive em
 `src/messages/`, nunca espalhado pelo código. O app nasce em **português (Brasil)**
-e também fala **inglês**; o idioma é escolhido em **Configurações** e persistido
+e também fala **inglês** e **coreano**; o idioma é escolhido em **Configurações** e persistido
 em `settings.json` (`AppSettings.language`).
 
 ## O contrato
@@ -11,7 +11,7 @@ em `settings.json` (`AppSettings.language`).
   `export type Messages = typeof ptBR`. Toda chave e assinatura nasce aqui.
 - `src/messages/en.ts` exporta `en: Messages` — o TypeScript aponta qualquer
   chave ou parâmetro faltando (ou sobrando) na tradução.
-- `src/messages/index.ts` é o barrel: `LANGUAGES` (`'pt-BR' | 'en'`),
+- `src/messages/index.ts` é o barrel: `LANGUAGES` (`'pt-BR' | 'en' | 'ko'`),
   `LANGUAGE_LABELS` (nome nativo do idioma, que **não** se traduz), `messages()`
   e os bundles.
 

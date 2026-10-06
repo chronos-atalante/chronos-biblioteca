@@ -80,17 +80,34 @@ describe('contexto de idioma', () => {
 
 describe('catálogo de idiomas', () => {
   it('expõe os idiomas suportados com nome nativo', () => {
-    expect([...LANGUAGES]).toEqual(['pt-BR', 'en']);
+    expect([...LANGUAGES]).toEqual(['pt-BR', 'en', 'ko']);
     expect(LANGUAGE_LABELS['pt-BR']).toBe('Português (Brasil)');
     expect(LANGUAGE_LABELS.en).toBe('English');
+    expect(LANGUAGE_LABELS.ko).toBe('한국어');
   });
 
   it('devolve bundles distintos por idioma com as mesmas chaves', () => {
     const pt = messages('pt-BR');
     const en = messages('en');
+    const ko = messages('ko');
     expect(en).not.toBe(pt);
+    expect(ko).not.toBe(pt);
     expect(Object.keys(en)).toEqual(Object.keys(pt));
+    expect(Object.keys(ko)).toEqual(Object.keys(pt));
     const language: Language = 'en';
     expect(messages(language).app.newWork).toBe('New work');
+  });
+
+  it('traduz o app para o coreano', () => {
+    const ko = messages('ko');
+    expect(ko.app.newWork).toBe('새 작품');
+    expect(ko.workStatus.lendo).toBe('읽는 중');
+    expect(ko.workModal.progressValue(12)).toBe('12화');
+    render(
+      <MessagesProvider language="ko">
+        <Probe />
+      </MessagesProvider>,
+    );
+    expect(screen.getByTestId('probe')).toHaveTextContent('ko:읽는 중');
   });
 });
