@@ -115,6 +115,15 @@ describe('SettingsModal: carregamento', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('fecha pelo botão Fechar do rodapé', async () => {
+    const { onClose } = setup();
+    await screen.findByText('Desconectado');
+    const footer = document.querySelector<HTMLElement>('.modal-footer');
+    if (footer === null) throw new Error('rodapé do modal não encontrado.');
+    await userEvent.setup().click(within(footer).getByRole('button', { name: /^Fechar$/ }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('cancela a assinatura de status ao desmontar', async () => {
     const mock = createApiMock();
     installApiMock(mock);

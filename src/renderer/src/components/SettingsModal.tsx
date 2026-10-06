@@ -329,6 +329,9 @@ export default function SettingsModal({
               <i className="fa-solid fa-cloud-arrow-up" />{' '}
               {busy === 'backup' ? m.settings.sending : m.settings.backupAction}
             </button>
+            <button className="btn ghost" onClick={onClose}>
+              <i className="fa-solid fa-xmark" /> {m.common.close}
+            </button>
           </div>
         </div>
       </div>
