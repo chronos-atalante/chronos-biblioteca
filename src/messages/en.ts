@@ -11,6 +11,9 @@ export const en: Messages = {
     select: 'Select',
     none: 'None',
     notFound: 'Not found',
+    searchOptions: 'Type to filter…',
+    clearSearch: 'Clear search',
+    noOptionsFound: 'No options found',
   },
 
   dialogs: {

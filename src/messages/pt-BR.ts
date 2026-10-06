@@ -16,6 +16,9 @@ export const ptBR = {
     select: 'Selecione',
     none: 'Nenhuma',
     notFound: 'Não encontrado',
+    searchOptions: 'Digite para filtrar…',
+    clearSearch: 'Limpar busca',
+    noOptionsFound: 'Nenhuma opção encontrada',
   },
 
   dialogs: {

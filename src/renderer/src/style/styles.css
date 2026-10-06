@@ -852,6 +852,59 @@ input[type='range']::-webkit-slider-thumb {
   opacity: 1;
 }
 
+.select-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  position: sticky;
+  top: 0;
+  background: var(--bg-elevated);
+}
+
+.select-search i {
+  color: var(--text-dim);
+  font-size: 12px;
+  flex-shrink: 0;
+  padding-left: 6px;
+}
+
+.select-search input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+
+.select-search input:focus {
+  border-color: var(--accent);
+}
+
+.select-search-clear {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 6px;
+  font-size: 12px;
+}
+
+.select-search-clear:hover {
+  color: var(--text);
+}
+
+.select-empty {
+  padding: 12px 10px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
 .cover-editor {
   display: flex;
   gap: 16px;

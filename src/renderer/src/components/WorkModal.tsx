@@ -203,6 +203,7 @@ export default function WorkModal({
                 value={draft.category ?? ''}
                 options={categoryOptions}
                 onChange={(category) => patch({ category: category === '' ? undefined : category })}
+                searchable
               />
             </div>
             <div className="field">

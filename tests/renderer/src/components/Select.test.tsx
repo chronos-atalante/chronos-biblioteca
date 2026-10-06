@@ -136,3 +136,74 @@ describe('Select', () => {
     expect(onChange).toHaveBeenCalledWith('b');
   });
 });
+
+describe('Select pesquisável', () => {
+  const GENRES: SelectOption<string>[] = [
+    { value: '', label: 'Nenhuma' },
+    { value: 'Ação', label: 'Ação' },
+    { value: 'Artes Marciais', label: 'Artes Marciais' },
+    { value: 'Ficção Científica', label: 'Ficção Científica' },
+    { value: 'Romance', label: 'Romance' },
+  ];
+
+  it('filtra as opções enquanto digita', async () => {
+    const user = userEvent.setup();
+    render(<Select value="" options={GENRES} onChange={() => undefined} searchable />);
+    await user.click(screen.getByRole('button', { name: /Nenhuma/ }));
+
+    const search = screen.getByLabelText('Digite para filtrar…');
+    await user.type(search, 'marciais');
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    expect(screen.getByRole('option', { name: /Artes Marciais/ })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Romance' })).not.toBeInTheDocument();
+  });
+
+  it('ignora acentos e maiúsculas no filtro', async () => {
+    const user = userEvent.setup();
+    render(<Select value="" options={GENRES} onChange={() => undefined} searchable />);
+    await user.click(screen.getByRole('button', { name: /Nenhuma/ }));
+
+    const search = screen.getByLabelText('Digite para filtrar…');
+    await user.type(search, 'ACAO');
+    expect(screen.getByRole('option', { name: 'Ação' })).toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, 'ficcao');
+    expect(screen.getByRole('option', { name: 'Ficção Científica' })).toBeInTheDocument();
+  });
+
+  it('mostra mensagem quando nada combina e limpa a busca', async () => {
+    const user = userEvent.setup();
+    render(<Select value="" options={GENRES} onChange={() => undefined} searchable />);
+    await user.click(screen.getByRole('button', { name: /Nenhuma/ }));
+
+    const search = screen.getByLabelText('Digite para filtrar…');
+    await user.type(search, 'zzz');
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
+    expect(screen.getByText('Nenhuma opção encontrada')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Limpar busca' }));
+    expect(search).toHaveValue('');
+    expect(screen.getAllByRole('option')).toHaveLength(GENRES.length);
+  });
+
+  it('confirma a opção filtrada com Enter e mantém o espaço na digitação', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn<(value: string) => void>();
+    render(<Select value="" options={GENRES} onChange={onChange} searchable />);
+    await user.click(screen.getByRole('button', { name: /Nenhuma/ }));
+
+    const search = screen.getByLabelText('Digite para filtrar…');
+    await user.type(search, 'rom');
+    expect(search).toHaveValue('rom');
+    fireEvent.keyDown(search, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith('Romance');
+  });
+
+  it('não mostra busca quando não é pesquisável', async () => {
+    const user = userEvent.setup();
+    render(<Select value="a" options={OPTIONS} onChange={() => undefined} />);
+    await user.click(screen.getByRole('button'));
+    expect(screen.queryByLabelText('Digite para filtrar…')).not.toBeInTheDocument();
+  });
+});

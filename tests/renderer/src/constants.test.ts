@@ -34,7 +34,10 @@ describe('opções e cores', () => {
 
   it('lista categorias prontas para uso', () => {
     expect(CATEGORIES).toContain('Isekai');
-    expect(CATEGORIES).toHaveLength(16);
+    expect(CATEGORIES).toContain('Ação');
+    expect(CATEGORIES).toContain('Ficção Científica');
+    expect(CATEGORIES).toContain('Sobrenatural');
+    expect(CATEGORIES).toHaveLength(56);
     expect(new Set(CATEGORIES).size).toBe(CATEGORIES.length);
   });
 });

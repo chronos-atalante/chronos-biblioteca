@@ -181,6 +181,20 @@ describe('WorkModal: campos', () => {
     expect(screen.getByRole('button', { name: /Nenhuma/ })).toBeInTheDocument();
   });
 
+  it('filtra as categorias enquanto digita', async () => {
+    const user = userEvent.setup();
+    setup(makeWork({ category: 'Isekai' }));
+
+    await user.click(screen.getByRole('button', { name: /Isekai/ }));
+    const search = screen.getByLabelText('Digite para filtrar…');
+    await user.type(search, 'vampir');
+    expect(screen.getByRole('option', { name: 'Vampiros' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Romance' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('option', { name: 'Vampiros' }));
+    expect(screen.getByRole('button', { name: /Vampiros/ })).toBeInTheDocument();
+  });
+
   it('normaliza o progresso digitado', () => {
     setup(makeWork({ progress: 10 }));
     const input = progressInput();

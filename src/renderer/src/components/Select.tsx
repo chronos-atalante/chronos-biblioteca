@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useMessages } from '@zero/renderer/i18n';
 
@@ -13,6 +13,15 @@ interface SelectProps<T extends string> {
   options: readonly SelectOption<T>[];
   onChange: (value: T) => void;
   placeholder?: string;
+  searchable?: boolean;
+}
+
+/** Normaliza para o filtro: sem acento e em minúsculas. */
+function normalize(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
 export default function Select<T extends string>({
@@ -20,15 +29,23 @@ export default function Select<T extends string>({
   options,
   onChange,
   placeholder,
+  searchable = false,
 }: SelectProps<T>): JSX.Element {
   const m = useMessages();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [query, setQuery] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const selectedIndex = options.findIndex((option) => option.value === value);
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined;
+
+  const filtered = useMemo(() => {
+    const term = normalize(query.trim());
+    if (!searchable || term === '') return options;
+    return options.filter((option) => normalize(option.label).includes(term));
+  }, [options, query, searchable]);
 
   useEffect(() => {
     if (!open) return;
@@ -41,24 +58,41 @@ export default function Select<T extends string>({
   }, [open]);
 
   useEffect(() => {
+    if (open) setQuery('');
+  }, [open]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [query]);
+
+  useEffect(() => {
     if (!open) return;
     const active = menuRef.current?.querySelector<HTMLElement>('[data-active="true"]');
     active?.scrollIntoView({ block: 'nearest' });
   }, [open, activeIndex]);
 
   const openMenu = (index: number): void => {
+    setQuery('');
     setActiveIndex(index);
     setOpen(true);
   };
 
-  const choose = (option: SelectOption<T>): void => {
-    onChange(option.value);
+  const closeMenu = (): void => {
+    setQuery('');
     setOpen(false);
   };
 
+  const choose = (option: SelectOption<T>): void => {
+    onChange(option.value);
+    closeMenu();
+  };
+
   const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    const target = event.target as HTMLElement;
+    const typing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+
     if (!open) {
-      if (event.key === 'ArrowDown') {
+      if (!typing && event.key === 'ArrowDown') {
         event.preventDefault();
         openMenu(selectedIndex >= 0 ? selectedIndex : 0);
       }
@@ -68,7 +102,7 @@ export default function Select<T extends string>({
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
-        setActiveIndex((current) => Math.min(current + 1, options.length - 1));
+        setActiveIndex((current) => Math.min(current + 1, filtered.length - 1));
         break;
       case 'ArrowUp':
         event.preventDefault();
@@ -80,11 +114,20 @@ export default function Select<T extends string>({
         break;
       case 'End':
         event.preventDefault();
-        setActiveIndex(options.length - 1);
+        setActiveIndex(filtered.length - 1);
         break;
-      case 'Enter':
+      case 'Enter': {
+        const option = filtered[activeIndex];
+        if (option !== undefined) {
+          event.preventDefault();
+          choose(option);
+        }
+        break;
+      }
       case ' ': {
-        const option = options[activeIndex];
+        // Com a busca aberta o espaço faz parte do texto digitado.
+        if (typing) return;
+        const option = filtered[activeIndex];
         if (option !== undefined) {
           event.preventDefault();
           choose(option);
@@ -93,10 +136,10 @@ export default function Select<T extends string>({
       }
       case 'Escape':
         event.stopPropagation();
-        setOpen(false);
+        closeMenu();
         break;
       case 'Tab':
-        setOpen(false);
+        closeMenu();
         break;
       default:
         break;
@@ -110,7 +153,7 @@ export default function Select<T extends string>({
         className="select-trigger"
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => (open ? setOpen(false) : openMenu(selectedIndex >= 0 ? selectedIndex : 0))}
+        onClick={() => (open ? closeMenu() : openMenu(selectedIndex >= 0 ? selectedIndex : 0))}
       >
         {selected !== undefined ? (
           <span className="select-value">
@@ -127,7 +170,31 @@ export default function Select<T extends string>({
 
       {open ? (
         <div className="select-menu" role="listbox" ref={menuRef}>
-          {options.map((option, index) => (
+          {searchable ? (
+            <div className="select-search">
+              <i className="fa-solid fa-magnifying-glass" aria-hidden="true" />
+              <input
+                type="text"
+                value={query}
+                placeholder={m.common.searchOptions}
+                aria-label={m.common.searchOptions}
+                autoFocus
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              {query !== '' ? (
+                <button
+                  type="button"
+                  className="select-search-clear"
+                  title={m.common.clearSearch}
+                  aria-label={m.common.clearSearch}
+                  onClick={() => setQuery('')}
+                >
+                  <i className="fa-solid fa-xmark" />
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {filtered.map((option, index) => (
             <div
               key={option.value}
               role="option"
@@ -146,6 +213,9 @@ export default function Select<T extends string>({
               <i className="fa-solid fa-check select-check" />
             </div>
           ))}
+          {filtered.length === 0 ? (
+            <div className="select-empty">{m.common.noOptionsFound}</div>
+          ) : null}
         </div>
       ) : null}
     </div>
