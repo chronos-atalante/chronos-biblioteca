@@ -355,7 +355,7 @@ components:
       properties:
         driveClientId:
           type: string
-          description: App key do Dropbox ('' usa a chave embutida)
+          description: App key alternativa ('' usa a embutida; sem campo na UI)
         driveClientSecret:
           type: string
           description: Legado do provedor anterior, ignorado

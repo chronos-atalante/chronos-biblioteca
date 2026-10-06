@@ -34,8 +34,8 @@ export default function SettingsModal({
 }: SettingsModalProps): JSX.Element {
   const m = useMessages();
   const language = useLanguage();
-  // driveClientId guarda a App key do Dropbox (nome mantido por compatibilidade
-  // com o settings.json); driveClientSecret é legado e ignorado pelo backend.
+  // driveClientId é a App key alternativa (override via settings.json, sem campo
+  // na UI: a chave padrão é a embutida); driveClientSecret é legado e ignorado.
   const [settings, setSettings] = useState<AppSettings>({
     driveClientId: '',
     driveClientSecret: '',
@@ -227,22 +227,6 @@ export default function SettingsModal({
                     setSettings({ ...settings, drivePassphrase: event.target.value })
                   }
                 />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="field">
-                <label>{m.settings.appKeyLabel}</label>
-                <input
-                  type="text"
-                  value={settings.driveClientId}
-                  placeholder={m.settings.appKeyPlaceholder}
-                  disabled={working}
-                  onChange={(event) =>
-                    setSettings({ ...settings, driveClientId: event.target.value })
-                  }
-                />
-                <div className="help">{richText(m.settings.appKeyHelp)}</div>
               </div>
             </div>
 

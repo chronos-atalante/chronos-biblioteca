@@ -10,14 +10,17 @@ export const SCOPES = [
 export const SCOPE_VERSION = 3;
 
 /**
- * Chave do aplicativo Dropbox (App key) embutida.
+ * Chave do aplicativo Dropbox (App key / `client_id`) embutida.
  *
  * Com PKCE o Dropbox dispensa o `app secret` em clientes públicos: só a chave
- * identifica o app e o segredo real é o `refresh_token` guardado no keyring.
- * Enquanto nenhum app existir, fica vazia e cada instalação usa a própria
- * chave informada nas Configurações (ver `docs/dropbox.md`).
+ * identifica o app, então ela é **pública por definição** (aparece na URL de
+ * consentimento e sai extraída do binário) e embuti-la não cria segredo novo —
+ * o `refresh_token` real continua no keyring. Fica em branco em build de
+ * desenvolvimento quando for usar um app Dropbox próprio; a alternativa sem
+ * recompilar é `driveClientId` no `settings.json` (override, sem UI — ver
+ * `docs/dropbox.md` §1).
  */
-export const EMBEDDED_APP_KEY = '';
+export const EMBEDDED_APP_KEY = 'b049tyhvv2d5so7';
 
 export const AUTH_ENDPOINT = 'https://www.dropbox.com/oauth2/authorize';
 export const TOKEN_ENDPOINT = 'https://api.dropboxapi.com/oauth2/token';

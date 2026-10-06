@@ -79,12 +79,6 @@ export const en: Messages = {
     backupIn: (target: string): string => `Backup in ${target}`,
     passphraseLabel: 'Backup encryption password',
     passphrasePlaceholder: 'Used to encrypt the backup on Dropbox',
-    appKeyLabel: 'Dropbox app key (App key)',
-    appKeyPlaceholder: 'Optional: only needed if the app has no built-in key yet',
-    appKeyHelp:
-      'Created at `dropbox.com/developers/apps` as an App folder app ' +
-      '(see `docs/dropbox.md`). With PKCE there is no secret: only the key identifies the ' +
-      'app, and real access lives in the token stored on this machine.',
     connected: 'Connected',
     disconnected: 'Disconnected',
     accountFallback: 'Dropbox account',

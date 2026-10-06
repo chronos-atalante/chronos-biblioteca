@@ -283,7 +283,31 @@ describe('handlers de configurações e Drive', () => {
     expect(opened).toContain('client_id=id-do-teste');
     expect(opened).toMatch(/redirect_uri=http(%3A|:)(\/\/|%2F%2F)localhost(%3A|:)\d+/);
     expect(opened).not.toContain('client_secret');
-    expect(EMBEDDED_APP_KEY).toBe('');
+    // O override do settings.json tem prioridade sobre a chave embutida.
+    expect(opened).not.toContain(`client_id=${EMBEDDED_APP_KEY}`);
+  });
+
+  it('drive:auth usa a chave embutida quando o settings não tem override', async () => {
+    invoke('settings:set', {
+      driveClientId: '',
+      driveClientSecret: '',
+      drivePassphrase: '',
+    });
+    shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
+      const redirect = new URL(url).searchParams.get('redirect_uri');
+      if (redirect !== null) {
+        const request = http.get(`${redirect}?error=access_denied`);
+        request.on('error', () => undefined);
+      }
+      return Promise.resolve();
+    });
+
+    const result = await invokeAsync<{ ok: boolean; error?: string }>('drive:auth');
+
+    expect(result).toEqual({ ok: false, error: 'access_denied' });
+    expect(EMBEDDED_APP_KEY).not.toBe('');
+    const opened = shell.openExternal.mock.calls.at(-1)?.[0] ?? '';
+    expect(opened).toContain(`client_id=${EMBEDDED_APP_KEY}`);
   });
 
   it('drive:disconnect limpa a sessão e avisa a janela', () => {

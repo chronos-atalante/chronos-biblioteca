@@ -144,8 +144,7 @@ export async function backupNow(): Promise<{
 
     // O salt vem do manifesto anterior (nomes estáveis entre backups); sem
     // manifesto legível, um salt aleatório novo inicia uma cadeia v2.
-    const nameSalt =
-      (await previousNameSalt(remote, manifestRemote, passphrase)) ?? newNameSalt();
+    const nameSalt = (await previousNameSalt(remote, manifestRemote, passphrase)) ?? newNameSalt();
     const key = nameKeyFor(passphrase, nameSalt);
     const toRemote = (local: string): string => remoteName(local, key);
 

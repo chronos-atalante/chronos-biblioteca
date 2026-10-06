@@ -9,6 +9,14 @@ import { saveSettings } from '@zero/main/settings';
 import { shell } from '../mocks/electron.ts';
 import { APP_KEY, connect, json, resetDrive, stubFetch, tokensPath } from '../helpers/drive.ts';
 
+// Este arquivo também cobre o caminho "sem chave nenhuma" (build sem chave
+// embutida e sem override no settings.json), então a chave embutida é anulada
+// aqui; os demais testes sempre apontam `driveClientId` para APP_KEY.
+vi.mock('@zero/main/drive/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@zero/main/drive/constants')>();
+  return { ...actual, EMBEDDED_APP_KEY: '' };
+});
+
 describe('estado do Dropbox', { timeout: 60_000 }, () => {
   beforeEach(() => {
     resetDrive();

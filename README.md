@@ -386,10 +386,9 @@ Detalhes da configuração (campo `build` do `package.json`):
 
 Fluxo resumido (passo a passo completo em [`docs/dropbox.md`](docs/dropbox.md)):
 
-1. ⚙ → defina a **senha de criptografia do backup** (obrigatória) e, se o app ainda não
-   tem chave embutida, informe a **App key** do Dropbox (cadastro único de 5 minutos no
-   App Console; ver `docs/dropbox.md`). Com PKCE não existe segredo: só a chave identifica
-   o app, e o acesso real fica no `refresh_token` guardado na sua máquina.
+1. ⚙ → defina a **senha de criptografia do backup** (obrigatória). A App key do Dropbox já
+   vem embutida no app (com PKCE não existe segredo: só a chave identifica o app, e o
+   acesso real fica no `refresh_token` guardado na sua máquina).
 2. **Conectar ao Dropbox** → janela do navegador → consentimento → tokens guardados
    localmente em `dropbox-tokens.json` (PKCE + callback fixo em `localhost:17431`, a URI
    que o Dropbox exige pré-cadastrada).

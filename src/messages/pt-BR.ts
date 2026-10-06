@@ -84,12 +84,6 @@ export const ptBR = {
     backupIn: (target: string): string => `Backup em ${target}`,
     passphraseLabel: 'Senha de criptografia do backup',
     passphrasePlaceholder: 'Usada para criptografar o backup no Dropbox',
-    appKeyLabel: 'Chave do aplicativo Dropbox (App key)',
-    appKeyPlaceholder: 'Opcional: só precisa se o app ainda não tem chave embutida',
-    appKeyHelp:
-      'Criada em `dropbox.com/developers/apps` como app do tipo App folder ' +
-      '(ver `docs/dropbox.md`). Com PKCE não existe segredo: só a chave identifica o app, ' +
-      'e o acesso real fica no token guardado nesta máquina.',
     connected: 'Conectado',
     disconnected: 'Desconectado',
     accountFallback: 'Conta Dropbox',

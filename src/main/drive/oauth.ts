@@ -156,9 +156,7 @@ export function missingScopes(granted: string | undefined): string[] {
 }
 
 /** Valida a forma mínima da resposta de tokens antes de usar (falha fechada). */
-function isTokenResponse(
-  data: unknown,
-): data is {
+function isTokenResponse(data: unknown): data is {
   access_token: string;
   refresh_token?: string | undefined;
   expires_in: number;

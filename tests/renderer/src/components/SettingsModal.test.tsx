@@ -163,22 +163,10 @@ describe('SettingsModal: credenciais', () => {
     expect(connect).toBeEnabled();
   });
 
-  it('salva a chave do aplicativo Dropbox junto com a senha', async () => {
-    const { mock } = setup();
+  it('não expõe campo de App key (a chave padrão é a embutida)', async () => {
+    setup();
     await screen.findByText('Desconectado');
-    const user = userEvent.setup();
-    await user.type(
-      screen.getByPlaceholderText('Opcional: só precisa se o app ainda não tem chave embutida'),
-      'minha-app-key',
-    );
-
-    await user.click(screen.getByRole('button', { name: /^Salvar$/ }));
-    expect(mock.settingsSet).toHaveBeenCalledWith({
-      driveClientId: 'minha-app-key',
-      driveClientSecret: '',
-      drivePassphrase: '',
-      language: 'pt-BR',
-    });
+    expect(screen.queryByText('Chave do aplicativo Dropbox (App key)')).not.toBeInTheDocument();
   });
 });
 

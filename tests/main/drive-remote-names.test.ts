@@ -72,9 +72,7 @@ describe('nomes remotos opacos', { timeout: 60_000 }, () => {
 
     // Nem o salt fixo legado (o mesmo que localiza o manifesto) deriva esses
     // nomes: a cadeia de conteúdo usa o salt aleatório do manifesto v2.
-    expect(remoteName('library.json', key)).not.toBe(
-      remoteName('library.json', manifestKey),
-    );
+    expect(remoteName('library.json', key)).not.toBe(remoteName('library.json', manifestKey));
   });
 
   it('reaproveita o salt do manifesto e mantém os nomes entre backups', async () => {

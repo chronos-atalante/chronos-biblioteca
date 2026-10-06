@@ -45,12 +45,18 @@ flowchart TD
 
 ## 1. Chave do aplicativo no Dropbox
 
-> **Quando o app já tem a chave embutida, pule esta seção.** A chave abaixo só é
-> necessária enquanto o app não embarca uma. Nesse caso, informe-a no campo
-> **Chave do aplicativo Dropbox (App key)** nas Configurações e clique em
-> **Salvar** antes de conectar.
+> **A chave padrão já vem embutida no app** (`EMBEDDED_APP_KEY` em
+> `src/main/drive/constants.ts`) e não há mais campo nas Configurações: dá para
+> pular esta seção e conectar direto. A App key é identificador público de
+> cliente OAuth — com PKCE não existe `app secret`, então embuti-la não cria
+> segredo algum; o `refresh_token` continua só na sua máquina.
+>
+> Esta seção é para quem quiser rodar com um **app Dropbox próprio**
+> (desenvolvimento): no lugar de campo na UI, o override é manual em
+> `~/.config/chronos-biblioteca/settings.json`, preenchendo `driveClientId`
+> com a sua chave (ele tem prioridade sobre a embutida).
 
-Para criar a sua (é o mesmo cadastro que um dia será embutido no app):
+Para criar o seu:
 
 1. Acesse <https://www.dropbox.com/developers/apps> e clique em **Create app**.
 2. Escolha **Scoped access** → **App folder**. É esse tipo que cria a pasta
@@ -65,7 +71,9 @@ Para criar a sua (é o mesmo cadastro que um dia será embutido no app):
    `http://localhost:17431/callback`
    O Dropbox só aceita URI http em `localhost` e exige o cadastro prévio; por
    isso o app usa sempre essa porta fixa em vez de sortear uma a cada conexão.
-5. Copie a **App key** e cole nas Configurações do app.
+5. Copie a **App key** e, para usá-la, grave-a em
+   `~/.config/chronos-biblioteca/settings.json` como `driveClientId`
+   (ex.: `{"driveClientId": "sua-app-key"}`).
 
 ### Development × Production (limites reais do Dropbox)
 
@@ -155,8 +163,8 @@ sequenceDiagram
 
 | Sintoma                                                            | Causa provável / solução                                                                                                                                                                                              |
 | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| “Configure a chave do aplicativo Dropbox…”                         | Nenhuma App key nas Configurações e nenhuma embutida. Crie o app (§1) e cole a chave.                                                                                                                                 |
-| `redirect_uri_mismatch` ao conectar                                | A URI `http://localhost:17431/callback` não está em **Redirect URIs** no App Console, ou a App key colada é de outro app. Confira os dois.                                                                            |
+| “Configure a chave do aplicativo Dropbox…”                         | Este build saiu sem chave embutida e o `settings.json` não tem `driveClientId`. Rebuild com a chave ou preencha o campo no arquivo (§1).                                                                              |
+| `redirect_uri_mismatch` ao conectar                                | A URI `http://localhost:17431/callback` não está em **Redirect URIs** no App Console, ou o `driveClientId` do `settings.json` é de outro app. Confira.                                                                |
 | Porta `17431` ocupada ao conectar                                  | Outro programa usa a porta do callback. Feche-o e tente de novo (o app é de instância única, então normalmente é outra coisa).                                                                                        |
 | “Permissões do Dropbox atualizadas. Reconecte a conta Dropbox.”    | Os escopos pedidos pelo app mudaram. Clique em **Conectar ao Dropbox** de novo (uma vez).                                                                                                                             |
 | “Faltam permissões no app Dropbox…” ao conectar ou no backup       | Nem todas as caixas da aba **Permissions** estão marcadas, ou a sessão foi concedida antes de marcar. Marque os 5 escopos (§1), **Desconecte** e **Conecte de novo**; concessão antiga não ganha escopo novo sozinha. |

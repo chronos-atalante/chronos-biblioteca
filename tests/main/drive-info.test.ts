@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { backupInfo, backupNow, getStatus, initDrive } from '@zero/main/drive';
 import { SCOPE_VERSION } from '@zero/main/drive/constants';
 import { saveLibrary } from '@zero/main/library';
@@ -19,6 +19,14 @@ import {
   stubFetch,
   tokensPath,
 } from '../helpers/drive.ts';
+
+// Este arquivo também cobre o caminho "sem chave nenhuma" (build sem chave
+// embutida e sem override no settings.json), então a chave embutida é anulada
+// aqui; os demais testes sempre apontam `driveClientId` para APP_KEY.
+vi.mock('@zero/main/drive/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@zero/main/drive/constants')>();
+  return { ...actual, EMBEDDED_APP_KEY: '' };
+});
 
 describe('backupInfo', { timeout: 60_000 }, () => {
   beforeEach(() => {

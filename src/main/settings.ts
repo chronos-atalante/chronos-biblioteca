@@ -7,7 +7,7 @@ import type { AppSettings, Language } from '@zero/types';
 /**
  * Forma persistida das configurações (nomes de campos mantidos por
  * compatibilidade com o `settings.json` existente):
- * - `driveClientId`: chave do aplicativo Dropbox (App key);
+ * - `driveClientId`: App key alternativa (override da embutida; sem UI);
  * - `driveClientSecret`: legado do provedor anterior, ignorado;
  * - `drivePassphrase`: senha de criptografia do backup;
  * - `language`: idioma da interface (`pt-BR` ou `en`).

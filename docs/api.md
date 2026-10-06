@@ -94,7 +94,7 @@ usuário cancelar. A imagem é servida pelo protocolo interno (§6).
 type Language = 'pt-BR' | 'en';
 
 interface AppSettings {
-  driveClientId: string; // App key do Dropbox ('' = usa a chave embutida)
+  driveClientId: string; // App key alternativa ('' = usa a embutida; sem campo na UI)
   driveClientSecret: string; // legado do provedor anterior, ignorado
   drivePassphrase: string; // senha de criptografia do backup (obrigatória p/ backup)
   language: Language; // idioma da interface e das mensagens
@@ -164,8 +164,8 @@ URI de redirect pré-cadastrada no App Console, então a porta não pode ser sor
 se estiver ocupada, cai para uma livre e o Dropbox recusa com `redirect_uri_mismatch`).
 Troca o código por tokens e grava `dropbox-tokens.json` (modo `0600`). Falhas típicas:
 `access_denied` (usuário recusou), `Tempo esgotado aguardando autorização.`,
-`Falha ao obter tokens (HTTP).`. Sem App key (nem embutida, nem nas Configurações), recusa
-antes de abrir o navegador.
+`Falha ao obter tokens (HTTP).`. Sem App key (a embutida estando vazia e sem
+`driveClientId` no `settings.json`), recusa antes de abrir o navegador.
 
 ### `drive.backup() → Promise<{ ok: boolean; error?: string; summary?: BackupSummary }>`
 
