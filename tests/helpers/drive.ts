@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import http from 'http';
 import path from 'path';
 import { vi } from 'vitest';
@@ -92,16 +91,6 @@ export function tokensPath(): string {
 
 export function coversPath(name: string): string {
   return path.join(sandboxPath('XDG_DATA_HOME'), 'chronos-biblioteca', 'covers', name);
-}
-
-/** Reproduz o formato legado WTENC1 (scrypt padrão) para testar restauração antiga. */
-export function encryptForTest(data: Buffer, passphrase: string): Buffer {
-  const salt = crypto.randomBytes(16);
-  const iv = crypto.randomBytes(12);
-  const key = crypto.scryptSync(passphrase, salt, 32);
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-  const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
-  return Buffer.concat([Buffer.from('WTENC1'), salt, iv, cipher.getAuthTag(), encrypted]);
 }
 
 export function defer(): { promise: Promise<Response>; resolve: (value: Response) => void } {

@@ -154,6 +154,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DriveStatus'
+  /drive/providers:
+    post:
+      tags: [drive]
+      summary: Catálogo de provedores de backup
+      description: >
+        Lista os provedores catalogados (`BackupProviderInfo`): Dropbox
+        operante e Google Drive não operante, com o motivo e o destino do
+        backup (pasta oculta `appDataFolder` no Google).
+      x-ipc-channel: drive:providers
+      responses:
+        '200':
+          description: Catálogo em ordem de exibição
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BackupProviderInfo'
   /drive/auth:
     post:
       tags: [drive]
@@ -375,6 +393,28 @@ components:
         works:
           type: [integer, 'null']
           minimum: 0
+    BackupProviderInfo:
+      type: object
+      required: [id, label, operational, unavailableReason, storageTarget, storageHidden]
+      properties:
+        id:
+          type: string
+          enum: [dropbox, google-drive]
+        label:
+          type: string
+          description: Nome exibido na interface
+        operational:
+          type: boolean
+          description: true quando já é possível conectar e fazer backup
+        unavailableReason:
+          type: [string, 'null']
+          description: Motivo da indisponibilidade (null quando operante)
+        storageTarget:
+          type: string
+          description: Destino do backup na conta, em texto pronto para exibição
+        storageHidden:
+          type: boolean
+          description: true quando o destino é oculto na interface do serviço
     Outcome:
       type: object
       required: [ok]

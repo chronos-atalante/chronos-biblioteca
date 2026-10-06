@@ -1,8 +1,20 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import type { AppSettings, BackupSummary, DriveStatus } from '@zero/types';
+import type {
+  AppSettings,
+  BackupProviderId,
+  BackupProviderInfo,
+  BackupSummary,
+  DriveStatus,
+} from '@zero/types';
 import { formatDate } from '@zero/renderer/constants';
 import RestorePasswordModal from '@zero/renderer/components/RestorePasswordModal';
+
+/** Ícone de marca por provedor (catálogo fechado em `BackupProviderId`). */
+const PROVIDER_ICONS: Record<BackupProviderId, string> = {
+  dropbox: 'fa-brands fa-dropbox',
+  'google-drive': 'fa-brands fa-google',
+};
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -19,6 +31,7 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
   });
   const [status, setStatus] = useState<DriveStatus | null>(null);
   const [info, setInfo] = useState<BackupSummary | null>(null);
+  const [providers, setProviders] = useState<BackupProviderInfo[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [promptRestore, setPromptRestore] = useState(false);
@@ -37,14 +50,16 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
     const unsubscribe = window.api.drive.onStatus((next) => setStatus(next));
 
     const loadInitial = async (): Promise<void> => {
-      const [loadedSettings, driveStatus, backupSummary] = await Promise.all([
+      const [loadedSettings, driveStatus, backupSummary, providerCatalog] = await Promise.all([
         window.api.settings.get(),
         window.api.drive.status(),
         window.api.drive.backupInfo(),
+        window.api.drive.providers(),
       ]);
       setSettings(loadedSettings);
       setStatus(driveStatus);
       setInfo(backupSummary);
+      setProviders(providerCatalog);
       setLoading(false);
     };
 
@@ -142,6 +157,29 @@ export default function SettingsModal({ onClose, notify }: SettingsModalProps): 
               essa pasta, e o resto do seu Dropbox nem aparece para ele. Como a pasta é visível para
               você, todo arquivo sobe com nome ilegível e conteúdo criptografado (AES-256-GCM),
               então defina a senha de criptografia abaixo antes do primeiro backup.
+            </div>
+
+            <div className="field">
+              <label>Provedores de backup</label>
+              <ul className="provider-list">
+                {providers.map((provider) => (
+                  <li key={provider.id} className="provider-item">
+                    <span className="provider-name">
+                      <i className={PROVIDER_ICONS[provider.id]} /> {provider.label}
+                    </span>
+                    {provider.storageHidden ? (
+                      <span className="provider-badge hidden">Pasta oculta</span>
+                    ) : null}
+                    <span className={provider.operational ? 'provider-badge on' : 'provider-badge'}>
+                      {provider.operational ? 'Operante' : 'Não operante'}
+                    </span>
+                    <span className="help">Backup em {provider.storageTarget}</span>
+                    {provider.unavailableReason !== null ? (
+                      <span className="help">{provider.unavailableReason}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <div className="form-row">

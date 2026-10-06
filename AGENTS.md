@@ -14,7 +14,7 @@ leituras, com backup criptografado no Dropbox, alvo Linux Mint e distribuição
 Camadas (diagrama no `README.md`, seção Arquitetura):
 
 - `src/main/`: janela, IPC, protocolo `cover://` (`index.ts`), persistência
-  (`library.ts`, `settings.ts`) e Dropbox (`drive/`).
+  (`library.ts`, `settings.ts`) e backup na nuvem (`drive/`).
 - `src/preload/`: única ponte da UI; monta e expõe `window.api` tipado.
 - `src/renderer/`: React; não acessa disco, rede nem Node direto.
 - `src/types/`: contratos compartilhados (`@zero/types`, barrel).
@@ -23,8 +23,9 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
 
 - Cada arquivo do `main` responde por um domínio; o renderer só conhece o
   contrato de `window.api` (`docs/api.md`).
-- Persistência local em JSON sob `~/.config/chronos-biblioteca/`; a nuvem é
-  sempre a pasta do app no Dropbox (App folder, sem credencial embutida).
+- Persistência local em JSON sob `~/.config/chronos-biblioteca/`; a nuvem
+  passa pelo contrato `BackupProvider` (`docs/backup-providers.md`), com o
+  Dropbox como único provedor operante (App folder, sem credencial embutida).
 - IPC via `ipcRenderer.invoke` e `ipcMain.handle`; canal novo só com tipo em
   `src/types/` e entrada em `docs/api.md`.
 
@@ -35,8 +36,9 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
 - Barrel exports: `index.ts` só re-exporta (exceto os entrypoints
   `src/main/index.ts` e `src/preload/index.ts`); exemplo:
   `src/main/drive/index.ts`.
-- Módulos de serviço coesos em `src/main/drive/` (`oauth`, `rest`, `crypto`,
-  `backup`, `state`), um por responsabilidade.
+- Módulos de serviço coesos em `src/main/drive/` (`provider`, `oauth`, `rest`,
+  `crypto`, `backup`, `state`), um por responsabilidade; os adaptadores de
+  provedor ficam em `drive/providers/`.
 - Tipagem de domínio por uniões fechadas (`WorkStatus`, `WorkType` em
   `src/types/work.ts`), nunca strings soltas.
 - UI composicional: estado no topo (`App.tsx`), cartões e modais
@@ -116,6 +118,7 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
 - Documentação nova vai em `docs/`; o `README.md` é o índice (atualize a
   tabela na mesma mudança).
 - Mapa: `docs/api.md` (contrato `window.api`), `docs/dropbox.md` (backup),
+  `docs/backup-providers.md` (provedores de nuvem e status do Google Drive),
   `docs/atribuicoes.md` e `docs/doacoes.md` (páginas do app),
   `docs/distribuicao-apt.md` (distribuição APT), `docs/openapi.yaml` (API em
   OpenAPI 3.1).

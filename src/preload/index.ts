@@ -14,6 +14,7 @@ const api: ElectronApi = {
   },
   drive: {
     status: () => ipcRenderer.invoke('drive:status'),
+    providers: () => ipcRenderer.invoke('drive:providers'),
     auth: () => ipcRenderer.invoke('drive:auth'),
     backup: () => ipcRenderer.invoke('drive:backup'),
     restore: (passphrase: string) => ipcRenderer.invoke('drive:restore', passphrase),

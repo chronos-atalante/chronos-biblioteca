@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { backupInfo, backupNow, getStatus, restoreNow } from '@zero/main/drive';
-import { nameKeyFor, remoteName } from '@zero/main/drive/crypto';
+import { encryptWith, nameKeyFor, remoteName } from '@zero/main/drive/crypto';
 import { loadLibrary, saveLibrary } from '@zero/main/library';
 import { makeWork } from '../helpers/fixtures.ts';
 import {
@@ -13,7 +13,6 @@ import {
   connect,
   coversPath,
   defer,
-  encryptForTest,
   headerOf,
   json,
   resetDrive,
@@ -99,7 +98,7 @@ describe('backupNow', { timeout: 60_000 }, () => {
 
     const uploads = [...drive.files.values()].map((file) => file.content);
     expect(uploads.length).toBeGreaterThan(0);
-    expect(uploads.some((body) => body.includes(Buffer.from('WTENC2')))).toBe(true);
+    expect(uploads.some((body) => body.includes(Buffer.from('WTENC3')))).toBe(true);
     expect(uploads.some((body) => body.includes(Buffer.from('Título Sigiloso')))).toBe(false);
   });
 
@@ -245,7 +244,7 @@ describe('restoreNow', { timeout: 60_000 }, () => {
     await connect();
     const drive = new FakeDropbox();
     const payload = [makeWork({ id: 'cifrada' })];
-    drive.seed('library.json', encryptForTest(Buffer.from(JSON.stringify(payload)), PASSPHRASE));
+    drive.seed('library.json', encryptWith(Buffer.from(JSON.stringify(payload)), PASSPHRASE));
     stubFetch((call) => drive.handle(call));
 
     const result = await restoreNow(PASSPHRASE);
@@ -257,7 +256,7 @@ describe('restoreNow', { timeout: 60_000 }, () => {
     await connect();
     const drive = new FakeDropbox();
     const payload = [makeWork({ id: 'cifrada' })];
-    drive.seed('library.json', encryptForTest(Buffer.from(JSON.stringify(payload)), 'outra-senha'));
+    drive.seed('library.json', encryptWith(Buffer.from(JSON.stringify(payload)), 'outra-senha'));
     stubFetch((call) => drive.handle(call));
 
     const result = await restoreNow(PASSPHRASE);

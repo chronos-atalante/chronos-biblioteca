@@ -1,7 +1,8 @@
 # Backup no Dropbox
 
 Guia completo de como conectar o **Chronos Biblioteca** ao Dropbox e proteger sua
-biblioteca na nuvem.
+biblioteca na nuvem. O mapa dos provedores de backup (quem está operante e por
+que o Google Drive ainda não) está em [`backup-providers.md`](backup-providers.md).
 
 O app usa **OAuth 2.0 direto no aplicativo** (fluxo loopback + PKCE, sem servidor
 intermediário e sem bibliotecas pesadas, apenas `fetch` nativo) e guarda tudo na
@@ -173,7 +174,7 @@ sequenceDiagram
 - Os tokens ficam **somente na sua máquina** (`configDir/dropbox-tokens.json`, modo `0600`), nunca em repositório.
 - **Sem segredo embutido**: com PKCE o `app secret` nem entra no fluxo. A App key é pública por definição e a proteção vem do PKCE + loopback. O segredo de verdade é o `refresh_token`, que nunca sai da sua máquina. Para revogar tudo, desconecte no app **e** remova o app em <https://www.dropbox.com/account/security>.
 - Escopo mínimo: só a **pasta do app** (App folder; o app nem fica sabendo que o resto do seu Dropbox existe) + leitura do e-mail da conta (só para exibir qual conta está conectada).
-- **Criptografia obrigatória** no cliente: AES-256-GCM com chave derivada por scrypt (salt e IV aleatórios por arquivo, autenticação GCM), e o Dropbox guarda apenas blobs cifrados de nome opaco.
+- **Criptografia obrigatória** no cliente: AES-256-GCM com chave derivada por scrypt (`N=2¹⁷`, mínimo do OWASP; salt e IV aleatórios por arquivo, autenticação GCM), e o Dropbox guarda apenas blobs cifrados de nome opaco.
 - Nenhum dado passa por servidor de terceiros: as chamadas vão do seu PC direto para o Dropbox (`api.dropboxapi.com`, `content.dropboxapi.com`).
 
 ---

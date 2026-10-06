@@ -24,28 +24,34 @@ contrário).
 
 ## Proteções já existentes
 
-- **Tokens só na máquina**: `drive-tokens.json` com permissão `0600`, nunca em
+- **Tokens só na máquina**: `dropbox-tokens.json` com permissão `0600`, nunca em
   repositório (coberto pelo `.gitignore`).
 - **Backup sempre criptografado**: AES-256-GCM com chave derivada por scrypt
-  explícito (`N=2¹⁶`, `r=8`, `p=1`; salt e IV aleatórios por arquivo, tag
-  verificada na leitura). Formato atual `WTENC2`, com leitura dos legados
-  `WTENC1`; o Google guarda só blobs cifrados.
+  explícito (`N=2¹⁷`, `r=8`, `p=1` — mínimo atual do OWASP; salt e IV
+  aleatórios por arquivo, tag verificada na leitura). Formato único
+  `WTENC3`; o Dropbox guarda só blobs cifrados.
 - **Nomes remotos opacos**: HMAC-SHA256 com chave de nomes derivada da senha
-  - manifesto cifrado (nome remoto → nome local). Ao Google restam visíveis
-    só a quantidade aproximada e o tamanho dos blobs (limitação da API do
-    Drive; tamanhos exatos não têm como ser ocultados sem padding).
+  - mesmo custo da cifra (`N=2¹⁷`): o nome do `library.json` é adivinhável e
+    permite testar senhas candidatas offline sem decifrar nada.
+  - manifesto cifrado (nome remoto → nome local). Ao Dropbox restam visíveis
+    só a quantidade aproximada e o tamanho dos blobs (limitação da API;
+    tamanhos exatos não têm como ser ocultados sem padding).
 - **Senha no keyring**: `drivePassphrase` vai para o cofre do SO
   (`safeStorage`) quando há keyring; sem keyring, em claro com `0600`
   (fallback documentado, com migração automática).
-- **Escopos mínimos**: `drive.appdata` + `drive.file` + `openid email`.
-- **Sem servidor intermediário**: do PC direto para o Google (`fetch` nativo).
-- **Credenciais embutidas**: o `client_secret` de app desktop não é segredo
-  real (é público por definição; a proteção vem de PKCE + loopback); não
-  reporte isso como falha.
+- **Escopos mínimos**: o Dropbox recebe só `account_info.read`,
+  `files.metadata.read`, `files.metadata.write`, `files.content.read` e
+  `files.content.write`, limitados à App folder. Quando o Google Drive for
+  ativado, o destino será a pasta oculta `appDataFolder` (`drive.appdata`),
+  sem acesso ao restante do Drive (`docs/backup-providers.md`).
+- **Sem servidor intermediário**: do PC direto para o Dropbox (`fetch` nativo).
+- **Credenciais embutidas**: a proteção vem do PKCE + loopback (não há
+  `client_secret` em uso); não reporte isso como falha.
 - **Dependências auditadas**: `npm run security:audit` (OSV Scanner) roda em
   todo `npm run check`.
 
 ## Fora de escopo
 
-- Engenharia social, spam e ataques a serviços de terceiros (Google, npm).
+- Engenharia social, spam e ataques a serviços de terceiros (Dropbox, Google,
+  npm).
 - Falhas que exijam acesso físico ao PC já desbloqueado do usuário.

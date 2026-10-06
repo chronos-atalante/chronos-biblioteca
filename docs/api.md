@@ -112,9 +112,27 @@ Normaliza (`trim` em ID/secret; senha preservada como digitada), grava
 
 ---
 
-## 5. Backup no Dropbox
+## 5. Backup em nuvem (provedores)
 
-Fluxo completo em [`dropbox.md`](dropbox.md). Resumo dos métodos:
+Catálogo e status dos provedores em [`backup-providers.md`](backup-providers.md);
+fluxo do Dropbox em [`dropbox.md`](dropbox.md). Resumo dos métodos:
+
+### `drive.providers() → Promise<BackupProviderInfo[]>`
+
+```ts
+interface BackupProviderInfo {
+  id: 'dropbox' | 'google-drive';
+  label: string; // nome exibido na interface
+  operational: boolean; // dá para conectar e fazer backup?
+  unavailableReason: string | null; // motivo (null quando operante)
+  storageTarget: string; // destino do backup, pronto para exibição
+  storageHidden: boolean; // destino oculto na interface do serviço?
+}
+```
+
+Ordem de exibição: Dropbox (operante) e depois Google Drive (**não
+operante** — a UI mostra o selo _Não operante_ e o motivo, sempre com o
+destino oculto `appDataFolder`).
 
 ### `drive.status() → Promise<DriveStatus>`
 
@@ -149,10 +167,11 @@ arquivos remotos órfãos. Cada upload usa `mode: overwrite` direto no
 `content.dropboxapi.com`, sem multipart nem id prévio.
 
 Cifra (ver `src/main/drive/crypto.ts`): AES-256-GCM com chave de 32 bytes
-derivada por **scrypt explícito** (`N=2¹⁶`, `r=8`, `p=1`), salt de 16 e IV de
+derivada por **scrypt explícito** (`N=2¹⁷`, `r=8`, `p=1` — mínimo atual do
+OWASP, ~128 MiB por derivação), salt de 16 e IV de
 12 bytes aleatórios por arquivo, tag de 16 bytes verificada na leitura.
-Formato atual `WTENC2`; backups antigos `WTENC1` (scrypt padrão) continuam
-restauráveis.
+Formato único `WTENC3` (nunca houve release com outro; o app ainda não foi
+publicado para usuários).
 
 Nomes remotos opacos: a pasta do app é visível na conta do usuário, então nada nela
 pode entregar o conteúdo. Cada upload usa `HMAC-SHA256(chaveDeNomes, nomeLocal)` como

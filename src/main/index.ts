@@ -31,6 +31,7 @@ import {
   disconnect,
   getStatus,
   initDrive,
+  listProviders,
   onStatus,
   restoreNow,
 } from '@zero/main/drive';
@@ -184,6 +185,7 @@ function registerIpc(): void {
   );
 
   ipcMain.handle('drive:status', (): DriveStatus => getStatus());
+  ipcMain.handle('drive:providers', () => listProviders());
   ipcMain.handle('drive:auth', () => authorize());
   ipcMain.handle('drive:backup', () => backupNow());
   ipcMain.handle('drive:restore', (_event, passphrase: string) => restoreNow(passphrase));

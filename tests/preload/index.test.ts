@@ -53,6 +53,7 @@ describe('preload (contextBridge)', () => {
   it('encaminha as operações do Drive', async () => {
     const api = exposedApi();
     await api.drive.status();
+    await api.drive.providers();
     await api.drive.auth();
     await api.drive.backup();
     await api.drive.restore('senha-de-teste');
@@ -60,6 +61,7 @@ describe('preload (contextBridge)', () => {
     await api.drive.disconnect();
     expect(ipcRenderer.invoke.mock.calls.map((call) => call[0])).toEqual([
       'drive:status',
+      'drive:providers',
       'drive:auth',
       'drive:backup',
       'drive:restore',

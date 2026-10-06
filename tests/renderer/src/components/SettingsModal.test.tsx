@@ -68,6 +68,22 @@ describe('SettingsModal: carregamento', () => {
     expect(screen.getByText(/Backup no Dropbox/)).toBeInTheDocument();
   });
 
+  it('lista os provedores e marca o Google Drive como não operante', async () => {
+    setup();
+    const label = await screen.findByText('Provedores de backup');
+    const section = label.closest<HTMLElement>('.field');
+    if (section === null) throw new Error('Seção de provedores ausente.');
+
+    expect(within(section).getByText('Dropbox')).toBeInTheDocument();
+    expect(within(section).getByText('Operante')).toBeInTheDocument();
+    expect(within(section).getByText('Google Drive')).toBeInTheDocument();
+    expect(within(section).getByText('Não operante')).toBeInTheDocument();
+    expect(within(section).getByText('Pasta oculta')).toBeInTheDocument();
+    expect(within(section).getByText(/Backup em appDataFolder/)).toBeInTheDocument();
+    expect(within(section).getByText(/exigências do Google/)).toBeInTheDocument();
+    expect(within(section).getByText(/backup usa o Dropbox/)).toBeInTheDocument();
+  });
+
   it('mostra o estado vazio quando não há conexão nem backup', async () => {
     setup();
     expect(await screen.findByText('Desconectado')).toBeInTheDocument();

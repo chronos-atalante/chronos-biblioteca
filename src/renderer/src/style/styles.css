@@ -1005,6 +1005,59 @@ input[type='range']::-webkit-slider-thumb {
   flex: 1;
 }
 
+.provider-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.provider-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.provider-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.provider-badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text-dim);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.provider-badge.on {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.provider-badge.hidden {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.provider-item .help {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .toast {
   position: fixed;
   bottom: 22px;

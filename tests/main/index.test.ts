@@ -71,6 +71,7 @@ const expectedChannels = [
   'settings:get',
   'settings:set',
   'drive:status',
+  'drive:providers',
   'drive:auth',
   'drive:backup',
   'drive:restore',
@@ -244,6 +245,19 @@ describe('handlers de configurações e Drive', () => {
     const status = invoke('drive:status') as { connected: boolean; accountEmail: string | null };
     expect(status.connected).toBe(false);
     expect(status.accountEmail).toBeNull();
+  });
+
+  it('drive:providers devolve o catálogo com o Google Drive não operante', () => {
+    const providers = invoke('drive:providers') as {
+      id: string;
+      operational: boolean;
+      storageHidden: boolean;
+      unavailableReason: string | null;
+    }[];
+    expect(providers.map((provider) => provider.id)).toEqual(['dropbox', 'google-drive']);
+    expect(providers[0]).toMatchObject({ operational: true, storageHidden: false });
+    expect(providers[1]).toMatchObject({ operational: false, storageHidden: true });
+    expect(providers[1]?.unavailableReason ?? '').toContain('exigências do Google');
   });
 
   it('drive:auth usa a chave das configurações e roda o OAuth do Dropbox', async () => {

@@ -213,7 +213,7 @@ flowchart TD
         IDX["index.ts: janela, IPC, protocolo cover:, F11"]
         LIB["library.ts: library.json + capas"]
         SET["settings.ts: App key e senha do backup"]
-        DRV["drive/: OAuth PKCE, REST do Dropbox, backup"]
+        DRV["drive/: provedor Dropbox, OAuth PKCE, backup (AES-256-GCM)"]
     end
 
     subgraph STORAGE["Persistência"]
@@ -284,6 +284,7 @@ Webtoons/
 │   └── make-icon.py          # gerador do ícone (PIL)
 ├── docs/
 │   ├── dropbox.md              # guia do backup + diagramas
+│   ├── backup-providers.md     # provedores de nuvem (Dropbox · Google Drive)
 │   ├── distribuicao-apt.md     # distribuição: Release + repo APT flat assinado
 │   ├── atribuicoes.md        # página de Atribuições (créditos em loop)
 │   ├── doacoes.md            # página de Doações (Mercado Pago + QR Pix)
@@ -293,8 +294,10 @@ Webtoons/
 │   │   ├── index.ts          # janela, IPC, protocolo cover://, F11 em tela cheia
 │   │   ├── library.ts        # library.json + cópia/limpeza de capas
 │   │   ├── settings.ts       # App key + senha do backup
-│   │   └── drive/            # OAuth PKCE, REST do Dropbox, backup/restauração
+│   │   └── drive/            # provedores de nuvem, OAuth PKCE, backup/restauração
 │   │       ├── index.ts      # barrel da API pública (authorize, backupNow…)
+│   │       ├── provider.ts   # contrato BackupProvider + catálogo de provedores
+│   │       ├── providers/    # dropbox.ts (operante) · google-drive.ts (não operante)
 │   │       ├── constants.ts  # escopos, App key, loopback fixo
 │   │       ├── state.ts      # sessão, App key e listener de status
 │   │       ├── oauth.ts      # autorização (PKCE sem secret) + refresh
@@ -431,6 +434,7 @@ Guias e referências (tudo em pt-BR):
 | Documento                                              | Conteúdo                                                         |
 | ------------------------------------------------------ | ---------------------------------------------------------------- |
 | [`docs/dropbox.md`](docs/dropbox.md)                   | Guia do backup: OAuth PKCE, App folder, troubleshooting          |
+| [`docs/backup-providers.md`](docs/backup-providers.md) | Provedores de backup: contrato, catálogo e Google Drive oculto   |
 | [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md) | Distribuição: Release, repo APT flat assinado e fluxo de release |
 | [`docs/atribuicoes.md`](docs/atribuicoes.md)           | Página de Atribuições: créditos em loop e licenças               |
 | [`docs/doacoes.md`](docs/doacoes.md)                   | Página de Doações: Mercado Pago + QR Pix                         |

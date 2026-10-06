@@ -1,4 +1,4 @@
-import type { BackupSummary, DriveStatus } from '@zero/types/drive';
+import type { BackupProviderInfo, BackupSummary, DriveStatus } from '@zero/types/drive';
 import type { AppSettings } from '@zero/types/settings';
 import type { Work } from '@zero/types/work';
 
@@ -17,6 +17,7 @@ export interface ElectronApi {
   };
   drive: {
     status: () => Promise<DriveStatus>;
+    providers: () => Promise<BackupProviderInfo[]>;
     auth: () => Promise<{ ok: boolean; error?: string }>;
     backup: () => Promise<{ ok: boolean; error?: string; summary?: BackupSummary }>;
     restore: (passphrase: string) => Promise<{ ok: boolean; error?: string; works?: number }>;
