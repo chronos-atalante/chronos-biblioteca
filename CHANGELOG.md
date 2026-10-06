@@ -4,7 +4,7 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
-## [1.2.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.2...v1.2.0) (2026-10-06)
+## [1.2.1](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.2...v1.2.1) (2026-10-06)
 
 ### Features
 
@@ -18,11 +18,27 @@ em português do Brasil.
   Configurações e persistido em `language`; textos centralizados em
   `src/messages/` (ver `docs/messages.md`).
 - configurações: botão **Fechar** no rodapé do modal.
+- configurações: App key do Dropbox embutida no binário (em cliente PKCE a
+  chave é pública por definição); `driveClientId` no `settings.json` passa a
+  ser override opcional e a UI não pergunta mais a chave.
 
 ### Bug Fixes
 
+- segurança: salt aleatório por cadeia no manifesto v2 de nomes do backup,
+  em vez de derivar o mesmo salt fixo da senha.
+- segurança: respostas da API do Dropbox passam por validação de forma
+  (`parseJson` → `unknown` com guards) e `openExternalSafe` só abre `https:`.
+- segurança: `build/postrm` usa o nome correto do pacote (casing) e as
+  Actions do GitHub ficam fixadas por SHA.
 - dev: os webfonts do FontAwesome deixam de ser recusados (HTTP 403) pelo
   servidor do Vite no `npm run dev` (`server.fs.allow` no renderer).
+
+### Documentação
+
+- `SECURITY.md` passa a registrar a política de segurança e os riscos
+  aceitos (porta do callback OAuth, senha sem keyring e `braces` na landing);
+  `api.md`/`dropbox.md`/`README.md` refletem a chave embutida e as URLs do
+  repo APT flat da Release.
 
 ## [1.1.2](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.1...v1.1.2) (2026-10-06)
 

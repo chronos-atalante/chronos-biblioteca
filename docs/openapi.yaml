@@ -7,7 +7,7 @@
 openapi: 3.1.0
 info:
   title: 'Chronos Biblioteca: API interna (ponte IPC)'
-  version: 1.2.0
+  version: 1.2.1
   description: >
     Ponte `window.api` (contextBridge) entre o renderer e o processo main:
     biblioteca de obras, capas, configurações e backup no Dropbox.
