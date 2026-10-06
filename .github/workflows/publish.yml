@@ -5,7 +5,7 @@ name: Publicar .deb
 # Release — base: .../releases/latest/download/ (suite ./).
 # Gatilhos:
 # - tag v* enviada manualmente (ex.: git push origin v1.0.3), ou
-# - Release criada pelo bot do release-please ao mesclar o PR de release, ou
+# - Release criada na UI do GitHub, ou
 # - execução manual na UI (workflow_dispatch).
 # Sem loop: releases criadas com GITHUB_TOKEN não disparam novos runs.
 on:

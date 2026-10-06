@@ -22,4 +22,4 @@
 - [ ] Documentação atualizada (`README.md` e/ou `docs/*.md`) quando a mudança
       afeta comportamento, fluxo, configuração, mensagens ou dependências
 - [ ] Imports em `src/` usam os aliases `@zero/*` (sem caminho relativo entre pastas)
-- [ ] Commit com tipo convencional (`feat:`, `fix:`, `chore:`) para o release-please
+- [ ] Commit com tipo convencional (`feat:`, `fix:`, `chore:`) no título

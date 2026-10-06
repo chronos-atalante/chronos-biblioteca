@@ -315,7 +315,7 @@ Webtoons/
 │   ├── helpers/              # fixtures, sandbox, drive (FakeDropbox + stubFetch)
 │   └── mocks/                # mock do electron para o Vitest
 ├── .github/
-│   ├── workflows/            # CodeQL, agradecimento, publicação do .deb, release-please
+│   ├── workflows/            # CodeQL, agradecimento, publicação do .deb
 │   ├── ISSUE_TEMPLATE/       # formulários de bug e de funcionalidade
 │   ├── dependabot.yml        # deps e actions atualizadas semanalmente
 │   └── pull_request_template.md

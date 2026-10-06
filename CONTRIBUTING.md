@@ -88,27 +88,31 @@ usuário ganham entrada em [`CHANGELOG.md`](CHANGELOG.md).
 - Ao mesclar um PR, `.github/workflows/agradecer.yml` deixa um comentário de
   agradecimento.
 
-## 10. Commits e lançamentos automáticos
+## 10. Commits e lançamentos
 
-Os lançamentos são automáticos via GitHub Actions, **sem token manual e sem
-bump manual de versão**:
+Use [Conventional Commits](https://www.conventionalcommits.org/) em pt-BR no
+título do commit vindo da `developer` para a `main`:
 
-- Use [Conventional Commits](https://www.conventionalcommits.org/) em pt-BR no
-  título do commit vindo da `developer` para a `main`:
-  - `feat: ...` → nova funcionalidade (sobe `MINOR`, ex.: 1.0.2 → 1.1.0);
-  - `fix: ...` → correção de bug (sobe `PATCH`, ex.: 1.0.2 → 1.0.3);
-  - `docs: ...`, `test: ...`, `chore: ...`, `refactor: ...` → sem lançamento.
-- Ao mesclar na `main`, o bot **release-please** abre o PR `chore: release x.y.z`
-  (bump em `package.json` + entrada no `CHANGELOG.md`). **Mesclar esse PR**
-  cria a tag `vx.y.z` e a GitHub Release.
-- O workflow **Publicar .deb** então compila (`npm run dist`), anexa o `.deb`
-  **e o repo APT flat assinado** (`Packages`, `Release`, `InRelease`,
-  `public.key` + alias `chronos-biblioteca_amd64.deb`) à Release, e dispara
-  o redeploy da landing (via Deploy Hook). Requer os secrets
-  `GPG_PRIVATE_KEY` (+ `GPG_PASSPHRASE`, se houver) em
-  Settings → Secrets → Actions.
-- A landing lê essa Release na API pública e atualiza versão, botão de
-  download e os comandos APT (`…/releases/latest/download/`, suite `./`) —
-  o `.deb` nunca é versionado no git.
-- Atalho: `git push origin v1.2.3` numa tag também publica (a Release é criada
-  com notas geradas). Use só em exceção; o fluxo normal é via PR do bot.
+- `feat: ...` → nova funcionalidade (sobe `MINOR`, ex.: 1.0.2 → 1.1.0);
+- `fix: ...` → correção de bug (sobe `PATCH`, ex.: 1.0.2 → 1.0.3);
+- `docs: ...`, `test: ...`, `chore: ...`, `refactor: ...` → sem lançamento.
+
+Para publicar uma versão (manualmente, a partir da `main`):
+
+1. Bump em `package.json` → `version` + entrada nova no `CHANGELOG.md`
+   (o tipo dos commits desde a última release indica MINOR/PATCH);
+2. Commit (`chore: release x.y.z`) e push na `main`;
+3. `git tag vX.Y.Z && git push origin vX.Y.Z` — a tag dispara o workflow
+   **Publicar .deb**, que compila (`npm run dist`), anexa o `.deb`
+   **e o repo APT flat assinado** (`Packages`, `Release`, `InRelease`,
+   `public.key` + alias `chronos-biblioteca_amd64.deb`) à Release, e dispara
+   o redeploy da landing (via Deploy Hook). Requer os secrets
+   `GPG_PRIVATE_KEY` (+ `GPG_PASSPHRASE`, se houver) em
+   Settings → Secrets → Actions;
+4. Confira a sincronia das 4 vias (ver `AGENTS.md` da raiz, §2):
+   `package.json` ≡ tag ≡ `Packages` (`Version:`) ≡ `release-info.json`
+   da landing.
+
+A landing lê essa Release na API pública e atualiza versão, botão de
+download e os comandos APT (`…/releases/latest/download/`, suite `./`) —
+o `.deb` nunca é versionado no git.
