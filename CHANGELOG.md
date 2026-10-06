@@ -4,6 +4,17 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.3.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.2.1...v1.3.0) (2026-10-06)
+
+### Features
+
+- categorias: lista ampliada de 16 para 56 gêneros e `Select` pesquisável na
+  Categoria da obra (campo "Digite para filtrar…", sem diferenciar acentos ou
+  maiúsculas, com mensagem de vazio).
+- idioma: coreano (`ko`, 한국어) na interface do app, escolhido em
+  Configurações e persistido em `settings.json` (textos em `src/messages/ko.ts`;
+  ver `docs/messages.md`).
+
 ## [1.2.1](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.2...v1.2.1) (2026-10-06)
 
 ### Features
