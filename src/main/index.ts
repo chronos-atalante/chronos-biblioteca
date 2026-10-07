@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { URL } from 'url';
+import { URL, pathToFileURL } from 'url';
 import {
   Menu,
   app,
@@ -10,6 +10,7 @@ import {
   ipcMain,
   nativeImage,
   protocol,
+  session,
 } from 'electron';
 import {
   cacheDir,
@@ -111,6 +112,8 @@ function createWindow(): void {
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
+      // Em produção o DevTools fica de fora: o atalho não expõe o renderer.
+      devTools: !app.isPackaged,
     },
   });
 
@@ -121,7 +124,17 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
+  // O app é uma SPA local: navegação só vale para a própria página (o reload
+  // mantém a mesma URL); qualquer salto para outra URL é recusado.
   const devUrl = process.env.ELECTRON_RENDERER_URL;
+  const targetUrl =
+    devUrl !== undefined && devUrl !== ''
+      ? devUrl
+      : pathToFileURL(path.join(__dirname, '../renderer/index.html')).toString();
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== targetUrl) event.preventDefault();
+  });
+
   if (devUrl !== undefined && devUrl !== '') {
     void mainWindow.loadURL(devUrl);
   } else {
@@ -151,6 +164,16 @@ function registerCoverProtocol(): void {
     } catch {
       return new Response('Erro', { status: 500 });
     }
+  });
+}
+
+/**
+ * Nega toda permissão web do renderer (mídia, geolocalização, notificações…);
+ * só o clipboard passa, usado pelo modal de doação para copiar o link.
+ */
+function registerPermissionPolicy(): void {
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    callback(permission === 'clipboard-read' || permission === 'clipboard-sanitized-write');
   });
 }
 
@@ -255,6 +278,7 @@ if (!gotLock) {
       registerIpc();
       initDrive();
       removeApplicationMenu();
+      registerPermissionPolicy();
       registerFullscreenShortcut();
       createWindow();
 

@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { safeStorage } from 'electron';
-import { configDir } from '@zero/main/library';
+import { writeJsonAtomic } from '@zero/main/jsonfile';
+import { configDir } from '@zero/main/paths';
 import type { AppSettings, Language } from '@zero/types';
 
 /**
@@ -114,10 +115,8 @@ export function saveSettings(settings: AppSettings): AppSettings {
   };
   // Em disco a senha vai protegida (keyring) ou em claro (fallback); o
   // retorno é sempre a forma utilizável, que o renderer exibe no formulário.
+  // Escrita atômica com 0600: nem JSON pela metade, nem legível por terceiros.
   const onDisk: AppSettings = { ...next, drivePassphrase: protect(next.drivePassphrase) };
-  fs.writeFileSync(settingsPath(), JSON.stringify(onDisk, null, 2), {
-    encoding: 'utf-8',
-    mode: 0o600,
-  });
+  writeJsonAtomic(settingsPath(), onDisk, 0o600);
   return next;
 }

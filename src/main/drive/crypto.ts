@@ -71,6 +71,20 @@ export function encryptWith(data: Buffer, passphrase: string): Buffer {
   return encryptBuffer(data, passphrase);
 }
 
+/**
+ * Falha de senha de criptografia (errada ou blob corrompido).
+ *
+ * Classe própria (e não só a mensagem) para `restoreNow` distinguir tentativa
+ * de senha de erro de rede/serviço e contar na trava exponencial, sem depender
+ * do texto localizado.
+ */
+export class PassphraseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PassphraseError';
+  }
+}
+
 export function decryptWith(data: Buffer, passphrase: string): Buffer {
   const m = currentMessages();
   if (!isEncrypted(data)) return data;
@@ -82,7 +96,7 @@ export function decryptWith(data: Buffer, passphrase: string): Buffer {
   } catch {
     // Mensagem única de propósito: não distingue senha errada de corrupção
     // para não dar oráculo a quem manipula o blob remoto.
-    throw new Error(m.driveErrors.wrongPassphrase);
+    throw new PassphraseError(m.driveErrors.wrongPassphrase);
   }
 }
 

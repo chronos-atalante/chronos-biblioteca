@@ -268,6 +268,15 @@ export const ko: Messages = {
       response === ''
         ? `Dropbox 오류(HTTP ${status}).`
         : `Dropbox 오류(HTTP ${status}). 응답: ${response}`,
+    restoreLocked: (seconds: number): string =>
+      seconds < 60
+        ? `잘못된 암호로 복원 시도가 너무 많습니다. ${seconds}초 후 다시 시도하세요.`
+        : `잘못된 암호로 복원 시도가 너무 많습니다. ${Math.ceil(seconds / 60)}분 후 다시 시도하세요.`,
+  },
+
+  /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */
+  libraryErrors: {
+    invalidId: '잘못된 작품 식별자입니다.',
   },
 
   /** HTML page the OAuth loopback shows in the browser tab. */

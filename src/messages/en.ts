@@ -272,6 +272,15 @@ export const en: Messages = {
       response === ''
         ? `Dropbox error (HTTP ${status}).`
         : `Dropbox error (HTTP ${status}). Response: ${response}`,
+    restoreLocked: (seconds: number): string =>
+      seconds < 60
+        ? `Too many failed restore attempts with the wrong passphrase. Try again in ${seconds} seconds.`
+        : `Too many failed restore attempts with the wrong passphrase. Try again in ${Math.ceil(seconds / 60)} minutes.`,
+  },
+
+  /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */
+  libraryErrors: {
+    invalidId: 'Invalid work identifier.',
   },
 
   /** HTML page the OAuth loopback shows in the browser tab. */

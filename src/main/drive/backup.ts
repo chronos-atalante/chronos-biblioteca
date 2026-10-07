@@ -3,6 +3,7 @@ import path from 'path';
 import type { BackupSummary, DriveStatus, Work } from '@zero/types';
 import {
   MANIFEST_FILE,
+  PassphraseError,
   buildManifest,
   decryptWith,
   encryptWith,
@@ -15,6 +16,11 @@ import {
 } from '@zero/main/drive/crypto';
 import { currentProvider } from '@zero/main/drive/provider';
 import type { RemoteFile } from '@zero/main/drive/provider';
+import {
+  registerRestoreFailure,
+  resetRestoreLock,
+  restoreLockRemainingSec,
+} from '@zero/main/drive/restore-lock';
 import {
   emit,
   getStatus,
@@ -196,6 +202,12 @@ export async function restoreNow(passphrase: string): Promise<{
   error?: string;
   works?: number;
 }> {
+  // Trava exponencial: falhas seguidas de senha errada atrasam a próxima
+  // tentativa (ver `restore-lock.ts`); checa antes de qualquer chamada de rede.
+  const lockedFor = restoreLockRemainingSec();
+  if (lockedFor > 0) {
+    return { ok: false, error: currentMessages().driveErrors.restoreLocked(lockedFor) };
+  }
   if (state.syncing) return { ok: false, error: currentMessages().driveErrors.syncInProgress };
   const provider = currentProvider();
   if (state.tokens === null) {
@@ -234,10 +246,12 @@ export async function restoreNow(passphrase: string): Promise<{
 
     const restored = restoreLibrary(works);
     state.syncing = false;
+    resetRestoreLock();
     emit();
     return { ok: true, works: restored.length };
   } catch (err) {
     state.syncing = false;
+    if (err instanceof PassphraseError) registerRestoreFailure();
     const message = toMessage(err);
     setError(message);
     return { ok: false, error: message };

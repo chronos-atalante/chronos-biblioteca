@@ -2,6 +2,7 @@ import fs from 'fs';
 import http from 'http';
 import os from 'os';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppSettings, Work } from '@zero/types';
 import { configDir, coversDir, dataDir } from '@zero/main/library';
@@ -17,6 +18,7 @@ import {
   Menu,
   nativeImage,
   protocol,
+  session,
   shell,
 } from '../mocks/electron.ts';
 import type { IpcHandler, WindowEventHandler } from '../mocks/electron.ts';
@@ -144,6 +146,9 @@ describe('inicialização', () => {
     expect(options.webPreferences.nodeIntegration).toBe(false);
     expect(options.webPreferences.sandbox).toBe(true);
     expect(options.webPreferences.webSecurity).toBe(true);
+    // Mock com isPackaged false (modo dev) mantém o DevTools ligado; no .deb
+    // empacotado isPackaged vira true e `devTools` desliga.
+    expect(options.webPreferences.devTools).toBe(true);
     expect(String(options.webPreferences.preload)).toContain(path.join('preload', 'index'));
     expect(win?.loadFile.mock.calls[0]?.[0]).toContain(path.join('renderer', 'index.html'));
     expect(win?.loadURL).not.toHaveBeenCalled();
@@ -158,7 +163,25 @@ describe('inicialização', () => {
     expect(Menu.setApplicationMenu).toHaveBeenCalledTimes(1);
     expect(Menu.setApplicationMenu).toHaveBeenCalledWith(null);
     const win = BrowserWindow.instances[0];
-    expect(win?.webContents.on).not.toHaveBeenCalled();
+    // O único listener de webContents é a guarda de navegação; nenhum
+    // handler de context-menu (menu de botão direito).
+    const events = win?.webContents.on.mock.calls.map((call) => call[0]) ?? [];
+    expect(events).not.toContain('context-menu');
+  });
+
+  it('nega permissões da sessão menos o clipboard', () => {
+    expect(session.defaultSession.setPermissionRequestHandler).toHaveBeenCalledTimes(1);
+    const policy = session.defaultSession.setPermissionRequestHandler.mock.calls[0]?.[0];
+    if (policy === undefined) throw new Error('Política de permissões ausente.');
+    const grant = vi.fn<(granted: boolean) => void>();
+    policy(null, 'geolocation', grant, null);
+    expect(grant).toHaveBeenCalledWith(false);
+    policy(null, 'media', grant, null);
+    expect(grant).toHaveBeenLastCalledWith(false);
+    policy(null, 'clipboard-sanitized-write', grant, null);
+    expect(grant).toHaveBeenLastCalledWith(true);
+    policy(null, 'clipboard-read', grant, null);
+    expect(grant).toHaveBeenLastCalledWith(true);
   });
 
   it('define o ícone da janela a partir do ícone do pacote', () => {
@@ -447,6 +470,24 @@ describe('ciclo de vida da janela', () => {
       expect(opener({ url }).action).toBe('deny');
     }
     expect(shell.openExternal).not.toHaveBeenCalled();
+  });
+
+  it('prende a navegação à página do app (will-navigate)', () => {
+    const win = BrowserWindow.instances[0];
+    if (win === undefined) throw new Error('Janela não criada.');
+    const call = win.webContents.on.mock.calls.find((entry) => entry[0] === 'will-navigate');
+    if (call === undefined) throw new Error('Listener will-navigate ausente.');
+    const listener = call[1];
+    const filePath = win.loadFile.mock.calls[0]?.[0] ?? '';
+    if (filePath === '') throw new Error('loadFile não chamado (modo dev?).');
+    const targetUrl = pathToFileURL(filePath).toString();
+
+    const event = { preventDefault: vi.fn() };
+    listener(event, 'https://exemplo.com/fora');
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+    listener(event, targetUrl);
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
   });
 
   it('foca (e restaura) a janela na segunda instância', () => {

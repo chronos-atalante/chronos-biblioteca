@@ -278,6 +278,15 @@ export const ptBR = {
       response === ''
         ? `Erro do Dropbox (HTTP ${status}).`
         : `Erro do Dropbox (HTTP ${status}). Resposta: ${response}`,
+    restoreLocked: (seconds: number): string =>
+      seconds < 60
+        ? `Muitas tentativas de restauração com senha errada. Tente novamente em ${seconds} segundos.`
+        : `Muitas tentativas de restauração com senha errada. Tente novamente em ${Math.ceil(seconds / 60)} minutos.`,
+  },
+
+  /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */
+  libraryErrors: {
+    invalidId: 'Identificador de obra inválido.',
   },
 
   /** Página HTML que o loopback do OAuth mostra na aba do navegador. */

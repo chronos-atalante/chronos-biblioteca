@@ -251,6 +251,15 @@ export const zhCN: Messages = {
       response === ''
         ? `Dropbox错误（HTTP ${status}）。`
         : `Dropbox错误（HTTP ${status}）。响应：${response}`,
+    restoreLocked: (seconds: number): string =>
+      seconds < 60
+        ? `恢复时密码错误尝试次数过多，请在 ${seconds} 秒后重试。`
+        : `恢复时密码错误尝试次数过多，请在 ${Math.ceil(seconds / 60)} 分钟后重试。`,
+  },
+
+  /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */
+  libraryErrors: {
+    invalidId: '作品标识符无效。',
   },
 
   /** OAuth回环在浏览器选项卡中显示的HTML页面。 */
