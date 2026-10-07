@@ -4,6 +4,33 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.4.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.3.0...v1.4.0) (2026-10-07)
+
+### Features
+
+- idioma: chinês simplificado (`zh-CN`, 简体中文) na interface do app e no
+  site, escolhido em Configurações e persistido em `settings.json` (textos em
+  `src/messages/zh-CN.ts`; detecção `zh-*` e seletor PT/EN/KO/中 na landing;
+  ver `docs/messages.md`).
+- configurações: aviso na tela de Configurações quando o cofre do sistema está
+  indisponível (canal IPC `settings:keyring` com `settings.keyringWarning`
+  nos 4 idiomas), em vez de cair em silêncio no fallback em claro.
+
+### Bug Fixes
+
+- privacidade: caminhos de persistência corrigidos na política do site, no
+  `README.md` e no `AGENTS.md` (obras e capas em `~/.local/share/`, configs e
+  tokens em `~/.config/`), incluindo a instrução de exclusão.
+- textos: pontuação restaurada nas mensagens em pt-BR e en (parênteses e ponto
+  e vírgula onde a remoção de travessões tinha truncado frases) e progresso
+  descrito em capítulos no site (era "porcentagem"), com o tipo "outro" na
+  lista.
+- doações: removidas as menções ao QR Code Pix (`README.md` e
+  `docs/doacoes.md`); o modal oferece link do Mercado Pago e botão de copiar.
+- metadados: `homepage` e `maintainer` do pacote apontam para o repositório e
+  o e-mail oficiais; exemplo de instalação local usa glob de versão;
+  workflow do CI no Node 24 e scripts de limpeza sem `rimraf`.
+
 ## [1.3.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.2.1...v1.3.0) (2026-10-06)
 
 ### Features

@@ -15,7 +15,7 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
 
 - `src/main/`: janela, IPC, protocolo `cover://` (`index.ts`), persistência
   (`library.ts`, `settings.ts`) e backup na nuvem (`drive/`).
-- `src/messages/`: textos do app em pt-BR (canônico), en e ko (`@zero/messages`);
+- `src/messages/`: textos do app em pt-BR (canônico), en, ko e zh-CN (`@zero/messages`);
   guia em `docs/messages.md`.
 - `src/preload/`: única ponte da UI; monta e expõe `window.api` tipado.
 - `src/renderer/`: React; não acessa disco, rede nem Node direto.
@@ -66,7 +66,7 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
   desligue regra de lint para passar, corrija o código.
 - `console` só `warn`/`error` (regra do ESLint); nenhum `debugger`/`alert`.
 - Textos fixos de UI e de mensagem **só em `src/messages/`** (pt-BR é o
-  canônico; `en.ts` e `ko.ts` devem fechar com `Messages`): no renderer use
+  canônico; `en.ts`, `ko.ts` e `zh-CN.ts` devem fechar com `Messages`): no renderer use
   `useMessages()`/`richText()` (`src/renderer/src/i18n.tsx`), no main
   `currentMessages()` (`src/main/i18n.tsx`). Marcadores ricos `**negrito**` e
   `` `código` `` só em string exibida. Nomes de marca, dados por dependência

@@ -80,20 +80,24 @@ describe('contexto de idioma', () => {
 
 describe('catálogo de idiomas', () => {
   it('expõe os idiomas suportados com nome nativo', () => {
-    expect([...LANGUAGES]).toEqual(['pt-BR', 'en', 'ko']);
+    expect([...LANGUAGES]).toEqual(['pt-BR', 'en', 'ko', 'zh-CN']);
     expect(LANGUAGE_LABELS['pt-BR']).toBe('Português (Brasil)');
     expect(LANGUAGE_LABELS.en).toBe('English');
     expect(LANGUAGE_LABELS.ko).toBe('한국어');
+    expect(LANGUAGE_LABELS['zh-CN']).toBe('简体中文');
   });
 
   it('devolve bundles distintos por idioma com as mesmas chaves', () => {
     const pt = messages('pt-BR');
     const en = messages('en');
     const ko = messages('ko');
+    const zhCN = messages('zh-CN');
     expect(en).not.toBe(pt);
     expect(ko).not.toBe(pt);
+    expect(zhCN).not.toBe(pt);
     expect(Object.keys(en)).toEqual(Object.keys(pt));
     expect(Object.keys(ko)).toEqual(Object.keys(pt));
+    expect(Object.keys(zhCN)).toEqual(Object.keys(pt));
     const language: Language = 'en';
     expect(messages(language).app.newWork).toBe('New work');
   });
@@ -109,5 +113,18 @@ describe('catálogo de idiomas', () => {
       </MessagesProvider>,
     );
     expect(screen.getByTestId('probe')).toHaveTextContent('ko:읽는 중');
+  });
+
+  it('traduz o app para o chinês simplificado', () => {
+    const zhCN = messages('zh-CN');
+    expect(zhCN.app.newWork).toBe('新作品');
+    expect(zhCN.workStatus.lendo).toBe('在读');
+    expect(zhCN.workModal.progressValue(12)).toBe('第12话');
+    render(
+      <MessagesProvider language="zh-CN">
+        <Probe />
+      </MessagesProvider>,
+    );
+    expect(screen.getByTestId('probe')).toHaveTextContent('zh-CN:在读');
   });
 });

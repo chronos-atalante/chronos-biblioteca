@@ -91,7 +91,7 @@ usuário cancelar. A imagem é servida pelo protocolo interno (§6).
 ### `settings.get() → Promise<AppSettings>`
 
 ```ts
-type Language = 'pt-BR' | 'en' | 'ko';
+type Language = 'pt-BR' | 'en' | 'ko' | 'zh-CN';
 
 interface AppSettings {
   driveClientId: string; // App key alternativa ('' = usa a embutida; sem campo na UI)
@@ -102,7 +102,7 @@ interface AppSettings {
 ```
 
 Campos ausentes ou com tipo errado no disco caem para `''` (padrão seguro);
-`language` fora de `'pt-BR' | 'en' | 'ko'` cai para `'pt-BR'` (padrão também quando o
+`language` fora de `'pt-BR' | 'en' | 'ko' | 'zh-CN'` cai para `'pt-BR'` (padrão também quando o
 arquivo não existe — o app não detecta o idioma do SO, a escolha é explícita
 em Configurações).
 
