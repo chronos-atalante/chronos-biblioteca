@@ -72,6 +72,16 @@ contrário).
   `dropbox-tokens.json` são gravados em `.tmp` e renomeados por cima (nunca
   JSON pela metade), com `0600` onde há credencial
   (`src/main/jsonfile.ts`).
+- **IPC fechado por origem**: todo handler confere `event.senderFrame` contra a
+  página oficial do app (scheme `chronos://` em produção ou dev server do
+  Vite), bloqueando a mensagem antes do domínio tocar.
+- **Sem `file://` em produção**: o renderer é servido por `chronos://`
+  (`registerAppProtocol` com path-traversal rejeitado), e o
+  `grantFileProtocolExtraPrivileges` está desligado via fuse.
+- **Fuses do Electron**: `runAsNode: false`, `NODE_OPTIONS` e inspetor de
+  `--inspect` desligados, `enableCookieEncryption: true`,
+  `onlyLoadAppFromAsar: true`
+  no `electron-builder`.
 - **Dependências auditadas**: `npm run security:audit` (OSV Scanner) roda em
   todo `npm run check`.
 

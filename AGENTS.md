@@ -13,8 +13,8 @@ leituras, com backup criptografado no Dropbox, alvo Linux Mint e distribuição
 
 Camadas (diagrama no `README.md`, seção Arquitetura):
 
-- `src/main/`: janela, IPC, protocolo `cover://` (`index.ts`), persistência
-  (`library.ts`, `settings.ts`) e backup na nuvem (`drive/`).
+- `src/main/`: janela, IPC, protocolos `cover://` e `chronos://` (`index.ts`),
+  persistência (`library.ts`, `settings.ts`) e backup na nuvem (`drive/`).
 - `src/messages/`: textos do app em pt-BR (canônico), en, ko e zh-CN (`@zero/messages`);
   guia em `docs/messages.md`.
 - `src/preload/`: única ponte da UI; monta e expõe `window.api` tipado.
@@ -106,8 +106,12 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
 - Nada de credencial no repositório: tokens Dropbox saem do device do
   usuário (OAuth PKCE, sem secret) e os secrets do CI (`GPG_PRIVATE_KEY`,
   `GPG_PASSPHRASE`) vivem só no GitHub.
-- Renderer com CSP (scheme `cover:`) e preload sandboxed (por isso ele é
-  CommonJS); não enfraquecer `contextIsolation` nem inserir HTML dinâmico.
+- Renderer com CSP (schemes `cover:` e `chronos:`) e preload sandboxed (por
+  isso ele é CommonJS); não enfraquecer `contextIsolation` nem inserir HTML
+  dinâmico. Na produção a SPA é servida por `chronos://` via
+  `registerAppProtocol` (substitui `file://`); todo handler IPC valida
+  `event.senderFrame` com `assertAppFrame`. Fuses de segurança no electron-
+  builder via chave `electronFuses`.
 - Backup: cifragem AES-256-GCM com nomes opacos (`docs/dropbox.md`); senha
   e conteúdo nunca em log ou mensagem exibida.
 - `.deb` nunca entra no git e a assinatura do repo APT acontece só no

@@ -2,7 +2,6 @@ import fs from 'fs';
 import http from 'http';
 import os from 'os';
 import path from 'path';
-import { pathToFileURL } from 'url';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppSettings, Work } from '@zero/types';
 import { configDir, coversDir, dataDir } from '@zero/main/library';
@@ -31,7 +30,7 @@ function handler(channel: string): IpcHandler {
   return call[1];
 }
 
-const FAKE_EVENT = { sender: {} };
+const FAKE_EVENT = { senderFrame: { url: 'chronos://app/index.html' } };
 
 function invoke(channel: string, ...args: unknown[]): unknown {
   return handler(channel)(FAKE_EVENT, ...args);
@@ -101,10 +100,19 @@ beforeAll(async () => {
 });
 
 describe('inicialização', () => {
-  it('registra o scheme cover como privilegiado', () => {
+  it('registra os schemes cover e chronos como privilegiados', () => {
     expect(protocol.registerSchemesAsPrivileged).toHaveBeenCalledWith([
       {
         scheme: 'cover',
+        privileges: {
+          standard: true,
+          secure: true,
+          supportFetchAPI: true,
+          stream: true,
+        },
+      },
+      {
+        scheme: 'chronos',
         privileges: {
           standard: true,
           secure: true,
@@ -150,8 +158,10 @@ describe('inicialização', () => {
     // empacotado isPackaged vira true e `devTools` desliga.
     expect(options.webPreferences.devTools).toBe(true);
     expect(String(options.webPreferences.preload)).toContain(path.join('preload', 'index'));
-    expect(win?.loadFile.mock.calls[0]?.[0]).toContain(path.join('renderer', 'index.html'));
-    expect(win?.loadURL).not.toHaveBeenCalled();
+    // Em produção o renderer é servido pelo scheme custom `chronos://` (sem file://).
+    expect(win?.loadURL.mock.calls[0]?.[0]).toBe('chronos://app/index.html');
+    // Sem dev URL, loadFile não é usado (scheme custom cobre a home).
+    expect(win?.loadFile).not.toHaveBeenCalled();
   });
 
   it('trava o app em uma única instância', () => {
@@ -478,9 +488,8 @@ describe('ciclo de vida da janela', () => {
     const call = win.webContents.on.mock.calls.find((entry) => entry[0] === 'will-navigate');
     if (call === undefined) throw new Error('Listener will-navigate ausente.');
     const listener = call[1];
-    const filePath = win.loadFile.mock.calls[0]?.[0] ?? '';
-    if (filePath === '') throw new Error('loadFile não chamado (modo dev?).');
-    const targetUrl = pathToFileURL(filePath).toString();
+    const targetUrl = win.loadURL.mock.calls[0]?.[0] ?? '';
+    if (targetUrl === '') throw new Error('loadURL não chamado (modo dev?).');
 
     const event = { preventDefault: vi.fn() };
     listener(event, 'https://exemplo.com/fora');

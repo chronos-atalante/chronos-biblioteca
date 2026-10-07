@@ -55,6 +55,11 @@ Métodos de biblioteca/configurações devolvem os dados direto (ou `null` onde
 indicado). Erros de Drive saem no idioma corrente (`AppSettings.language`,
 pt-BR por padrão; ver §4 e [`messages.md`](messages.md)).
 
+Guarda de origem: todo handler IPC chama `assertAppFrame(event)` antes da
+lógica de domínio, exigindo `event.senderFrame` apontando para a página
+oficial do app (scheme `chronos://` em produção ou dev server do Vite em dev);
+uma mensagem de emissor desconhecido é bloqueada com erro.
+
 ---
 
 ## 3. Biblioteca
@@ -269,13 +274,17 @@ ao desmontar o componente.
 
 ---
 
-## 6. Protocolo `cover://`
+## 6. Protocolos `cover://` e `chronos://`
 
 Capas servidas como `cover://<arquivo>` (scheme privilegiado: `standard`,
 `secure`, `supportFetchAPI`, `stream`), com `Content-Type` por extensão e
 `Cache-Control: max-age=3600`. Respostas: `200` (bytes), `404` (ausente ou
 nome vazio), `500` (URL inválida). Nomes são higienizados com `basename`
 (anti path-traversal).
+
+Em produção, a SPA vem pelo scheme `chronos://` (desde a 1.5.0), implementado
+por `registerAppProtocol`: mapeia o pathname da URL para `out/renderer`, com
+`..` rejeitado (`path.resolve` + verificação de prefixo) — não usa `file://`.
 
 ---
 

@@ -33,6 +33,18 @@ em português do Brasil.
   notificações…) é negada; só o clipboard passa, para o modal de doação.
 - produção: DevTools desligado no app empacotado (`devTools:
 !app.isPackaged`).
+- IPC pelo frame oficial: todo handler chegou com `assertAppFrame(event)`, que
+  confere `event.senderFrame` contra a página do scheme `chronos://` (ou o Vite
+  dev server), bloqueando qualquer frame de fora antes do domínio.
+- renderer entregue via scheme `chronos://` em produção (`registerAppProtocol`
+  serve `out/renderer`), em vez de `file://`; CSP com `object-src 'none';
+base-uri 'self'; frame-ancestors 'none'; form-action 'self'` nos dois
+  lugares.
+- `electronFuses` no electron-builder: `runAsNode: false`,
+  `enableNodeOptionsEnvironmentVariable: false`,
+  `enableNodeCliInspectArguments: false`, `enableCookieEncryption: true`,
+  `onlyLoadAppFromAsar: true` e
+  `grantFileProtocolExtraPrivileges: false`.
 
 ### Documentação
 
