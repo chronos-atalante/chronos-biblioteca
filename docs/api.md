@@ -103,7 +103,7 @@ interface AppSettings {
 
 Campos ausentes ou com tipo errado no disco caem para `''` (padrão seguro);
 `language` fora de `'pt-BR' | 'en' | 'ko' | 'zh-CN'` cai para `'pt-BR'` (padrão também quando o
-arquivo não existe — o app não detecta o idioma do SO, a escolha é explícita
+arquivo não existe: o app não detecta o idioma do SO, a escolha é explícita
 em Configurações).
 
 A senha (`drivePassphrase`) é guardada no keyring do SO via `safeStorage`
@@ -145,9 +145,9 @@ interface BackupProviderInfo {
 ```
 
 Ordem de exibição: Dropbox (operante) e depois Google Drive (**não
-operante** — a UI mostra o selo _Não operante_ e o motivo, sempre com o
+operante**; a UI mostra o selo _Não operante_ e o motivo, sempre com o
 destino oculto `appDataFolder`). Os textos (`unavailableReason`,
-`storageTarget`) voltam **no idioma corrente** (`AppSettings.language`, §4) —
+`storageTarget`) voltam **no idioma corrente** (`AppSettings.language`, §4);
 ver [`messages.md`](messages.md).
 
 ### `drive.status() → Promise<DriveStatus>`
@@ -183,7 +183,7 @@ arquivos remotos órfãos. Cada upload usa `mode: overwrite` direto no
 `content.dropboxapi.com`, sem multipart nem id prévio.
 
 Cifra (ver `src/main/drive/crypto.ts`): AES-256-GCM com chave de 32 bytes
-derivada por **scrypt explícito** (`N=2¹⁷`, `r=8`, `p=1` — mínimo atual do
+derivada por **scrypt explícito** (`N=2¹⁷`, `r=8`, `p=1`; mínimo atual do
 OWASP, ~128 MiB por derivação), salt de 16 e IV de
 12 bytes aleatórios por arquivo, tag de 16 bytes verificada na leitura.
 Formato único `WTENC3` (nunca houve release com outro; o app ainda não foi

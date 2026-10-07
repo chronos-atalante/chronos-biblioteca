@@ -10,7 +10,7 @@ em `settings.json` (`AppSettings.language`).
 - `src/messages/pt-BR.ts` é o **canônico**: exporta `ptBR` e
   `export type Messages = typeof ptBR`. Toda chave e assinatura nasce aqui.
 - `src/messages/en.ts` exporta `en: Messages` (o mesmo vale para `ko.ts` e
-  `zh-CN.ts`) — o TypeScript aponta qualquer
+  `zh-CN.ts`). O TypeScript aponta qualquer
   chave ou parâmetro faltando (ou sobrando) na tradução.
 - `src/messages/index.ts` é o barrel: `LANGUAGES` (`'pt-BR' | 'en' | 'ko' | 'zh-CN'`),
   `LANGUAGE_LABELS` (nome nativo do idioma, que **não** se traduz), `messages()`
@@ -20,7 +20,7 @@ Regras das strings:
 
 - Strings com parâmetro são **funções** (`connectFirst: (provider: string) => ...`).
 - Marcadores ricos, usados **só na UI**: `**negrito**` vira `<strong>` e
-  `` `código` `` vira `<code>` — renderize com `richText()` (em
+  `` `código` `` vira `<code>`; renderize com `richText()` (em
   `src/renderer/src/i18n.tsx`), que monta nós React sem `dangerouslySetInnerHTML`.
 - Elipses são `…` (U+2026), não `...`.
 
@@ -44,14 +44,14 @@ Regras das strings:
   `Webtoon`, `Manhwa`... (`label` do provedor, `workTypes.webtoon`, título da
   janela).
 - **Logs** (`console.error`/`warn`) e o corpo do 404 interno do protocolo
-  `cover://` — diagnóstico, não UI.
+  `cover://`: diagnóstico, não UI.
 - **Erros vindos de fora** (Dropbox/`error_summary`, mensagens já gravadas em
   `status.lastError`): repassam como chegam.
 
 ## Adicionando uma string
 
 1. Crie a chave em `src/messages/pt-BR.ts` (com parâmetro, se variar).
-2. Traduza em `src/messages/en.ts`, `src/messages/ko.ts` e `src/messages/zh-CN.ts` —
+2. Traduza em `src/messages/en.ts`, `src/messages/ko.ts` e `src/messages/zh-CN.ts`:
    o typecheck reclama se faltar.
 3. Use via `useMessages()` (renderer) ou `currentMessages()` (main).
 4. `npm run check` + `npm test`.

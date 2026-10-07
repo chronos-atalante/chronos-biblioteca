@@ -22,6 +22,10 @@ export default defineConfig({
     root: import.meta.dirname,
     environment: 'jsdom',
     pool: 'forks',
+    // Com 21 forks abrindo jsdom em paralelo, testes que rodam em <1s isolados
+    // já estouraram os 5s padrão e flakaram sob carga; 15s dá folga sem esconder
+    // teste travado (o failure ainda aparece no timeout).
+    testTimeout: 15_000,
     // O registro de IPC/scheme do processo main acontece no import; limpar mocks
     // antes de cada teste apagaria essas chamadas e quebraria os asserts.
     clearMocks: false,

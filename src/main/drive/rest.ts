@@ -32,7 +32,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * Valida a página de `list_folder` antes de ler campo algum.
  *
  * Os elementos de `entries` são checados campo a campo em `toRemoteFile`
- * (id/nome/tipos); aqui só se garante a forma da resposta como um todo —
+ * (id/nome/tipos); aqui só se garante a forma da resposta como um todo:
  * corpo malformado vira erro explícito em vez de listagem vazia silenciosa.
  */
 function isListFolderResponse(value: unknown): value is ListFolderResponse {

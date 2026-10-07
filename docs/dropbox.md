@@ -48,7 +48,7 @@ flowchart TD
 > **A chave padrão já vem embutida no app** (`EMBEDDED_APP_KEY` em
 > `src/main/drive/constants.ts`) e não há mais campo nas Configurações: dá para
 > pular esta seção e conectar direto. A App key é identificador público de
-> cliente OAuth — com PKCE não existe `app secret`, então embuti-la não cria
+> cliente OAuth; com PKCE não existe `app secret`, então embuti-la não cria
 > segredo algum; o `refresh_token` continua só na sua máquina.
 >
 > Esta seção é para quem quiser rodar com um **app Dropbox próprio**

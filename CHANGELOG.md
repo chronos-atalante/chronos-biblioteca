@@ -82,7 +82,7 @@ em português do Brasil.
 
 ### Bug Fixes
 
-- embalagem: o `after-pack` não remove mais o `libffmpeg.so` — o binário do
+- embalagem: o `after-pack` não remove mais o `libffmpeg.so`, o binário do
   Electron o declara como `DT_NEEDED` e o 1.1.1 abria apenas o ícone,
   morrendo com "error while loading shared libraries: libffmpeg.so".
 

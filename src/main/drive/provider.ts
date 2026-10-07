@@ -60,7 +60,7 @@ export function getProvider(id: BackupProviderId): BackupProvider {
  *
  * Hoje só o Dropbox é operante (`operational` no catálogo), então ele é a
  * escolha fixa. A seleção entre provedores passa a existir quando um segundo
- * ficar operante — momento em que a escolha do usuário também deve valer para
+ * ficar operante, momento em que a escolha do usuário também deve valer para
  * `state.tokens`.
  */
 export function currentProvider(): BackupProvider {

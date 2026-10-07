@@ -70,7 +70,7 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
   `useMessages()`/`richText()` (`src/renderer/src/i18n.tsx`), no main
   `currentMessages()` (`src/main/i18n.tsx`). Marcadores ricos `**negrito**` e
   `` `código` `` só em string exibida. Nomes de marca, dados por dependência
-  (`attributions.ts`, `CATEGORIES`) e logs ficam fora dos bundles — regras e
+  (`attributions.ts`, `CATEGORIES`) e logs ficam fora dos bundles; regras e
   lista completas do que não se traduz em `docs/messages.md`.
 
 ## Comandos

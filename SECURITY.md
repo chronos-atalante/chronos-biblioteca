@@ -27,7 +27,7 @@ contrário).
 - **Tokens só na máquina**: `dropbox-tokens.json` com permissão `0600`, nunca em
   repositório (coberto pelo `.gitignore`).
 - **Backup sempre criptografado**: AES-256-GCM com chave derivada por scrypt
-  explícito (`N=2¹⁷`, `r=8`, `p=1` — mínimo atual do OWASP; salt e IV
+  explícito (`N=2¹⁷`, `r=8`, `p=1`; mínimo atual do OWASP; salt e IV
   aleatórios por arquivo, tag verificada na leitura). Formato único
   `WTENC3`; o Dropbox guarda só blobs cifrados.
 - **Nomes remotos opacos**: HMAC-SHA256 com chave de nomes derivada da senha
@@ -63,7 +63,7 @@ contrário).
 - **Porta fixa do callback OAuth (`localhost:17431`)**: exigência do App
   Console do Dropbox (redirect URI cadastrada). Um processo malicioso na
   mesma máquina poderia escutar nessa porta, mas isso exige acesso local ao
-  PC — fora de escopo (ver abaixo).
+  PC, fora de escopo (ver abaixo).
 - **Senha de backup em claro sem keyring**: quando
   `safeStorage.isEncryptionAvailable()` é `false` (containers, WSL sem
   cofre), a `drivePassphrase` vai para `settings.json` com permissão `0600`

@@ -93,7 +93,7 @@ async function resolveLocalNames(
  * estáveis entre backups (mesmo `library.json`, resumo com id real).
  *
  * Devolve `null` quando não dá para aproveitar: primeiro backup (sem
- * manifesto), manifesto v1 (sem salt — o próximo migra para v2) ou manifesto
+ * manifesto), manifesto v1 (sem salt; o próximo migra para v2) ou manifesto
  * ilegível com a senha atual. O chamador sorteia um salt novo nesses casos.
  */
 async function previousNameSalt(

@@ -12,7 +12,7 @@ const HEADER_BYTES = MAGIC_BYTES + SALT_BYTES + IV_BYTES + TAG_BYTES;
 /**
  * Custo do scrypt, sempre explícito (os padrões do Node mudam entre versões):
  * `N=2^17` é o mínimo do OWASP Password Storage Cheat Sheet, ~128 MiB por
- * derivação — 8x o padrão do Node (2^14) e pesado o bastante para inviabilizar
+ * derivação, 8x o padrão do Node (2^14) e pesado o bastante para inviabilizar
  * força bruta paralela (ASIC/GPU) contra a senha, sem travar o backup manual
  * (típico: <1s por arquivo em desktop).
  */
@@ -120,7 +120,7 @@ export function manifestKeyFor(passphrase: string): Buffer {
  * cifrado (aleatório por cadeia de backup), então tabelas pré-computadas com o
  * salt fixo não servem contra um backup real. O custo acompanha o da chave de
  * conteúdo (`N=2^17`): o nome do `library.json` é adivinhável, então um
- * atacante testa senhas candidatas offline pelo HMAC sem decifrar nada — mesma
+ * atacante testa senhas candidatas offline pelo HMAC sem decifrar nada, mesma
  * força da cifra.
  */
 export function nameKeyFor(passphrase: string, salt: Buffer): Buffer {
@@ -181,7 +181,7 @@ function parseNameSalt(value: unknown, invalid: Error): Buffer {
  *
  * - **v2** (`{ v, salt, files }`): formato atual, com o salt da chave de nomes.
  * - **v1** (mapa puro): backups antigos, legados sem salt próprio (`nameSalt`
- *   fica `null` — o próximo backup sorteia um e migra para v2).
+ *   fica `null`; o próximo backup sorteia um e migra para v2).
  */
 export function parseManifest(data: Buffer): Manifest {
   const invalid = new Error(currentMessages().driveErrors.invalidManifest);
