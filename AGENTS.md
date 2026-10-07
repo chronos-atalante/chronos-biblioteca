@@ -25,7 +25,9 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
 
 - Cada arquivo do `main` responde por um domínio; o renderer só conhece o
   contrato de `window.api` (`docs/api.md`).
-- Persistência local em JSON sob `~/.config/chronos-biblioteca/`; a nuvem
+- Persistência local em JSON: obras e capas em `~/.local/share/chronos-biblioteca/`
+  (`library.json`, `covers/`) e configurações e tokens em
+  `~/.config/chronos-biblioteca/` (`settings.json`, `dropbox-tokens.json`); a nuvem
   passa pelo contrato `BackupProvider` (`docs/backup-providers.md`), com o
   Dropbox como único provedor operante (App folder, sem credencial embutida).
 - IPC via `ipcRenderer.invoke` e `ipcMain.handle`; canal novo só com tipo em

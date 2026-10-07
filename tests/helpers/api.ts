@@ -18,6 +18,7 @@ export interface ApiMockOptions {
   status?: DriveStatus;
   backupInfo?: BackupSummary | null;
   providers?: BackupProviderInfo[];
+  keyringAvailable?: boolean;
 }
 
 export interface ApiMock {
@@ -28,6 +29,7 @@ export interface ApiMock {
   pickCover: Mock<() => Promise<string | null>>;
   settingsGet: Mock<() => Promise<AppSettings>>;
   settingsSet: Mock<(settings: AppSettings) => Promise<AppSettings>>;
+  settingsKeyring: Mock<() => Promise<boolean>>;
   driveStatus: Mock<() => Promise<DriveStatus>>;
   driveProviders: Mock<() => Promise<BackupProviderInfo[]>>;
   driveAuth: Mock<() => Promise<{ ok: boolean; error?: string }>>;
@@ -96,6 +98,10 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     Promise.resolve(settings),
   );
 
+  const settingsKeyring = vi.fn((): Promise<boolean> =>
+    Promise.resolve(options.keyringAvailable ?? true),
+  );
+
   const driveStatus = vi.fn((): Promise<DriveStatus> =>
     Promise.resolve({ ...DEFAULT_STATUS, ...(options.status ?? {}) }),
   );
@@ -142,6 +148,7 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     settings: {
       get: settingsGet,
       set: settingsSet,
+      isKeyringAvailable: settingsKeyring,
     },
     drive: {
       status: driveStatus,
@@ -163,6 +170,7 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     pickCover,
     settingsGet,
     settingsSet,
+    settingsKeyring,
     driveStatus,
     driveProviders,
     driveAuth,

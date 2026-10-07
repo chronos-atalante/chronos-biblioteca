@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { loadSettings, saveSettings } from '@zero/main/settings';
+import { isKeyringAvailable, loadSettings, saveSettings } from '@zero/main/settings';
 import { safeStorage } from '../mocks/electron.ts';
 import { resetSandbox, sandboxPath } from '../helpers/sandbox.ts';
 
@@ -157,5 +157,19 @@ describe('settings', () => {
       safeStorage.isEncryptionAvailable.mockReturnValue(false);
     }
     expect(loadSettings().drivePassphrase).toBe('');
+  });
+
+  it('isKeyringAvailable espelha o safeStorage', () => {
+    safeStorage.isEncryptionAvailable.mockReturnValue(true);
+    expect(isKeyringAvailable()).toBe(true);
+    safeStorage.isEncryptionAvailable.mockReturnValue(false);
+    expect(isKeyringAvailable()).toBe(false);
+  });
+
+  it('isKeyringAvailable devolve false quando o safeStorage lança', () => {
+    safeStorage.isEncryptionAvailable.mockImplementationOnce(() => {
+      throw new Error('sem dbus');
+    });
+    expect(isKeyringAvailable()).toBe(false);
   });
 });

@@ -73,6 +73,10 @@ export const ko: Messages = {
       '앱만 그 폴더를 볼 수 있으며, 나머지 Dropbox는 이 앱에 보이지도 않습니다. 폴더는 ' +
       '회원님께 보이므로, 모든 파일은 알아볼 수 없는 이름과 암호화된 내용(AES-256-GCM)으로 ' +
       '업로드됩니다. 첫 백업 전에 아래에서 암호화 비밀번호를 설정하세요.',
+    keyringWarning:
+      '시스템 키체인을 사용할 수 없습니다: 백업 비밀번호가 키체인의 추가 보호 없이 ' +
+      '저장됩니다(파일은 본인만 읽을 수 있습니다). 가능하다면 시스템 키체인(GNOME Keyring, ' +
+      'KWallet, Keychain, DPAPI)을 활성화하세요.',
     languageLabel: '언어',
     providersLabel: '백업 제공업체',
     hiddenFolder: '숨김 폴더',

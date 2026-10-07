@@ -8,7 +8,7 @@ export interface Work {
   synopsis: string;
   type: WorkType;
   status: WorkStatus;
-  /** Progresso de leitura em porcentagem, apenas valores >= 0 (sem limite superior) */
+  /** Progresso de leitura em capítulos, apenas valores >= 0 (sem limite superior) */
   progress: number;
   /** Indicação livre, ex.: "Cap. 45", "Vol. 3" */
   marker?: string | undefined;

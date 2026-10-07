@@ -1,5 +1,5 @@
 /**
- * Mensagens em português (Brasil) — canônico de todas as chaves e assinaturas.
+ * Mensagens em português (Brasil): canônico de todas as chaves e assinaturas.
  *
  * Cada idioma é um objeto com a mesma forma (`Messages = typeof ptBR`); o
  * TypeScript aponta qualquer chave ou parâmetro faltando no `en.ts`. Strings
@@ -79,6 +79,10 @@ export const ptBR = {
       'para ele. Como a pasta é visível para você, todo arquivo sobe com nome ilegível e ' +
       'conteúdo criptografado (AES-256-GCM), então defina a senha de criptografia abaixo ' +
       'antes do primeiro backup.',
+    keyringWarning:
+      'Cofre do sistema indisponível: a senha do backup será guardada sem a proteção ' +
+      'extra do chaveiro (o arquivo continua com acesso só seu). Se puder, ative o ' +
+      'chaveiro do sistema (GNOME Keyring, KWallet, Keychain ou DPAPI).',
     languageLabel: 'Idioma',
     providersLabel: 'Provedores de backup',
     hiddenFolder: 'Pasta oculta',
@@ -172,7 +176,7 @@ export const ptBR = {
     title: 'Atribuições',
     bannerTitle: 'Créditos do projeto.',
     bannerBody:
-      'Estas são as dependências de código aberto usadas no Chronos Biblioteca todas com ' +
+      'Estas são as dependências de código aberto usadas no Chronos Biblioteca, todas com ' +
       'licenças permissivas aprovadas pela OSI. As versões exatas estão em ' +
       '`package.json` / `package-lock.json`.',
     pause: 'Pausar',
@@ -197,7 +201,7 @@ export const ptBR = {
     text2:
       'Querendo ou não, eu tô mais quebrado que arroz de quinta e o backup em nuvem depende ' +
       'do Dropbox: enquanto o app não passar pela revisão de produção, depois das primeiras ' +
-      '50 contas conectadas ele ganha um relógio de 2 semanas para ser aprovado senão para ' +
+      '50 contas conectadas ele ganha um relógio de 2 semanas para ser aprovado, senão para ' +
       'de aceitar gente nova. Sua doação ajuda a manter o app (e a paciência) no ar.',
     text3:
       'A verdade é que esse projeto é pessoal, para eu acompanhar minhas leituras. Porque ' +

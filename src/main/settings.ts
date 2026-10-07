@@ -71,6 +71,18 @@ function unprotect(stored: string): string {
   }
 }
 
+/**
+ * Informa se o cofre do SO está disponível para proteger a senha do backup.
+ * A UI usa isso para avisar quando a senha cai no fallback em claro.
+ */
+export function isKeyringAvailable(): boolean {
+  try {
+    return safeStorage.isEncryptionAvailable();
+  } catch {
+    return false;
+  }
+}
+
 export function loadSettings(): AppSettings {
   try {
     const file = settingsPath();

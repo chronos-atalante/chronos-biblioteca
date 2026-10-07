@@ -70,6 +70,7 @@ const expectedChannels = [
   'cover:pick',
   'settings:get',
   'settings:set',
+  'settings:keyring',
   'drive:status',
   'drive:providers',
   'drive:auth',

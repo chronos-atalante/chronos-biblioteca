@@ -67,8 +67,9 @@ contrário).
 - **Senha de backup em claro sem keyring**: quando
   `safeStorage.isEncryptionAvailable()` é `false` (containers, WSL sem
   cofre), a `drivePassphrase` vai para `settings.json` com permissão `0600`
-  e migra sozinha para o keyring no próximo save. Não há alternativa viável
-  nesses ambientes.
+  e migra sozinha para o keyring no próximo save. A tela de Configurações
+  avisa com `settings.keyringWarning` (`settings.isKeyringAvailable()`).
+  Não há alternativa viável nesses ambientes.
 - **Dependências sem fix upstream**: problemas reportados em dependências de
   desenvolvimento sem versão corrigida publicada são documentados no README
   da parte correspondente e monitorados (ex.: `braces` na landing).

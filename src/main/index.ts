@@ -22,7 +22,7 @@ import {
   mimeFor,
   upsertWork,
 } from '@zero/main/library';
-import { loadSettings, saveSettings } from '@zero/main/settings';
+import { isKeyringAvailable, loadSettings, saveSettings } from '@zero/main/settings';
 import {
   authorize,
   backupInfo,
@@ -188,6 +188,8 @@ function registerIpc(): void {
   ipcMain.handle('settings:set', (_event, settings: AppSettings): AppSettings =>
     saveSettings(settings),
   );
+
+  ipcMain.handle('settings:keyring', (): boolean => isKeyringAvailable());
 
   ipcMain.handle('drive:status', (): DriveStatus => getStatus());
   ipcMain.handle('drive:providers', () => listProviders());

@@ -118,6 +118,12 @@ Normaliza (`trim` em ID/secret; senha preservada como digitada; `language`
 recaído para o valor válido mais próximo), grava `settings.json` com permissão
 `0600` e devolve o valor salvo.
 
+### `settings.isKeyringAvailable() → Promise<boolean>`
+
+Informa se o cofre do SO (`safeStorage`) está disponível para proteger a senha
+do backup. Quando devolve `false`, a senha cai no fallback em claro e a tela de
+Configurações exibe o aviso `settings.keyringWarning`.
+
 ---
 
 ## 5. Backup em nuvem (provedores)
@@ -273,7 +279,7 @@ nome vazio), `500` (URL inválida). Nomes são higienizados com `basename`
 | `synopsis`  | `string`     | sim         | descrição livre                                       |
 | `type`      | `WorkType`   | sim         | `webtoon` `manhwa` `manhua` `manga` `livro` `outro`   |
 | `status`    | `WorkStatus` | sim         | `planejado` `lendo` `pausado` `concluido` `cancelado` |
-| `progress`  | `number`     | sim         | porcentagem, `>= 0`, sem teto                         |
+| `progress`  | `number`     | sim         | capítulos (`Cap. X`), `>= 0`, sem teto                |
 | `marker`    | `string`     | não         | ex.: `Cap. 45`, `Vol. 3`                              |
 | `coverFile` | `string`     | não         | arquivo em `covers/` (ver §6)                         |
 | `category`  | `string`     | não         | ex.: `Isekai`                                         |

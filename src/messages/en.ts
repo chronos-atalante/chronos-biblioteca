@@ -74,6 +74,10 @@ export const en: Messages = {
       'of your Dropbox is not even visible to it. Since the folder is visible to you, every ' +
       'file is uploaded with an unreadable name and encrypted content (AES-256-GCM), so set ' +
       'the encryption password below before the first backup.',
+    keyringWarning:
+      'System keyring unavailable: the backup password will be stored without the extra ' +
+      'keyring protection (the file stays readable only by you). If you can, enable the ' +
+      'system keyring (GNOME Keyring, KWallet, Keychain or DPAPI).',
     languageLabel: 'Language',
     providersLabel: 'Backup providers',
     hiddenFolder: 'Hidden folder',

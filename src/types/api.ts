@@ -14,6 +14,7 @@ export interface ElectronApi {
   settings: {
     get: () => Promise<AppSettings>;
     set: (settings: AppSettings) => Promise<AppSettings>;
+    isKeyringAvailable: () => Promise<boolean>;
   };
   drive: {
     status: () => Promise<DriveStatus>;

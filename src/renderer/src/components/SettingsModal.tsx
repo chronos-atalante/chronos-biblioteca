@@ -45,6 +45,7 @@ export default function SettingsModal({
   const [status, setStatus] = useState<DriveStatus | null>(null);
   const [info, setInfo] = useState<BackupSummary | null>(null);
   const [providers, setProviders] = useState<BackupProviderInfo[]>([]);
+  const [keyring, setKeyring] = useState<boolean | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [promptRestore, setPromptRestore] = useState(false);
@@ -76,16 +77,19 @@ export default function SettingsModal({
     const unsubscribe = window.api.drive.onStatus((next) => setStatus(next));
 
     const loadInitial = async (): Promise<void> => {
-      const [loadedSettings, driveStatus, backupSummary, providerCatalog] = await Promise.all([
-        window.api.settings.get(),
-        window.api.drive.status(),
-        window.api.drive.backupInfo(),
-        window.api.drive.providers(),
-      ]);
+      const [loadedSettings, driveStatus, backupSummary, providerCatalog, keyringAvailable] =
+        await Promise.all([
+          window.api.settings.get(),
+          window.api.drive.status(),
+          window.api.drive.backupInfo(),
+          window.api.drive.providers(),
+          window.api.settings.isKeyringAvailable(),
+        ]);
       setSettings(loadedSettings);
       setStatus(driveStatus);
       setInfo(backupSummary);
       setProviders(providerCatalog);
+      setKeyring(keyringAvailable);
       setLoading(false);
     };
 
@@ -180,6 +184,11 @@ export default function SettingsModal({
             <div className="banner info">
               <strong>{m.settings.bannerTitle}</strong> {richText(m.settings.bannerBody)}
             </div>
+            {keyring === false ? (
+              <div className="banner warning">
+                <i className="fa-solid fa-triangle-exclamation" /> {m.settings.keyringWarning}
+              </div>
+            ) : null}
 
             <div className="form-row">
               <div className="field">

@@ -1,8 +1,8 @@
 # Chronos Biblioteca
 
 Aplicativo desktop (Electron + TypeScript + React) para anotar o progresso das suas leituras de
-**webtoons, manhwas, manhuas, mangás e livros**: capa da obra, título, descrição, barra de
-progresso em porcentagem e marcação de conclusão, com **backup manual no Dropbox** na pasta do
+**webtoons, manhwas, manhuas, mangás, livros e outros**: capa da obra, título, descrição, barra de
+progresso em capítulos e marcação de conclusão, com **backup manual no Dropbox** na pasta do
 app.
 
 Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
@@ -11,7 +11,7 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 
 ## Recursos
 
-- **Biblioteca em grade** com capa, título, tipo (webtoon/manhwa/manhua/mangá/livro), status
+- **Biblioteca em grade** com capa, título, tipo (webtoon/manhwa/manhua/mangá/livro/outro), status
   (planejado, lendo, pausado, concluído, cancelado) e progresso.
 - **Capa da obra**: escolha uma imagem JPG/PNG/WebP do disco. A imagem é copiada para a
   biblioteca local e servida pelo protocolo interno `cover://`.
@@ -34,7 +34,7 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
   rolagem lenta e contínua (estilo pós-créditos de cinema), com pausar/continuar e
   respeito a `prefers-reduced-motion`; detalhes em [`docs/atribuicoes.md`](docs/atribuicoes.md).
 - **Doações**: botão **Doar** no cabeçalho abre a página de apoio ao projeto, com link do
-  Mercado Pago (abre no navegador), botão de copiar e QR Code Pix; detalhes em
+  Mercado Pago (abre no navegador) e botão de copiar; detalhes em
   [`docs/doacoes.md`](docs/doacoes.md).
 - **Idioma**: interface em **português (Brasil)**, **inglês** ou **coreano**, escolhido em Configurações e
   persistido; todo texto fixo mora em `src/messages/` (ver [`docs/messages.md`](docs/messages.md)).
@@ -44,7 +44,7 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 
 ## Instalação
 
-### Via repositório APT (recomendado — recebe `sudo apt upgrade`)
+### Via repositório APT (recomendado: recebe `sudo apt upgrade`)
 
 O repositório é a própria GitHub Release do projeto (índices assinados como
 assets; nada de binário no git). Motivo da escolha, passo a passo da
@@ -80,7 +80,7 @@ npm install
 npm run dist
 
 # instale
-sudo apt install ./release/chronos-biblioteca_1.1.1_amd64.deb
+sudo apt install ./release/chronos-biblioteca_*_amd64.deb
 ```
 
 O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
@@ -88,7 +88,8 @@ O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
 - Executável: `/opt/Chronos Biblioteca/chronos-biblioteca` (alternativa
   `/usr/bin/chronos-biblioteca`)
 - Ícone instalado em `/usr/share/icons/hicolor/512x512/apps/chronos-biblioteca.png`
-- Dados: `~/.config/chronos-biblioteca/` (`library.json`, `covers/`, `settings.json`,
+- Dados: obras e capas em `~/.local/share/chronos-biblioteca/` (`library.json`, `covers/`);
+  configurações e tokens em `~/.config/chronos-biblioteca/` (`settings.json`,
   `dropbox-tokens.json`)
 
 ---
@@ -106,7 +107,7 @@ O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
 | `npm test`               | Roda a suíte Vitest (`tests/**/*.test.{ts,tsx}`)   |
 | `npm run security:audit` | Auditoria de vulnerabilidades via OSV Scanner      |
 | `npm run check`          | `typecheck` + `lint` + `format:check` + auditoria  |
-| `npm run clean`          | Apaga `out/` (build anterior) com rimraf           |
+| `npm run clean`          | Apaga `out/` (build anterior)                      |
 | `npm run build`          | Limpa + compila main/preload/renderer              |
 | `npm run dist`           | Build + gera o `.deb` com electron-builder         |
 
@@ -225,13 +226,14 @@ flowchart TD
     end
 
     subgraph STORAGE["Persistência"]
-        LOKAL[("~/.config/chronos-biblioteca/<br/>library.json · covers/ · settings.json · dropbox-tokens.json")]
+        LOKAL[("~/.local/share/chronos-biblioteca/<br/>library.json · covers/")]
+        CFG[("~/.config/chronos-biblioteca/<br/>settings.json · dropbox-tokens.json")]
         DRIVE[("Dropbox · pasta do app /Apps/Chronos Biblioteca")]
     end
 
     BRIDGE -->|"ipcRenderer.invoke"| IDX
     IDX --> LIB --> LOKAL
-    IDX --> SET --> LOKAL
+    IDX --> SET --> CFG
     IDX --> DRV
     DRV <-->|"HTTPS (fetch) · App folder + PKCE, sem secret"| DRIVE
     IDX -.->|"cover://imagens-da-capa"| UI1
@@ -298,7 +300,7 @@ Webtoons/
 │   ├── distribuicao-apt.md     # distribuição: Release + repo APT flat assinado
 │   ├── messages.md             # i18n: bundles pt-BR/en/ko e o que não se traduz
 │   ├── atribuicoes.md        # página de Atribuições (créditos em loop)
-│   ├── doacoes.md            # página de Doações (Mercado Pago + QR Pix)
+│   ├── doacoes.md            # página de Doações (Mercado Pago)
 │   └── api.md                # referência da API interna
 ├── src/
 │   ├── main/                 # processo main (Electron)
@@ -325,7 +327,7 @@ Webtoons/
 │   ├── preload/index.ts      # contextBridge (window.api)
 │   ├── renderer/             # React + Vite
 │   │   ├── index.html        # CSP com scheme cover:
-│   │   └── src/              # App, i18n.tsx (contexto de idioma), componentes, assets/qr-code-pix.png, donations.ts, style/styles.css
+│   │   └── src/              # App, i18n.tsx (contexto de idioma), componentes, donations.ts, style/styles.css
 │   ├── types/                # tipos compartilhados main ↔ renderer (@zero/types)
 │   │   ├── index.ts          # barrel (arquivo index só como barrel)
 │   │   ├── work.ts           # Work, WorkType, WorkStatus
@@ -363,7 +365,7 @@ flowchart LR
     PRT --> VITE
     VITE --> EB["electron-builder --linux deb"]
     ICON["build/icon.png"] --> EB
-    EB --> DEB[("release/<br/>chronos-biblioteca_1.0.1_amd64.deb")]
+    EB --> DEB[("release/<br/>chronos-biblioteca_<versão>_amd64.deb")]
 ```
 
 Detalhes da configuração (campo `build` do `package.json`):
@@ -372,9 +374,9 @@ Detalhes da configuração (campo `build` do `package.json`):
 - `desktopName` + `syncDesktopName` para o `StartupWMClass` casar com a janela (associação
   correta no menu/ALT+TAB do Mint)
 - Ícone empacotado em `usr/share/icons/hicolor/512x512/apps/`
-- `homepage` no `package.json` é um **placeholder** (`https://example.com/chronos-biblioteca`):
-  o alvo `deb` do electron-builder exige uma URL no campo `Homepage:` do controle do pacote e o
-  projeto não está no GitHub
+- `homepage` no `package.json` aponta para o repositório
+  (`https://github.com/chronos-atalante/chronos-biblioteca`): o alvo `deb` do
+  electron-builder exige uma URL no campo `Homepage:` do controle do pacote
 - `postinst` do electron-builder cuida do AppArmor (Ubuntu/Mint 24+) e do `chrome-sandbox`
 - Slim via `afterPack` (`build/after-pack.cjs`): remove do pacote locales não usados
   (mantém `pt-BR`/`pt-PT`/`en-US`), SwiftShader/Vulkan e `libffmpeg` (o app é DOM/CSS
@@ -453,7 +455,7 @@ Guias e referências (tudo em pt-BR):
 | [`docs/backup-providers.md`](docs/backup-providers.md) | Provedores de backup: contrato, catálogo e Google Drive oculto   |
 | [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md) | Distribuição: Release, repo APT flat assinado e fluxo de release |
 | [`docs/atribuicoes.md`](docs/atribuicoes.md)           | Página de Atribuições: créditos em loop e licenças               |
-| [`docs/doacoes.md`](docs/doacoes.md)                   | Página de Doações: Mercado Pago + QR Pix                         |
+| [`docs/doacoes.md`](docs/doacoes.md)                   | Página de Doações: Mercado Pago                                  |
 | [`docs/messages.md`](docs/messages.md)                 | i18n: bundles de mensagens (pt-BR/en/ko) e regras de tradução    |
 | [`docs/api.md`](docs/api.md)                           | Referência da API interna (`window.api` + canais IPC)            |
 | [`docs/openapi.yaml`](docs/openapi.yaml)               | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)              |

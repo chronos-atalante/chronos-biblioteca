@@ -340,3 +340,18 @@ describe('SettingsModal: idioma', () => {
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Settings saved.'));
   });
 });
+
+describe('SettingsModal: aviso de chaveiro', () => {
+  it('avisa quando o cofre do sistema está indisponível', async () => {
+    const { mock } = setup({ keyringAvailable: false });
+    await screen.findByText('Desconectado');
+    expect(mock.settingsKeyring).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/Cofre do sistema indisponível/)).toBeInTheDocument();
+  });
+
+  it('não avisa quando o cofre do sistema está disponível', async () => {
+    setup({ keyringAvailable: true });
+    await screen.findByText('Desconectado');
+    expect(screen.queryByText(/Cofre do sistema indisponível/)).not.toBeInTheDocument();
+  });
+});

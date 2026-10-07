@@ -185,7 +185,7 @@ push na main (versão nova) → Verificar versão (package.json vs Releases) →
 A tag é criada **pelo próprio CI, no commit do push**, então o workflow que
 roda é o da `main` e a tag nunca aponta para um commit antigo (lição da
 v1.1.1, abaixo). Como o push de tag sai do `GITHUB_TOKEN` da mesma execução,
-ele não dispara um segundo run — não há loop nem build duplicado.
+ele não dispara um segundo run: não há loop nem build duplicado.
 
 ## Publicação de uma nova versão (fluxo semanal)
 

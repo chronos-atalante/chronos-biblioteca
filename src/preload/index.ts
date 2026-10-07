@@ -11,6 +11,7 @@ const api: ElectronApi = {
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     set: (settings) => ipcRenderer.invoke('settings:set', settings),
+    isKeyringAvailable: () => ipcRenderer.invoke('settings:keyring'),
   },
   drive: {
     status: () => ipcRenderer.invoke('drive:status'),
