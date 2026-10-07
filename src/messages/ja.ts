@@ -90,6 +90,12 @@ export const ja: Messages = {
     accountFallback: 'Dropbox アカウント',
     lastBackup: '最終バックアップ',
     inDropboxBackup: 'Dropbox バックアップ内',
+    translationNotice: {
+      title: 'Translation Notice',
+      text: 'これらの言語の中でポルトガル語以外は話せません。すべての翻訳はAIによって行われています。世の中のすべてと同じように、間違いがあるかもしれません。少しの寛容をお願いいたします。',
+      translationNotice2:
+        '翻訳の改善にご協力いただける場合は、プロジェクトのリポジトリで Issue を作成してください。',
+    },
     worksInBackup: (works: number): string => `${works} 件`,
     syncingBanner: 'Dropbox と同期中…',
     disconnectTitle: 'このアプリから Dropbox アカウントの接続を解除します',

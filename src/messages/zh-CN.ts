@@ -107,6 +107,11 @@ export const zhCN: Messages = {
     toastRestoreFailed: '恢复失败。',
     toastRestored: (works: number): string => `已恢复备份，共${works} 部作品。`,
     toastDisconnected: 'Dropbox账号已断开。',
+    translationNotice: {
+      title: 'Translation Notice',
+      text: '这些语言中只有葡萄牙语我会说，所有翻译都是由AI完成的。像世间万物一样，可能会有错误，请多包涵。',
+      translationNotice2: '如果您想帮助改进翻译，请在项目仓库中提交 issue。',
+    },
   },
 
   restore: {

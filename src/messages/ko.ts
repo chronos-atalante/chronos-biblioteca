@@ -109,6 +109,11 @@ export const ko: Messages = {
     toastRestoreFailed: '복원에 실패했습니다.',
     toastRestored: (works: number): string => `백업에서 ${works}개 작품을 복원했습니다.`,
     toastDisconnected: 'Dropbox 계정 연결이 해제되었습니다.',
+    translationNotice: {
+      title: 'Translation Notice',
+      text: '이 언어들 중에서 포르투갈어를 제외하고는 할 줄 모릅니다. 모든 번역은 AI가 했습니다. 세상의 모든 것과 마찬가지로 오류가 있을 수 있으니 너그러운 양해 부탁드립니다.',
+      translationNotice2: '번역 개선에 도움을 주고 싶다면 프로젝트 저장소에 이슈를 열어 주세요.',
+    },
   },
 
   restore: {

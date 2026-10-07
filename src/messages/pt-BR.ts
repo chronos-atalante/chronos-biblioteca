@@ -115,6 +115,12 @@ export const ptBR = {
     toastRestoreFailed: 'Falha ao restaurar.',
     toastRestored: (works: number): string => `Backup restaurado com ${works} obra(s).`,
     toastDisconnected: 'Conta Dropbox desconectada.',
+    translationNotice: {
+      title: 'Aviso sobre traduções',
+      text: 'Eu não falo nenhum desses idiomas com exceção do português, e toda a tradução é feita por IA. Como tudo nesse mundo, pode haver falhas, então peço um pouco de paciência.',
+      translationNotice2:
+        'Se você quiser ajudar a melhorar a tradução, abra uma issue no repositório do projeto.',
+    },
   },
 
   restore: {

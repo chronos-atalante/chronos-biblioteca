@@ -110,6 +110,12 @@ export const en: Messages = {
     toastRestoreFailed: 'Restore failed.',
     toastRestored: (works: number): string => `Backup restored with ${works} work(s).`,
     toastDisconnected: 'Dropbox account disconnected.',
+    translationNotice: {
+      title: 'Translation Notice',
+      text: "I don't speak any of these languages except Portuguese, and all translations are done by AI. Like everything in this world, there may be errors, so please have a little patience.",
+      translationNotice2:
+        'If you would like to help improve the translation, please open an issue on the project repository.',
+    },
   },
 
   restore: {
