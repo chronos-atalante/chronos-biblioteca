@@ -59,7 +59,8 @@ export const app = {
   whenReady: vi.fn<() => Promise<void>>(() => Promise.resolve()),
   getName: vi.fn<() => string>(() => 'chronos-biblioteca'),
   name: 'Chronos Biblioteca',
-  isPackaged: vi.fn<() => boolean>(() => false),
+  // Propriedade booleana, como no Electron real (não função).
+  isPackaged: false,
 };
 
 export const Menu = {
@@ -120,6 +121,19 @@ export const contextBridge = {
   exposeInMainWorld: vi.fn<(key: string, api: unknown) => void>(),
 };
 
+export type PermissionRequestHandler = (
+  webContents: unknown,
+  permission: string,
+  callback: (permissionGranted: boolean) => void,
+  details: unknown,
+) => void;
+
+export const session = {
+  defaultSession: {
+    setPermissionRequestHandler: vi.fn<(handler: PermissionRequestHandler) => void>(),
+  },
+};
+
 export function resetElectronMock(): void {
   BrowserWindow.instances.length = 0;
   app.getPath.mockClear();
@@ -141,10 +155,10 @@ export function resetElectronMock(): void {
   ipcRenderer.on.mockClear();
   ipcRenderer.removeListener.mockClear();
   contextBridge.exposeInMainWorld.mockClear();
+  session.defaultSession.setPermissionRequestHandler.mockClear();
   BrowserWindow.getAllWindows.mockClear();
   BrowserWindow.fromWebContents.mockClear();
   app.getName.mockClear();
-  app.isPackaged.mockClear();
   Menu.buildFromTemplate.mockClear();
   Menu.setApplicationMenu.mockClear();
   globalShortcut.register.mockClear();

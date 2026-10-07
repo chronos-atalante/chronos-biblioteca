@@ -4,9 +4,9 @@
 
 | Versão | Suporte             |
 | ------ | ------------------- |
-| 1.0.x  | ✅ Correções ativas |
+| 1.5.x  | ✅ Correções ativas |
 
-Versões anteriores ao 1.0.0 não recebem correções; atualize pelo `.deb` mais
+Versões anteriores à linha suportada não recebem correções; atualize pelo `.deb` mais
 recente (`npm run dist` gera em `release/`).
 
 ## Como reportar uma vulnerabilidade
@@ -27,7 +27,7 @@ contrário).
 - **Tokens só na máquina**: `dropbox-tokens.json` com permissão `0600`, nunca em
   repositório (coberto pelo `.gitignore`).
 - **Backup sempre criptografado**: AES-256-GCM com chave derivada por scrypt
-  explícito (`N=2¹⁷`, `r=8`, `p=1` — mínimo atual do OWASP; salt e IV
+  explícito (`N=2¹⁷`, `r=8`, `p=1`; mínimo atual do OWASP; salt e IV
   aleatórios por arquivo, tag verificada na leitura). Formato único
   `WTENC3`; o Dropbox guarda só blobs cifrados.
 - **Nomes remotos opacos**: HMAC-SHA256 com chave de nomes derivada da senha
@@ -55,6 +55,33 @@ contrário).
 - **URLs externas só por `https:`**: o `shell.openExternal` é acionado pelo
   helper `openExternalSafe` (`src/main/external.ts`), que recusa qualquer
   protocolo fora de `https:` vindo do renderer ou do fluxo OAuth.
+- **Janela e sessão contidas**: a navegação do renderer fica presa à página do
+  app (`will-navigate` recusa salto para outra URL), o `setWindowOpenHandler`
+  nunca cria janela dentro do app, toda permissão web da sessão é negada no
+  renderer menos o clipboard (modal de doação) e o DevTools está desligado no
+  app empacotado (`devTools: !app.isPackaged`).
+- **Restauração com trava exponencial**: senha errada não é punida na hora
+  (2 tentativas livres), mas a partir da terceira a espera sobe 10 s → 30 s →
+  1 min → 5 min até 15 min, checada **antes** de qualquer chamada de rede;
+  conta só `PassphraseError`, nunca erro de rede, e o sucesso zera a trava
+  (`src/main/drive/restore-lock.ts`).
+- **Ids sem caminho**: `isValidWorkId` rejeita `..`, `/` e `\` nos ids aceitos
+  pela IPC e nos vindos da nuvem (o id inválido vira UUID novo), inclusive no
+  nome de capa importado (defesa em profundidade, classe CVE-2026-21589).
+- **Escrita de JSON atômica**: `library.json`, `settings.json` e
+  `dropbox-tokens.json` são gravados em `.tmp` e renomeados por cima (nunca
+  JSON pela metade), com `0600` onde há credencial
+  (`src/main/jsonfile.ts`).
+- **IPC fechado por origem**: todo handler confere `event.senderFrame` contra a
+  página oficial do app (scheme `chronos://` em produção ou dev server do
+  Vite), bloqueando a mensagem antes do domínio tocar.
+- **Sem `file://` em produção**: o renderer é servido por `chronos://`
+  (`registerAppProtocol` com path-traversal rejeitado), e o
+  `grantFileProtocolExtraPrivileges` está desligado via fuse.
+- **Fuses do Electron**: `runAsNode: false`, `NODE_OPTIONS` e inspetor de
+  `--inspect` desligados, `enableCookieEncryption: true`,
+  `onlyLoadAppFromAsar: true`
+  no `electron-builder`.
 - **Dependências auditadas**: `npm run security:audit` (OSV Scanner) roda em
   todo `npm run check`.
 
@@ -63,7 +90,7 @@ contrário).
 - **Porta fixa do callback OAuth (`localhost:17431`)**: exigência do App
   Console do Dropbox (redirect URI cadastrada). Um processo malicioso na
   mesma máquina poderia escutar nessa porta, mas isso exige acesso local ao
-  PC — fora de escopo (ver abaixo).
+  PC, fora de escopo (ver abaixo).
 - **Senha de backup em claro sem keyring**: quando
   `safeStorage.isEncryptionAvailable()` é `false` (containers, WSL sem
   cofre), a `drivePassphrase` vai para `settings.json` com permissão `0600`

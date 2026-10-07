@@ -4,7 +4,7 @@ import { deleteFile, downloadFile, listAppFiles, uploadFile } from '@zero/main/d
 
 /**
  * Provedor Dropbox: só adapta o OAuth PKCE e o REST já existentes ao contrato
- * `BackupProvider` — a implementação de verdade continua em `oauth.ts` e
+ * `BackupProvider`; a implementação de verdade continua em `oauth.ts` e
  * `rest.ts` (guia em `docs/dropbox.md`).
  */
 export const dropboxProvider: BackupProvider = {

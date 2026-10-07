@@ -189,6 +189,9 @@ export default function SettingsModal({
                 <i className="fa-solid fa-triangle-exclamation" /> {m.settings.keyringWarning}
               </div>
             ) : null}
+            <div className="banner info">
+              <i className="fa-solid fa-circle-info" /> {m.settings.translationNotice.text}
+            </div>
 
             <div className="form-row">
               <div className="field">

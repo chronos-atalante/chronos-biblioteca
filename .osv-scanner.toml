@@ -1,4 +1,4 @@
-# Ignições de vulnerabilidades sem fix upstream — cada uma com justificativa e
+# Ignições de vulnerabilidades sem fix upstream, cada uma com justificativa e
 # data de revisão (`ignoreUntil`): passou da data, volta a falhar o `security:audit`
 # e força uma nova checagem.
 # Histórico: GHSA-ch52-4w7c-c8xp (http-cache-semantics) foi resolvido em

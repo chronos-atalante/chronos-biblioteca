@@ -230,7 +230,7 @@ Casos de exceção (o mesmo workflow, sem checar a versão):
   plataforma rejeita `target_commitish` com SHA para `GITHUB_TOKEN`
   (bug conhecido, `cli/cli#9514`). Nada de configuração local resolve; a
   solução foi o bump manual de versão com publicação automática pelo
-  `publish.yml` (descrito acima) — ele cria a **tag via `git push`** antes
+  `publish.yml` (descrito acima); ele cria a **tag via `git push`** antes
   de chamar a API da Release, então o `target_commitish` nunca é preciso.
 - **A v1.1.1 não abria (só o ícone).** O `after-pack.cjs` removia o
   `libffmpeg.so`, mas o binário do Electron o declara como `DT_NEEDED` e o

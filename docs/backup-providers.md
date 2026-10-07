@@ -9,7 +9,7 @@ Dropbox (OAuth, App folder, troubleshooting) continua em
 
 | Provedor         | Situação                    | Destino do backup                                                            |
 | ---------------- | --------------------------- | ---------------------------------------------------------------------------- |
-| **Dropbox**      | **Operante** — único em uso | `/Apps/Chronos Biblioteca` (pasta visível na sua conta)                      |
+| **Dropbox**      | **Operante** (único em uso) | `/Apps/Chronos Biblioteca` (pasta visível na sua conta)                      |
 | **Google Drive** | **Não operante**            | `appDataFolder` (**pasta oculta**, não aparece na interface do Google Drive) |
 
 Em Configurações → **Provedores de backup** os dois aparecem: o Google Drive
@@ -32,7 +32,7 @@ no idioma corrente). Não há como “conectar” o Google Drive por engano.
 ### Pasta oculta no Google Drive (decisão de design)
 
 Quando o Google Drive for ativado, o backup **grava na pasta oculta
-`appDataFolder`** — e não em pasta visível:
+`appDataFolder`** e não em pasta visível:
 
 - `appDataFolder` só existe pela API (escopo `drive.appdata`) e **não aparece
   na interface do Google Drive**: ninguém vê a pasta na conta, e o app nem
@@ -69,12 +69,12 @@ O contrato é pequeno de propósito: `authorize()` + as 4 operações de arquivo
 (`listAppFiles`, `uploadFile`, `downloadFile`, `deleteFile`). Criptografia,
 manifesto e orquestração ficam fora, compartilhados por todos. Os textos da UI
 do catálogo (`label`, `unavailableReason`, `storageTarget`) são montados por
-`describe(messages)` no idioma corrente — ver [`messages.md`](messages.md).
+`describe(messages)` no idioma corrente; ver [`messages.md`](messages.md).
 
 ## Como ativar o Google Drive (ou um terceiro provedor)
 
 1. Implementar OAuth (PKCE + loopback, mesmo desenho do Dropbox) e o REST do
-   Drive em `src/main/drive/providers/` — **gravando em `appDataFolder`**,
+   Drive em `src/main/drive/providers/`, **gravando em `appDataFolder`**,
    com a pasta oculta.
 2. Marcar `operational: true` e zerar `unavailableReason` no catálogo.
 3. Generalizar o estado: hoje `state.tokens` é único e `currentProvider()` é

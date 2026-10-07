@@ -11,6 +11,7 @@ import {
   dataDir,
   deleteWork,
   importCover,
+  isValidWorkId,
   listCoverFiles,
   loadLibrary,
   mimeFor,
@@ -176,6 +177,23 @@ describe('biblioteca', () => {
     upsertWork(makeDraft({ id: 'sem-capa' }));
     expect(deleteWork('sem-capa')).toEqual([]);
   });
+
+  it('upsertWork e deleteWork recusam id com separador de caminho', () => {
+    for (const id of ['../fora', 'a/b', 'a\\b', '.', 'x'.repeat(65)]) {
+      expect(() => upsertWork(makeDraft({ id }))).toThrow('Identificador de obra inválido.');
+      expect(() => deleteWork(id)).toThrow('Identificador de obra inválido.');
+    }
+    expect(loadLibrary()).toHaveLength(0);
+  });
+
+  it('isValidWorkId aceita UUID e id curto, recusa ponto e separadores', () => {
+    expect(isValidWorkId(newId())).toBe(true);
+    expect(isValidWorkId('obra-1')).toBe(true);
+    expect(isValidWorkId('')).toBe(false);
+    expect(isValidWorkId('..')).toBe(false);
+    expect(isValidWorkId('a.b')).toBe(false);
+    expect(isValidWorkId('a/b')).toBe(false);
+  });
 });
 
 describe('capas', () => {
@@ -225,6 +243,18 @@ describe('capas', () => {
     }
   });
 
+  it('importCover ignora id preferido fora da régua', () => {
+    const source = path.join(os.tmpdir(), `chronos-src2-${Date.now()}.png`);
+    fs.writeFileSync(source, 'x', 'utf-8');
+    try {
+      const name = importCover(source, '../escapou');
+      expect(name).toMatch(/^[0-9a-f-]{36}\.png$/);
+      expect(name).not.toContain('..');
+    } finally {
+      fs.rmSync(source, { force: true });
+    }
+  });
+
   it('listCoverFiles ignora arquivos ocultos', () => {
     writeCoversDirFile('visible.png');
     writeCoversDirFile('.hidden.png');
@@ -266,6 +296,13 @@ describe('restoreLibrary', () => {
     const restored = restoreLibrary([work]);
     expect(restored[0]?.createdAt).toBe(work.createdAt);
     expect(restored[0]?.updatedAt).toBe(work.updatedAt);
+  });
+
+  it('troca id fora da régua vindo da nuvem por um novo UUID', () => {
+    const restored = restoreLibrary([makeWork({ id: '../id-malicioso' })]);
+    expect(restored[0]?.id).not.toBe('../id-malicioso');
+    expect(restored[0]?.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(loadLibrary()[0]?.id).toBe(restored[0]?.id);
   });
 });
 

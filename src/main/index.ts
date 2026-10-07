@@ -10,6 +10,7 @@ import {
   ipcMain,
   nativeImage,
   protocol,
+  session,
 } from 'electron';
 import {
   cacheDir,
@@ -43,7 +44,16 @@ protocol.registerSchemesAsPrivileged([
     scheme: 'cover',
     privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
   },
+  {
+    // Scheme que serve a página do app em produção (via protocol.handle), no
+    // lugar de file:// (recomendado pela doc de 2026 do Electron).
+    scheme: 'chronos',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+  },
 ]);
+
+const APP_SCHEME = 'chronos';
+const APP_ORIGIN = `${APP_SCHEME}://app`;
 
 // Diretórios da marca anterior (Webtoons Biblioteca), mantidos para migração.
 const legacyDirs = [
@@ -111,6 +121,8 @@ function createWindow(): void {
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
+      // Em produção o DevTools fica de fora: o atalho não expõe o renderer.
+      devTools: !app.isPackaged,
     },
   });
 
@@ -121,12 +133,15 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
+  // O app é uma SPA local: navegação só vale para a própria página (o reload
+  // mantém a mesma URL); qualquer salto para outra URL é recusado.
   const devUrl = process.env.ELECTRON_RENDERER_URL;
-  if (devUrl !== undefined && devUrl !== '') {
-    void mainWindow.loadURL(devUrl);
-  } else {
-    void mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
-  }
+  const targetUrl = devUrl !== undefined && devUrl !== '' ? devUrl : `${APP_ORIGIN}/index.html`;
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== targetUrl) event.preventDefault();
+  });
+
+  void mainWindow.loadURL(targetUrl);
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -154,14 +169,133 @@ function registerCoverProtocol(): void {
   });
 }
 
+/** Extenação → tipo MIME mínimo para servir a SPA local. */
+function rendererMime(file: string): string {
+  switch (path.extname(file).toLowerCase()) {
+    case '.html':
+      return 'text/html; charset=utf-8';
+    case '.js':
+    case '.mjs':
+      return 'text/javascript; charset=utf-8';
+    case '.css':
+      return 'text/css; charset=utf-8';
+    case '.json':
+      return 'application/json; charset=utf-8';
+    case '.map':
+      return 'application/json; charset=utf-8';
+    case '.svg':
+      return 'image/svg+xml';
+    case '.png':
+      return 'image/png';
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.gif':
+      return 'image/gif';
+    case '.webp':
+      return 'image/webp';
+    case '.avif':
+      return 'image/avif';
+    case '.ico':
+      return 'image/x-icon';
+    case '.woff':
+      return 'font/woff';
+    case '.woff2':
+      return 'font/woff2';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
+/**
+ * Serve a SPA empacotada sob o scheme `chronos://` (em vez de `file://`,
+ * recomendado pela doc atual do Electron): todo `/assets/...` resolve dentro de
+ * `out/renderer`, com path traversal rejeitado por `path.resolve` + prefix.
+ */
+function registerAppProtocol(): void {
+  const root = path.join(__dirname, '../renderer');
+  protocol.handle(APP_SCHEME, (request) => {
+    try {
+      const u = new URL(request.url);
+      const rel = decodeURIComponent(u.pathname).replace(/^\/+/, '');
+      const full = path.resolve(root, rel === '' ? 'index.html' : rel);
+      if (!full.startsWith(`${root}${path.sep}`)) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      if (!fs.existsSync(full) || fs.statSync(full).isDirectory()) {
+        return new Response('Não encontrado.', { status: 404 });
+      }
+      return new Response(new Uint8Array(fs.readFileSync(full)), {
+        headers: { 'Content-Type': rendererMime(full) },
+      });
+    } catch {
+      return new Response('Erro', { status: 500 });
+    }
+  });
+}
+
+/**
+ * Nega toda permissão web do renderer (mídia, geolocalização, notificações…);
+ * só o clipboard passa, usado pelo modal de doação para copiar o link.
+ */
+function registerPermissionPolicy(): void {
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    callback(permission === 'clipboard-read' || permission === 'clipboard-sanitized-write');
+  });
+}
+
+/**
+ * Só aceita URL da página oficial do app: dev server do Vite em dev, ou o
+ * scheme `chronos://` em produção. Qualquer frame fora desse host (ex.: um
+ * `<webview>` injetado) é bloqueado antes do handler de domínio rodar.
+ */
+function isAppFrameUrl(url: string | undefined): boolean {
+  if (url === undefined) return false;
+  const devUrl = process.env.ELECTRON_RENDERER_URL;
+  const base = devUrl !== undefined && devUrl !== '' ? devUrl : `${APP_ORIGIN}/index.html`;
+  try {
+    const frame = new URL(url);
+    const expected = new URL(base);
+    return (
+      frame.protocol === expected.protocol &&
+      frame.host === expected.host &&
+      frame.port === expected.port
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Recusa IPC cujo emissor não é a página oficial do app (scheme `chronos://`
+ * em produção ou dev server do Vite em dev). Requer `event.senderFrame`.
+ */
+function assertAppFrame(event: unknown): void {
+  const sf = (event as { senderFrame?: { url?: unknown } | null } | null | undefined)?.senderFrame;
+  const url = sf?.url;
+  if (!isAppFrameUrl(typeof url === 'string' ? url : undefined)) {
+    throw new Error('IPC bloqueado: frame fora da página oficial do app.');
+  }
+}
+
 function registerIpc(): void {
-  ipcMain.handle('library:get', (): Work[] => loadLibrary());
+  ipcMain.handle('library:get', (event): Work[] => {
+    assertAppFrame(event);
+    return loadLibrary();
+  });
 
-  ipcMain.handle('library:save', (_event, work: Work): Work[] => upsertWork(work));
+  ipcMain.handle('library:save', (event, work: Work): Work[] => {
+    assertAppFrame(event);
+    return upsertWork(work);
+  });
 
-  ipcMain.handle('library:delete', (_event, id: string): Work[] => deleteWork(id));
+  ipcMain.handle('library:delete', (event, id: string): Work[] => {
+    assertAppFrame(event);
+    return deleteWork(id);
+  });
 
   ipcMain.handle('cover:pick', async (event): Promise<string | null> => {
+    assertAppFrame(event);
     const m = currentMessages();
     const options = {
       title: m.dialogs.pickCover,
@@ -183,21 +317,49 @@ function registerIpc(): void {
     return importCover(first);
   });
 
-  ipcMain.handle('settings:get', (): AppSettings => loadSettings());
+  ipcMain.handle('settings:get', (event): AppSettings => {
+    assertAppFrame(event);
+    return loadSettings();
+  });
 
-  ipcMain.handle('settings:set', (_event, settings: AppSettings): AppSettings =>
-    saveSettings(settings),
-  );
+  ipcMain.handle('settings:set', (event, settings: AppSettings): AppSettings => {
+    assertAppFrame(event);
+    return saveSettings(settings);
+  });
 
-  ipcMain.handle('settings:keyring', (): boolean => isKeyringAvailable());
+  ipcMain.handle('settings:keyring', (event): boolean => {
+    assertAppFrame(event);
+    return isKeyringAvailable();
+  });
 
-  ipcMain.handle('drive:status', (): DriveStatus => getStatus());
-  ipcMain.handle('drive:providers', () => listProviders());
-  ipcMain.handle('drive:auth', () => authorize());
-  ipcMain.handle('drive:backup', () => backupNow());
-  ipcMain.handle('drive:restore', (_event, passphrase: string) => restoreNow(passphrase));
-  ipcMain.handle('drive:backup-info', () => backupInfo());
-  ipcMain.handle('drive:disconnect', (): DriveStatus => disconnect());
+  ipcMain.handle('drive:status', (event): DriveStatus => {
+    assertAppFrame(event);
+    return getStatus();
+  });
+  ipcMain.handle('drive:providers', (event) => {
+    assertAppFrame(event);
+    return listProviders();
+  });
+  ipcMain.handle('drive:auth', (event) => {
+    assertAppFrame(event);
+    return authorize();
+  });
+  ipcMain.handle('drive:backup', (event) => {
+    assertAppFrame(event);
+    return backupNow();
+  });
+  ipcMain.handle('drive:restore', (event, passphrase: string) => {
+    assertAppFrame(event);
+    return restoreNow(passphrase);
+  });
+  ipcMain.handle('drive:backup-info', (event) => {
+    assertAppFrame(event);
+    return backupInfo();
+  });
+  ipcMain.handle('drive:disconnect', (event): DriveStatus => {
+    assertAppFrame(event);
+    return disconnect();
+  });
 
   onStatus((status) => {
     if (mainWindow !== null && !mainWindow.isDestroyed()) {
@@ -252,9 +414,11 @@ if (!gotLock) {
     .whenReady()
     .then(() => {
       registerCoverProtocol();
+      registerAppProtocol();
       registerIpc();
       initDrive();
       removeApplicationMenu();
+      registerPermissionPolicy();
       registerFullscreenShortcut();
       createWindow();
 

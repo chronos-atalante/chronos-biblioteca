@@ -55,6 +55,11 @@ Métodos de biblioteca/configurações devolvem os dados direto (ou `null` onde
 indicado). Erros de Drive saem no idioma corrente (`AppSettings.language`,
 pt-BR por padrão; ver §4 e [`messages.md`](messages.md)).
 
+Guarda de origem: todo handler IPC chama `assertAppFrame(event)` antes da
+lógica de domínio, exigindo `event.senderFrame` apontando para a página
+oficial do app (scheme `chronos://` em produção ou dev server do Vite em dev);
+uma mensagem de emissor desconhecido é bloqueada com erro.
+
 ---
 
 ## 3. Biblioteca
@@ -70,13 +75,18 @@ Cria ou atualiza uma obra e devolve a lista completa atualizada.
 
 - Entrada: `Omit<Work, 'createdAt' | 'updatedAt'>` (os carimbos são gerados
   pelo main; `updatedAt` é renovado a cada salvamento).
+- `id` vazio gera UUID novo; fora da régua `^[A-Za-z0-9_-]{1,64}$` a chamada
+  falha com `Identificador de obra inválido.` (nenhum id vira caminho de
+  arquivo, `isValidWorkId`).
 - `progress` é fixado em `>= 0` (`clampProgress`), sem limite superior.
 - Uma obra `concluida` cujo progresso muda volta para `lendo` (regra de UI).
 
 ### `library.remove(id: string) → Promise<Work[]>`
 
 Remove a obra e apaga o arquivo de capa órfão, se houver. Devolve a lista
-restante. Remover um `id` inexistente devolve a lista inalterada.
+restante. Remover um `id` inexistente devolve a lista inalterada. Um `id`
+fora da régua (`^[A-Za-z0-9_-]{1,64}$`) falha com
+`Identificador de obra inválido.`
 
 ### `pickCover() → Promise<string | null>`
 
@@ -103,7 +113,7 @@ interface AppSettings {
 
 Campos ausentes ou com tipo errado no disco caem para `''` (padrão seguro);
 `language` fora de `'pt-BR' | 'en' | 'ko' | 'zh-CN'` cai para `'pt-BR'` (padrão também quando o
-arquivo não existe — o app não detecta o idioma do SO, a escolha é explícita
+arquivo não existe: o app não detecta o idioma do SO, a escolha é explícita
 em Configurações).
 
 A senha (`drivePassphrase`) é guardada no keyring do SO via `safeStorage`
@@ -145,9 +155,9 @@ interface BackupProviderInfo {
 ```
 
 Ordem de exibição: Dropbox (operante) e depois Google Drive (**não
-operante** — a UI mostra o selo _Não operante_ e o motivo, sempre com o
+operante**; a UI mostra o selo _Não operante_ e o motivo, sempre com o
 destino oculto `appDataFolder`). Os textos (`unavailableReason`,
-`storageTarget`) voltam **no idioma corrente** (`AppSettings.language`, §4) —
+`storageTarget`) voltam **no idioma corrente** (`AppSettings.language`, §4);
 ver [`messages.md`](messages.md).
 
 ### `drive.status() → Promise<DriveStatus>`
@@ -183,7 +193,7 @@ arquivos remotos órfãos. Cada upload usa `mode: overwrite` direto no
 `content.dropboxapi.com`, sem multipart nem id prévio.
 
 Cifra (ver `src/main/drive/crypto.ts`): AES-256-GCM com chave de 32 bytes
-derivada por **scrypt explícito** (`N=2¹⁷`, `r=8`, `p=1` — mínimo atual do
+derivada por **scrypt explícito** (`N=2¹⁷`, `r=8`, `p=1`; mínimo atual do
 OWASP, ~128 MiB por derivação), salt de 16 e IV de
 12 bytes aleatórios por arquivo, tag de 16 bytes verificada na leitura.
 Formato único `WTENC3` (nunca houve release com outro; o app ainda não foi
@@ -220,6 +230,11 @@ biblioteca local (incluindo capas). Senha errada ou arquivo corrompido:
 `Senha de criptografia incorreta ou backup corrompido.` Sem backup remoto:
 `Nenhum backup encontrado na pasta do app no Dropbox.`
 
+As falhas de senha contam numa trava exponencial (`src/main/drive/restore-lock.ts`)
+checada **antes** de qualquer chamada de rede: 2 tentativas livres e, a partir da
+terceira, 10 s → 30 s → 1 min → 5 min → 15 min (`driveErrors.restoreLocked`), zerada
+por um restore bem-sucedido. Erro de rede não conta na trava.
+
 ### `drive.backupInfo() → Promise<BackupSummary | null>`
 
 Metadados do backup remoto (`null` se desconectado, sem backup ou ilegível).
@@ -241,30 +256,35 @@ ao desmontar o componente.
 
 ### Erros comuns (pt-BR por padrão, como exibidos no app)
 
-| Mensagem                                                | Quando                                                                     |
-| ------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `Conecte a conta Dropbox primeiro.`                     | backup/restauração sem sessão                                              |
-| `Nenhuma biblioteca local para backup. …`               | backup com biblioteca vazia                                                |
-| `Defina uma senha de criptografia do backup…`           | backup sem senha configurada                                               |
-| `Sincronização já em andamento.`                        | backup/restauração paralelos                                               |
-| `Sessão expirada. Conecte a conta Dropbox novamente.`   | refresh token ausente                                                      |
-| `Não foi possível renovar a sessão do Dropbox.`         | refresh recusado pelo Dropbox                                              |
-| `Senha de criptografia incorreta ou backup corrompido.` | restauração com senha errada                                               |
-| `Nenhum backup encontrado na pasta do app no Dropbox.`  | restauração sem backup remoto                                              |
-| `Backup inválido (library.json corrompido).`            | backup remoto não é uma lista de obras                                     |
-| `Faltam permissões no app Dropbox…`                     | concessão sem todos os escopos, ou `missing_scope`/`required scope` da API |
-| `Permissões do Dropbox atualizadas. Reconecte…`         | escopos do app mudaram desde a sessão salva                                |
-| `Erro do Dropbox (HTTP 500)[. Resposta: …]`             | falha de rede/API sem `error_summary` (traz trecho da resposta)            |
+| Mensagem                                                                 | Quando                                                                         |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `Conecte a conta Dropbox primeiro.`                                      | backup/restauração sem sessão                                                  |
+| `Nenhuma biblioteca local para backup. …`                                | backup com biblioteca vazia                                                    |
+| `Defina uma senha de criptografia do backup…`                            | backup sem senha configurada                                                   |
+| `Sincronização já em andamento.`                                         | backup/restauração paralelos                                                   |
+| `Sessão expirada. Conecte a conta Dropbox novamente.`                    | refresh token ausente                                                          |
+| `Não foi possível renovar a sessão do Dropbox.`                          | refresh recusado pelo Dropbox                                                  |
+| `Senha de criptografia incorreta ou backup corrompido.`                  | restauração com senha errada                                                   |
+| `Muitas tentativas de restauração com senha errada. Tente novamente em…` | trava exponencial após a 3ª falha de senha (contada só para `PassphraseError`) |
+| `Nenhum backup encontrado na pasta do app no Dropbox.`                   | restauração sem backup remoto                                                  |
+| `Backup inválido (library.json corrompido).`                             | backup remoto não é uma lista de obras                                         |
+| `Faltam permissões no app Dropbox…`                                      | concessão sem todos os escopos, ou `missing_scope`/`required scope` da API     |
+| `Permissões do Dropbox atualizadas. Reconecte…`                          | escopos do app mudaram desde a sessão salva                                    |
+| `Erro do Dropbox (HTTP 500)[. Resposta: …]`                              | falha de rede/API sem `error_summary` (traz trecho da resposta)                |
 
 ---
 
-## 6. Protocolo `cover://`
+## 6. Protocolos `cover://` e `chronos://`
 
 Capas servidas como `cover://<arquivo>` (scheme privilegiado: `standard`,
 `secure`, `supportFetchAPI`, `stream`), com `Content-Type` por extensão e
 `Cache-Control: max-age=3600`. Respostas: `200` (bytes), `404` (ausente ou
 nome vazio), `500` (URL inválida). Nomes são higienizados com `basename`
 (anti path-traversal).
+
+Em produção, a SPA vem pelo scheme `chronos://` (desde a 1.5.0), implementado
+por `registerAppProtocol`: mapeia o pathname da URL para `out/renderer`, com
+`..` rejeitado (`path.resolve` + verificação de prefixo) — não usa `file://`.
 
 ---
 

@@ -115,6 +115,12 @@ export const ptBR = {
     toastRestoreFailed: 'Falha ao restaurar.',
     toastRestored: (works: number): string => `Backup restaurado com ${works} obra(s).`,
     toastDisconnected: 'Conta Dropbox desconectada.',
+    translationNotice: {
+      title: 'Aviso sobre traduções',
+      text: 'Eu não falo nenhum desses idiomas com exceção do português, e toda a tradução é feita por IA. Como tudo nesse mundo, pode haver falhas, então peço um pouco de paciência.',
+      translationNotice2:
+        'Se você quiser ajudar a melhorar a tradução, abra uma issue no repositório do projeto.',
+    },
   },
 
   restore: {
@@ -278,6 +284,15 @@ export const ptBR = {
       response === ''
         ? `Erro do Dropbox (HTTP ${status}).`
         : `Erro do Dropbox (HTTP ${status}). Resposta: ${response}`,
+    restoreLocked: (seconds: number): string =>
+      seconds < 60
+        ? `Muitas tentativas de restauração com senha errada. Tente novamente em ${seconds} segundos.`
+        : `Muitas tentativas de restauração com senha errada. Tente novamente em ${Math.ceil(seconds / 60)} minutos.`,
+  },
+
+  /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */
+  libraryErrors: {
+    invalidId: 'Identificador de obra inválido.',
   },
 
   /** Página HTML que o loopback do OAuth mostra na aba do navegador. */

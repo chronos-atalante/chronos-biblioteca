@@ -1,4 +1,4 @@
-Chronos Biblioteca — Avisos de Terceiros (Third-Party Notices)
+Chronos Biblioteca: Avisos de Terceiros (Third-Party Notices)
 ==============================================================
 
 Este arquivo lista os componentes de terceiros distribuídos junto com o

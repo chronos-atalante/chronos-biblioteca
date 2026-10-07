@@ -116,12 +116,12 @@ Para publicar uma versão (a partir da `main`):
    da landing.
 
 Para reanexar os assets de uma Release que falhou no meio, rode o workflow
-na UI (**Run workflow**, `workflow_dispatch`) — ele publica de novo sem
+na UI (**Run workflow**, `workflow_dispatch`); ele publica de novo sem
 conferir a versão. Também dá para empurrar a tag à mão
 (`git tag vX.Y.Z && git push origin vX.Y.Z`), que dispara o mesmo workflow.
 
 A landing lê essa Release na API pública e atualiza versão, botão de
-download e os comandos APT (`…/releases/latest/download/`, suite `./`) —
+download e os comandos APT (`…/releases/latest/download/`, suite `./`);
 o `.deb` nunca é versionado no git.
 
 Guia completo do fluxo de distribuição (motivos, passo a passo, lições e

@@ -1,37 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import os from 'os';
 import type { Work } from '@zero/types';
+import { currentMessages } from '@zero/main/i18n';
+import { writeJsonAtomic } from '@zero/main/jsonfile';
+import { cacheDir, configDir, coversDir, dataDir, userDataDir } from '@zero/main/paths';
+
+export { cacheDir, configDir, coversDir, dataDir, userDataDir };
 
 const RATING_CLAMPS = { min: 0 } as const;
-
-function xdgDir(envVar: string, fallback: string): string {
-  const value = process.env[envVar];
-  return value !== undefined && value !== '' ? value : path.join(os.homedir(), fallback);
-}
-
-export function dataDir(): string {
-  return path.join(xdgDir('XDG_DATA_HOME', path.join('.local', 'share')), 'chronos-biblioteca');
-}
-
-export function configDir(): string {
-  return path.join(xdgDir('XDG_CONFIG_HOME', '.config'), 'chronos-biblioteca');
-}
-
-export function cacheDir(): string {
-  return path.join(xdgDir('XDG_CACHE_HOME', '.cache'), 'chronos-biblioteca');
-}
-
-export function userDataDir(): string {
-  return dataDir();
-}
-
-export function coversDir(): string {
-  const dir = path.join(dataDir(), 'covers');
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
 
 function libraryPath(): string {
   return path.join(dataDir(), 'library.json');
@@ -48,9 +25,7 @@ function readJson<T>(file: string, fallback: T): T {
 }
 
 function writeJson(file: string, data: unknown): void {
-  const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tmp, file);
+  writeJsonAtomic(file, data);
 }
 
 export function clampProgress(value: number): number {
@@ -73,9 +48,24 @@ export function newId(): string {
   return crypto.randomUUID();
 }
 
+/**
+ * Id de obra aceito na IPC e restaurado da nuvem: UUID gerado pelo app ou um
+ * identificador curto legível sem separadores de caminho. Rejeitar `..`, `/`
+ * e `\` aqui é defesa em profundidade (classe CVE-2026-21589): nenhum id vira
+ * caminho de arquivo hoje, mas a regra garante que isso continue verdadeiro.
+ */
+const WORK_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+
+export function isValidWorkId(id: string): boolean {
+  return WORK_ID_PATTERN.test(id);
+}
+
 export function upsertWork(
   input: Omit<Work, 'createdAt' | 'updatedAt'> & Partial<Pick<Work, 'createdAt' | 'updatedAt'>>,
 ): Work[] {
+  if (input.id !== '' && !isValidWorkId(input.id)) {
+    throw new Error(currentMessages().libraryErrors.invalidId);
+  }
   const works = loadLibrary();
   const now = new Date().toISOString();
   const status = input.status;
@@ -117,6 +107,9 @@ export function upsertWork(
 }
 
 export function deleteWork(id: string): Work[] {
+  if (!isValidWorkId(id)) {
+    throw new Error(currentMessages().libraryErrors.invalidId);
+  }
   const works = loadLibrary();
   const target = works.find((w) => w.id === id);
   const coverFile = target?.coverFile;
@@ -134,7 +127,7 @@ export function importCover(sourcePath: string, preferredId?: string): string | 
     if (!fs.existsSync(sourcePath)) return null;
     const ext = path.extname(sourcePath).toLowerCase();
     const safeExt = COVER_EXT_WHITELIST.has(ext) ? ext : '.png';
-    const baseId = preferredId !== undefined && preferredId !== '' ? preferredId : newId();
+    const baseId = preferredId !== undefined && isValidWorkId(preferredId) ? preferredId : newId();
     const name = `${baseId}${safeExt}`;
     const destination = path.join(coversDir(), name);
     fs.copyFileSync(sourcePath, destination);
@@ -185,6 +178,8 @@ export function readCoverBuffer(fileName: string): Buffer | null {
 export function restoreLibrary(works: Work[]): Work[] {
   const sanitized = works.map((w) => ({
     ...w,
+    // Id vindo da nuvem passa pela mesma régua da IPC; fora da regra, novo id.
+    id: typeof w.id === 'string' && isValidWorkId(w.id) ? w.id : newId(),
     progress: clampProgress(w.progress),
     createdAt: w.createdAt !== '' ? w.createdAt : new Date().toISOString(),
     updatedAt: w.updatedAt !== '' ? w.updatedAt : new Date().toISOString(),

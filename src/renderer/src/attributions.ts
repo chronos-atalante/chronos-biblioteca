@@ -141,7 +141,7 @@ export const ATTRIBUTIONS: Attribution[] = [
   {
     name: 'rimraf',
     license: 'BlueOak-1.0.0',
-    description: 'Limpeza da pasta out/ antes de cada build.',
+    description: 'Remoção recursiva de arquivos, só como dependência transitiva.',
     url: 'https://github.com/isaacs/rimraf',
   },
   {

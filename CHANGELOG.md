@@ -4,6 +4,55 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.5.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.4.0...v1.5.0) (2026-10-07)
+
+### Features
+
+- backup: trava exponencial na restauração com senha errada
+  (`src/main/drive/restore-lock.ts`): as duas primeiras falhas são livres e,
+  a partir da terceira, a espera sobe 10 s → 30 s → 1 min → 5 min até o teto
+  de 15 min, sempre antes de qualquer chamada de rede; sucesso no fim da
+  tentativa zera a trava. Conta só `PassphraseError`, então erro de rede não
+  atrasa a próxima tentativa (`driveErrors.restoreLocked` nos 4 idiomas).
+- obras: régua de id (`isValidWorkId`) na entrada por IPC e na restauração:
+  UUID ou id curto sem separador de caminho; id fora da regra vindo da nuvem
+  vira UUID novo, o import de capa ignora id preferido inválido e o
+  `upsertWork`/`deleteWork` recusam `..`, `/` e `\` (defesa em profundidade,
+  classe CVE-2026-21589; `libraryErrors.invalidId` nos 4 idiomas).
+- infraestrutura: escrita de JSON atômica com permissão
+  (`writeJsonAtomic`, `src/main/jsonfile.ts`) para `library.json`,
+  `settings.json` e `dropbox-tokens.json`, e diretórios XDG extraídos para
+  `src/main/paths.ts` (quebra o ciclo `library` ↔ `settings` ↔ `drive`).
+
+### Segurança
+
+- janela: navegação presa na página do app (`will-navigate` recusa qualquer
+  URL fora da página carregada, mantendo o `setWindowOpenHandler` que só
+  repassa `https:` para o navegador do sistema).
+- sessão: toda permissão web do renderer (mídia, geolocalização,
+  notificações…) é negada; só o clipboard passa, para o modal de doação.
+- produção: DevTools desligado no app empacotado (`devTools:
+!app.isPackaged`).
+- IPC pelo frame oficial: todo handler chegou com `assertAppFrame(event)`, que
+  confere `event.senderFrame` contra a página do scheme `chronos://` (ou o Vite
+  dev server), bloqueando qualquer frame de fora antes do domínio.
+- renderer entregue via scheme `chronos://` em produção (`registerAppProtocol`
+  serve `out/renderer`), em vez de `file://`; CSP com `object-src 'none';
+base-uri 'self'; frame-ancestors 'none'; form-action 'self'` nos dois
+  lugares.
+- `electronFuses` no electron-builder: `runAsNode: false`,
+  `enableNodeOptionsEnvironmentVariable: false`,
+  `enableNodeCliInspectArguments: false`, `enableCookieEncryption: true`,
+  `onlyLoadAppFromAsar: true` e
+  `grantFileProtocolExtraPrivileges: false`.
+
+### Documentação
+
+- `SECURITY.md` com as proteções novas (janela e sessão contidas, trava de
+  restauração, régua de id e escrita atômica), `docs/api.md` com a mensagem
+  de trava na tabela de erros e o travamento em `drive.restore`, e
+  `docs/dropbox.md` com o sintoma na tabela de problemas.
+
 ## [1.4.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.3.0...v1.4.0) (2026-10-07)
 
 ### Features
@@ -82,7 +131,7 @@ em português do Brasil.
 
 ### Bug Fixes
 
-- embalagem: o `after-pack` não remove mais o `libffmpeg.so` — o binário do
+- embalagem: o `after-pack` não remove mais o `libffmpeg.so`, o binário do
   Electron o declara como `DT_NEEDED` e o 1.1.1 abria apenas o ícone,
   morrendo com "error while loading shared libraries: libffmpeg.so".
 

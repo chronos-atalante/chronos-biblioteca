@@ -13,7 +13,7 @@ body:
     attributes:
       label: Versão do app
       description: Veja em Configurações ou no nome do arquivo `.deb`.
-      placeholder: 1.1.1
+      placeholder: 1.5.0
     validations:
       required: true
   - type: dropdown

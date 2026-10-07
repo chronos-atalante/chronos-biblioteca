@@ -2,8 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import type { DriveStatus } from '@zero/types';
 import { EMBEDDED_APP_KEY, SCOPE_VERSION } from '@zero/main/drive/constants';
-import { configDir } from '@zero/main/library';
 import { currentMessages } from '@zero/main/i18n';
+import { writeJsonAtomic } from '@zero/main/jsonfile';
+import { configDir } from '@zero/main/paths';
 import { loadSettings } from '@zero/main/settings';
 
 export interface Tokens {
@@ -67,10 +68,9 @@ export function loadState(): void {
 export function persistState(): void {
   ensureConfig();
   if (state.tokens !== null) {
-    fs.writeFileSync(statePath(), JSON.stringify(state.tokens, null, 2), {
-      encoding: 'utf-8',
-      mode: 0o600,
-    });
+    // Tokens são credencial: escrita atômica com 0600 (nunca pela metade
+    // nem legível por terceiros).
+    writeJsonAtomic(statePath(), state.tokens, 0o600);
   } else if (fs.existsSync(statePath())) {
     fs.unlinkSync(statePath());
   }

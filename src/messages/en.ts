@@ -110,6 +110,12 @@ export const en: Messages = {
     toastRestoreFailed: 'Restore failed.',
     toastRestored: (works: number): string => `Backup restored with ${works} work(s).`,
     toastDisconnected: 'Dropbox account disconnected.',
+    translationNotice: {
+      title: 'Translation Notice',
+      text: "I don't speak any of these languages except Portuguese, and all translations are done by AI. Like everything in this world, there may be errors, so please have a little patience.",
+      translationNotice2:
+        'If you would like to help improve the translation, please open an issue on the project repository.',
+    },
   },
 
   restore: {
@@ -272,6 +278,15 @@ export const en: Messages = {
       response === ''
         ? `Dropbox error (HTTP ${status}).`
         : `Dropbox error (HTTP ${status}). Response: ${response}`,
+    restoreLocked: (seconds: number): string =>
+      seconds < 60
+        ? `Too many failed restore attempts with the wrong passphrase. Try again in ${seconds} seconds.`
+        : `Too many failed restore attempts with the wrong passphrase. Try again in ${Math.ceil(seconds / 60)} minutes.`,
+  },
+
+  /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */
+  libraryErrors: {
+    invalidId: 'Invalid work identifier.',
   },
 
   /** HTML page the OAuth loopback shows in the browser tab. */

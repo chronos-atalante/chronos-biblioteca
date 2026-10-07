@@ -1,7 +1,7 @@
 {
   "name": "chronos-biblioteca",
   "productName": "Chronos Biblioteca",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Biblioteca de anotação de progresso em leituras de webtoons, manhwas, manhuas, mangás e livros",
   "main": "out/main/index.js",
   "desktopName": "chronos-biblioteca.desktop",
@@ -13,7 +13,7 @@
     "leitura",
     "biblioteca"
   ],
-  "author": "Caipira",
+  "author": "Otaku Delirante",
   "homepage": "https://github.com/chronos-atalante/chronos-biblioteca",
   "license": "MIT",
   "scripts": {
@@ -92,6 +92,14 @@
       "package.json"
     ],
     "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableCookieEncryption": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
     "linux": {
       "target": [
         "deb"
