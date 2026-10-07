@@ -11,7 +11,7 @@ import type { AppSettings, Language } from '@zero/types';
  * - `driveClientId`: App key alternativa (override da embutida; sem UI);
  * - `driveClientSecret`: legado do provedor anterior, ignorado;
  * - `drivePassphrase`: senha de criptografia do backup;
- * - `language`: idioma da interface (`pt-BR`, `en`, `ko` ou `zh-CN`).
+ * - `language`: idioma da interface (`pt-BR`, `en`, `ko`, `zh-CN` ou `ja`).
  */
 const DEFAULTS: AppSettings = {
   driveClientId: '',
@@ -38,7 +38,11 @@ function field(record: object, key: keyof AppSettings): string {
 /** Lê o idioma; qualquer valor fora do catálogo cai no padrão. */
 function languageField(record: object): Language {
   const value: unknown = Reflect.get(record, 'language');
-  return value === 'pt-BR' || value === 'en' || value === 'ko' || value === 'zh-CN'
+  return value === 'pt-BR' ||
+    value === 'en' ||
+    value === 'ko' ||
+    value === 'zh-CN' ||
+    value === 'ja'
     ? value
     : DEFAULTS.language;
 }
@@ -109,7 +113,10 @@ export function saveSettings(settings: AppSettings): AppSettings {
     driveClientSecret: settings.driveClientSecret.trim(),
     drivePassphrase: settings.drivePassphrase,
     language:
-      settings.language === 'en' || settings.language === 'ko' || settings.language === 'zh-CN'
+      settings.language === 'en' ||
+      settings.language === 'ko' ||
+      settings.language === 'zh-CN' ||
+      settings.language === 'ja'
         ? settings.language
         : 'pt-BR',
   };

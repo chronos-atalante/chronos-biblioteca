@@ -1,4 +1,4 @@
-export type Language = 'pt-BR' | 'en' | 'ko' | 'zh-CN';
+export type Language = 'pt-BR' | 'en' | 'ko' | 'zh-CN' | 'ja';
 
 export interface AppSettings {
   /** App key alternativa do Dropbox: '' usa a chave embutida (override, sem UI). */

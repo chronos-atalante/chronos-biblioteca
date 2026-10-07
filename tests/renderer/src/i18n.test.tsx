@@ -80,11 +80,12 @@ describe('contexto de idioma', () => {
 
 describe('catálogo de idiomas', () => {
   it('expõe os idiomas suportados com nome nativo', () => {
-    expect([...LANGUAGES]).toEqual(['pt-BR', 'en', 'ko', 'zh-CN']);
+    expect([...LANGUAGES]).toEqual(['pt-BR', 'en', 'ko', 'zh-CN', 'ja']);
     expect(LANGUAGE_LABELS['pt-BR']).toBe('Português (Brasil)');
     expect(LANGUAGE_LABELS.en).toBe('English');
     expect(LANGUAGE_LABELS.ko).toBe('한국어');
     expect(LANGUAGE_LABELS['zh-CN']).toBe('简体中文');
+    expect(LANGUAGE_LABELS.ja).toBe('日本語');
   });
 
   it('devolve bundles distintos por idioma com as mesmas chaves', () => {
@@ -92,12 +93,15 @@ describe('catálogo de idiomas', () => {
     const en = messages('en');
     const ko = messages('ko');
     const zhCN = messages('zh-CN');
+    const ja = messages('ja');
     expect(en).not.toBe(pt);
     expect(ko).not.toBe(pt);
     expect(zhCN).not.toBe(pt);
+    expect(ja).not.toBe(pt);
     expect(Object.keys(en)).toEqual(Object.keys(pt));
     expect(Object.keys(ko)).toEqual(Object.keys(pt));
     expect(Object.keys(zhCN)).toEqual(Object.keys(pt));
+    expect(Object.keys(ja)).toEqual(Object.keys(pt));
     const language: Language = 'en';
     expect(messages(language).app.newWork).toBe('New work');
   });
@@ -126,5 +130,18 @@ describe('catálogo de idiomas', () => {
       </MessagesProvider>,
     );
     expect(screen.getByTestId('probe')).toHaveTextContent('zh-CN:在读');
+  });
+
+  it('traduz o app para o japonês', () => {
+    const ja = messages('ja');
+    expect(ja.app.newWork).toBe('新しい作品');
+    expect(ja.workStatus.lendo).toBe('読書中');
+    expect(ja.workModal.progressValue(12)).toBe('第12話');
+    render(
+      <MessagesProvider language="ja">
+        <Probe />
+      </MessagesProvider>,
+    );
+    expect(screen.getByTestId('probe')).toHaveTextContent('ja:読書中');
   });
 });
