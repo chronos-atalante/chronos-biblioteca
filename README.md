@@ -95,6 +95,28 @@ O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
 
 ---
 
+## Solução de problemas
+
+### App parou de funcionar depois de excluir a pasta `/tmp`
+
+O Chronos (e a maioria dos aplicativos Electron) usa `/tmp` para sockets e
+arquivos temporários. Se essa pasta for excluída, o app pode falhar ao abrir ou
+parar de responder sem motivo aparente. Restaure o diretório com as permissões
+padrão do sistema e, em geral, o app volta ao normal:
+
+```bash
+sudo mkdir -p /tmp
+sudo chmod 1777 /tmp
+sudo chown root:root /tmp
+```
+
+O `mkdir -p` recria a pasta se ela não existir mais; `chmod 1777` devolve o
+acesso temporário com bits de execução para todos (sticky bit, o padrão do
+Linux) e `chown root:root` devolve a posse ao sistema. O mesmo vale para
+qualquer outro aplicativo que passe a falhar depois que `/tmp` for apagada.
+
+---
+
 ## Comandos de desenvolvimento
 
 | Comando                  | O que faz                                          |
