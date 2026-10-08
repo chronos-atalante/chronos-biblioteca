@@ -53,12 +53,12 @@ export const en: Messages = {
     emptyFoundTitle: 'No works found',
     emptyFoundText: 'Try another filter or search term.',
     emptyLibraryTitle: 'Your library is empty',
-    emptyLibraryText: 'Add your first work: cover, title and track your progress.',
-    addFirstWork: 'Add first work',
+    emptyLibraryText: 'Add your first work with a cover and title, and track your progress.',
+    addFirstWork: 'Add your first work',
     drivePill: {
       syncing: 'Syncing…',
       connected: 'Dropbox connected',
-      off: 'Dropbox off',
+      off: 'Dropbox disconnected',
     },
     toastSaveError: 'Could not save the work.',
     toastSaved: 'Work saved.',
@@ -108,10 +108,10 @@ export const en: Messages = {
     toastBackupFailed: 'Backup failed.',
     toastBackupDone: 'Backup finished in the app folder on Dropbox.',
     toastRestoreFailed: 'Restore failed.',
-    toastRestored: (works: number): string => `Backup restored with ${works} work(s).`,
+    toastRestored: (works: number): string => `Backup restored: ${works} work(s).`,
     toastDisconnected: 'Dropbox account disconnected.',
     translationNotice: {
-      title: 'Translation Notice',
+      title: 'Translation notice',
       text: "I don't speak any of these languages except Portuguese, and all translations are done by AI. Like everything in this world, there may be errors, so please have a little patience.",
       translationNotice2:
         'If you would like to help improve the translation, please open an issue on the project repository.',
@@ -141,7 +141,7 @@ export const en: Messages = {
     titleLabel: 'Title',
     titlePlaceholder: 'e.g. Solo Leveling',
     synopsisLabel: 'Description',
-    synopsisPlaceholder: 'Write the work description...',
+    synopsisPlaceholder: 'Write the work description…',
     typeLabel: 'Type',
     statusLabel: 'Status',
     categoryLabel: 'Category',
@@ -270,18 +270,18 @@ export const en: Messages = {
     permissionsUpdated: 'Dropbox permissions updated. Reconnect the Dropbox account.',
     missingScopes:
       'Permissions missing in the Dropbox app. Check every scope in the Permissions tab ' +
-      'of the App Console, then Disconnect and Connect again.',
+      'of the App Console, then disconnect and reconnect.',
     missingScopesList: (missing: string): string =>
       `Permissions missing in the Dropbox app (${missing}). ` +
-      'Check every scope in the Permissions tab of the App Console and connect again.',
+      'Check every scope in the Permissions tab of the App Console, then disconnect and reconnect.',
     dropboxHttp: (status: number, response: string): string =>
       response === ''
         ? `Dropbox error (HTTP ${status}).`
         : `Dropbox error (HTTP ${status}). Response: ${response}`,
     restoreLocked: (seconds: number): string =>
       seconds < 60
-        ? `Too many failed restore attempts with the wrong passphrase. Try again in ${seconds} seconds.`
-        : `Too many failed restore attempts with the wrong passphrase. Try again in ${Math.ceil(seconds / 60)} minutes.`,
+        ? `Too many failed restore attempts with the wrong password. Try again in ${seconds} seconds.`
+        : `Too many failed restore attempts with the wrong password. Try again in ${Math.ceil(seconds / 60)} minutes.`,
   },
 
   /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */

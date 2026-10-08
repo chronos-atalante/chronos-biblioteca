@@ -201,7 +201,7 @@ describe('backupNow', { timeout: 60_000 }, () => {
       ok: false,
       error:
         'Faltam permissões no app Dropbox. Marque todos os escopos na aba Permissions ' +
-        'do App Console, Desconecte e Conecte de novo.',
+        'do App Console, desconecte e conecte de novo.',
     });
   });
 

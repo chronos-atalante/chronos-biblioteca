@@ -321,7 +321,7 @@ Webtoons/
 │   ├── dropbox.md              # guia do backup + diagramas
 │   ├── backup-providers.md     # provedores de nuvem (Dropbox · Google Drive)
 │   ├── distribuicao-apt.md     # distribuição: Release + repo APT flat assinado
-│   ├── messages.md             # i18n: bundles pt-BR/en/ko/zh-CN e o que não se traduz
+│   ├── messages.md             # i18n: bundles pt-BR/en/ko/zh-CN/ja e o que não se traduz
 │   ├── atribuicoes.md        # página de Atribuições (créditos em loop)
 │   ├── doacoes.md            # página de Doações (Mercado Pago)
 │   └── api.md                # referência da API interna
@@ -342,12 +342,13 @@ Webtoons/
 │   │       ├── json.ts       # leitura tipada de corpos JSON (`parseJson`)
 │   │       ├── crypto.ts     # AES-256-GCM do backup
 │   │       └── backup.ts     # backup, restauração e desconexão
-│   ├── messages/             # textos do app (i18n): pt-BR (canônico) + en + ko + zh-CN
+│   ├── messages/             # textos do app (i18n): pt-BR (canônico) + en + ko + zh-CN + ja
 │   │   ├── index.ts          # LANGUAGES, LANGUAGE_LABELS, messages()
 │   │   ├── pt-BR.ts          # bundle canônico + tipo Messages
 │   │   ├── en.ts             # tradução tipada contra Messages
 │   │   ├── ko.ts             # tradução tipada contra Messages
-│   │   └── zh-CN.ts          # tradução tipada contra Messages
+│   │   ├── zh-CN.ts          # tradução tipada contra Messages
+│   │   └── ja.ts             # tradução tipada contra Messages
 │   ├── preload/index.ts      # contextBridge (window.api)
 │   ├── renderer/             # React + Vite
 │   │   ├── index.html        # CSP com scheme cover:
@@ -473,20 +474,20 @@ python3 build/make-icon.py
 
 Guias e referências (tudo em pt-BR):
 
-| Documento                                              | Conteúdo                                                            |
-| ------------------------------------------------------ | ------------------------------------------------------------------- |
-| [`docs/dropbox.md`](docs/dropbox.md)                   | Guia do backup: OAuth PKCE, App folder, troubleshooting             |
-| [`docs/backup-providers.md`](docs/backup-providers.md) | Provedores de backup: contrato, catálogo e Google Drive oculto      |
-| [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md) | Distribuição: Release, repo APT flat assinado e fluxo de release    |
-| [`docs/atribuicoes.md`](docs/atribuicoes.md)           | Página de Atribuições: créditos em loop e licenças                  |
-| [`docs/doacoes.md`](docs/doacoes.md)                   | Página de Doações: Mercado Pago                                     |
-| [`docs/messages.md`](docs/messages.md)                 | i18n: bundles de mensagens (pt-BR/en/ko/zh-CN) e regras de tradução |
-| [`docs/api.md`](docs/api.md)                           | Referência da API interna (`window.api` + canais IPC)               |
-| [`docs/openapi.yaml`](docs/openapi.yaml)               | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)                 |
-| [`CHANGELOG.md`](CHANGELOG.md)                         | Histórico de mudanças por versão                                    |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md)                   | Como contribuir (ambiente, scripts, convenções)                     |
-| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)             | Código de conduta da comunidade                                     |
-| [`SECURITY.md`](SECURITY.md)                           | Política de segurança e como reportar falhas                        |
+| Documento                                              | Conteúdo                                                               |
+| ------------------------------------------------------ | ---------------------------------------------------------------------- |
+| [`docs/dropbox.md`](docs/dropbox.md)                   | Guia do backup: OAuth PKCE, App folder, troubleshooting                |
+| [`docs/backup-providers.md`](docs/backup-providers.md) | Provedores de backup: contrato, catálogo e Google Drive oculto         |
+| [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md) | Distribuição: Release, repo APT flat assinado e fluxo de release       |
+| [`docs/atribuicoes.md`](docs/atribuicoes.md)           | Página de Atribuições: créditos em loop e licenças                     |
+| [`docs/doacoes.md`](docs/doacoes.md)                   | Página de Doações: Mercado Pago                                        |
+| [`docs/messages.md`](docs/messages.md)                 | i18n: bundles de mensagens (pt-BR/en/ko/zh-CN/ja) e regras de tradução |
+| [`docs/api.md`](docs/api.md)                           | Referência da API interna (`window.api` + canais IPC)                  |
+| [`docs/openapi.yaml`](docs/openapi.yaml)               | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)                    |
+| [`CHANGELOG.md`](CHANGELOG.md)                         | Histórico de mudanças por versão                                       |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md)                   | Como contribuir (ambiente, scripts, convenções)                        |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)             | Código de conduta da comunidade                                        |
+| [`SECURITY.md`](SECURITY.md)                           | Política de segurança e como reportar falhas                           |
 
 ---
 

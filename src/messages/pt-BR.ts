@@ -58,12 +58,12 @@ export const ptBR = {
     emptyFoundTitle: 'Nenhuma obra encontrada',
     emptyFoundText: 'Tente outro filtro ou termo de busca.',
     emptyLibraryTitle: 'Sua biblioteca está vazia',
-    emptyLibraryText: 'Adicione sua primeira obra: capa, título e acompanhe o progresso.',
+    emptyLibraryText: 'Adicione a sua primeira obra com capa e título e acompanhe o progresso.',
     addFirstWork: 'Adicionar primeira obra',
     drivePill: {
       syncing: 'Sincronizando…',
       connected: 'Dropbox conectado',
-      off: 'Dropbox off',
+      off: 'Dropbox desconectado',
     },
     toastSaveError: 'Não foi possível salvar a obra.',
     toastSaved: 'Obra salva.',
@@ -147,7 +147,7 @@ export const ptBR = {
     titleLabel: 'Título',
     titlePlaceholder: 'Ex.: Solo Leveling',
     synopsisLabel: 'Descrição',
-    synopsisPlaceholder: 'Escreva a descrição da obra...',
+    synopsisPlaceholder: 'Escreva a descrição da obra…',
     typeLabel: 'Tipo',
     statusLabel: 'Status',
     categoryLabel: 'Categoria',
@@ -205,18 +205,18 @@ export const ptBR = {
       'e não ficarmos perdidos caso percamos acesso às nossas plataformas de leitura ' +
       'favoritas.',
     text2:
-      'Querendo ou não, eu tô mais quebrado que arroz de quinta e o backup em nuvem depende ' +
+      'Querendo ou não, eu tô mais quebrado que arroz de quinta, e o backup em nuvem depende ' +
       'do Dropbox: enquanto o app não passar pela revisão de produção, depois das primeiras ' +
-      '50 contas conectadas ele ganha um relógio de 2 semanas para ser aprovado, senão para ' +
-      'de aceitar gente nova. Sua doação ajuda a manter o app (e a paciência) no ar.',
+      '50 contas conectadas ele tem 2 semanas para ser aprovado. Caso contrário, para de ' +
+      'aceitar gente nova. Sua doação ajuda a manter o app (e a minha paciência) no ar.',
     text3:
       'A verdade é que esse projeto é pessoal, para eu acompanhar minhas leituras. Porque ' +
-      'você, como um otaku inveterado como eu, sabe o que é ver sua plataforma favorita ir ' +
+      'você, um otaku inveterado como eu, sabe o que é ver sua plataforma favorita ir ' +
       'de Vasco e perder todo o progresso das suas leituras.',
     text4:
       'Mas se por algum milagre esse projeto vier a receber doações, vou fazer o meu melhor ' +
-      'para que ele seja o mais completo possível para que possamos dormir tranquilos, sem ' +
-      'medo de acordar no outro dia e ver que seu histórico no reader foi de Vasco.',
+      'para que ele seja o mais completo possível, assim podemos dormir tranquilos, sem ' +
+      'medo de acordar no outro dia e ver que o seu histórico de leitura foi de Vasco.',
     openTitle: 'Abre a página de doação no navegador',
     donateNow: 'Doar agora',
     copyTitle: 'Copia o link de doação',
@@ -276,10 +276,10 @@ export const ptBR = {
     permissionsUpdated: 'Permissões do Dropbox atualizadas. Reconecte a conta Dropbox.',
     missingScopes:
       'Faltam permissões no app Dropbox. Marque todos os escopos na aba Permissions ' +
-      'do App Console, Desconecte e Conecte de novo.',
+      'do App Console, desconecte e conecte de novo.',
     missingScopesList: (missing: string): string =>
       `Faltam permissões no app Dropbox (${missing}). ` +
-      'Marque todos os escopos na aba Permissions do App Console e conecte de novo.',
+      'Marque todos os escopos na aba Permissions do App Console, desconecte e conecte de novo.',
     dropboxHttp: (status: number, response: string): string =>
       response === ''
         ? `Erro do Dropbox (HTTP ${status}).`

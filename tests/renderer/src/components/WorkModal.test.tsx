@@ -146,12 +146,12 @@ describe('WorkModal: campos', () => {
     setup();
     await user.clear(screen.getByPlaceholderText('Ex.: Solo Leveling'));
     await user.type(screen.getByPlaceholderText('Ex.: Solo Leveling'), 'Novo Título');
-    await user.clear(screen.getByPlaceholderText('Escreva a descrição da obra...'));
-    await user.type(screen.getByPlaceholderText('Escreva a descrição da obra...'), 'Sinopse');
+    await user.clear(screen.getByPlaceholderText('Escreva a descrição da obra…'));
+    await user.type(screen.getByPlaceholderText('Escreva a descrição da obra…'), 'Sinopse');
     await user.type(screen.getByPlaceholderText('Cap. 45 / Vol. 3'), 'Vol. 2');
 
     expect(screen.getByPlaceholderText('Ex.: Solo Leveling')).toHaveValue('Novo Título');
-    expect(screen.getByPlaceholderText('Escreva a descrição da obra...')).toHaveValue('Sinopse');
+    expect(screen.getByPlaceholderText('Escreva a descrição da obra…')).toHaveValue('Sinopse');
     expect(screen.getByPlaceholderText('Cap. 45 / Vol. 3')).toHaveValue('Vol. 2');
   });
 

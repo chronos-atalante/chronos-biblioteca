@@ -2,17 +2,18 @@
 
 Todo texto fixo da interface (e das mensagens de erro do processo main) vive em
 `src/messages/`, nunca espalhado pelo código. O app nasce em **português (Brasil)**
-e também fala **inglês**, **coreano** e **chinês simplificado**; o idioma é escolhido em **Configurações** e persistido
+e também fala **inglês**, **coreano**, **chinês simplificado** e **japonês**; o idioma é escolhido em **Configurações** e persistido
 em `settings.json` (`AppSettings.language`).
 
 ## O contrato
 
 - `src/messages/pt-BR.ts` é o **canônico**: exporta `ptBR` e
   `export type Messages = typeof ptBR`. Toda chave e assinatura nasce aqui.
-- `src/messages/en.ts` exporta `en: Messages` (o mesmo vale para `ko.ts` e
-  `zh-CN.ts`). O TypeScript aponta qualquer
+- `src/messages/en.ts` exporta `en: Messages` (o mesmo vale para `ko.ts`,
+  `zh-CN.ts` e `ja.ts`). O TypeScript aponta qualquer
   chave ou parâmetro faltando (ou sobrando) na tradução.
-- `src/messages/index.ts` é o barrel: `LANGUAGES` (`'pt-BR' | 'en' | 'ko' | 'zh-CN'`),
+- `src/messages/index.ts` é o barrel: `LANGUAGES`
+  (`'pt-BR' | 'en' | 'ko' | 'zh-CN' | 'ja'`),
   `LANGUAGE_LABELS` (nome nativo do idioma, que **não** se traduz), `messages()`
   e os bundles.
 
@@ -51,8 +52,8 @@ Regras das strings:
 ## Adicionando uma string
 
 1. Crie a chave em `src/messages/pt-BR.ts` (com parâmetro, se variar).
-2. Traduza em `src/messages/en.ts`, `src/messages/ko.ts` e `src/messages/zh-CN.ts`:
-   o typecheck reclama se faltar.
+2. Traduza em `src/messages/en.ts`, `src/messages/ko.ts`, `src/messages/zh-CN.ts`
+   e `src/messages/ja.ts`: o typecheck reclama se faltar.
 3. Use via `useMessages()` (renderer) ou `currentMessages()` (main).
 4. `npm run check` + `npm test`.
 
