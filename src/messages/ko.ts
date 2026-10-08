@@ -53,12 +53,12 @@ export const ko: Messages = {
     emptyFoundTitle: '작품을 찾을 수 없습니다',
     emptyFoundText: '다른 필터나 검색어로 시도해 보세요.',
     emptyLibraryTitle: '라이브러리가 비어 있습니다',
-    emptyLibraryText: '첫 작품을 추가하세요: 표지, 제목, 그리고 진행률을 기록하세요.',
+    emptyLibraryText: '첫 작품에 표지와 제목을 추가하고 진행률을 기록하세요.',
     addFirstWork: '첫 작품 추가하기',
     drivePill: {
       syncing: '동기화 중…',
       connected: 'Dropbox 연결됨',
-      off: 'Dropbox 꺼짐',
+      off: 'Dropbox 연결 해제됨',
     },
     toastSaveError: '작품을 저장할 수 없습니다.',
     toastSaved: '작품이 저장되었습니다.',
@@ -71,7 +71,7 @@ export const ko: Messages = {
     bannerBody:
       '라이브러리는 앱 전용 폴더에 저장됩니다(계정의 `/Apps/` 안): API를 통해 이 ' +
       '앱만 그 폴더를 볼 수 있으며, 나머지 Dropbox는 이 앱에 보이지도 않습니다. 폴더는 ' +
-      '회원님께 보이므로, 모든 파일은 알아볼 수 없는 이름과 암호화된 내용(AES-256-GCM)으로 ' +
+      '계정에서 보이므로, 모든 파일은 알아볼 수 없는 이름과 암호화된 내용(AES-256-GCM)으로 ' +
       '업로드됩니다. 첫 백업 전에 아래에서 암호화 비밀번호를 설정하세요.',
     keyringWarning:
       '시스템 키체인을 사용할 수 없습니다: 백업 비밀번호가 키체인의 추가 보호 없이 ' +
@@ -110,7 +110,7 @@ export const ko: Messages = {
     toastRestored: (works: number): string => `백업에서 ${works}개 작품을 복원했습니다.`,
     toastDisconnected: 'Dropbox 계정 연결이 해제되었습니다.',
     translationNotice: {
-      title: 'Translation Notice',
+      title: '번역 안내',
       text: '이 언어들 중에서 포르투갈어를 제외하고는 할 줄 모릅니다. 모든 번역은 AI가 했습니다. 세상의 모든 것과 마찬가지로 오류가 있을 수 있으니 너그러운 양해 부탁드립니다.',
       translationNotice2: '번역 개선에 도움을 주고 싶다면 프로젝트 저장소에 이슈를 열어 주세요.',
     },

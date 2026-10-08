@@ -93,7 +93,7 @@ describe('App: carregamento e estatísticas', () => {
     setup([]);
     expect(await screen.findByText('Sua biblioteca está vazia')).toBeInTheDocument();
     expect(
-      screen.getByText('Adicione sua primeira obra: capa, título e acompanhe o progresso.'),
+      screen.getByText('Adicione a sua primeira obra com capa e título e acompanhe o progresso.'),
     ).toBeInTheDocument();
 
     await userEvent.setup().click(screen.getByRole('button', { name: /Adicionar primeira obra/ }));
@@ -325,7 +325,7 @@ describe('App: status do Dropbox', () => {
     const { mock } = setup();
     await screen.findByText(/4 obra\(s\)/);
     expect(screen.getByTitle('Configurações do backup no Dropbox')).toHaveTextContent(
-      'Dropbox off',
+      'Dropbox desconectado',
     );
 
     mock.emitStatus({

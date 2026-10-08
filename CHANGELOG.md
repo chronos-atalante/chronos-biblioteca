@@ -4,6 +4,34 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.6.1](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.5.0...v1.6.1) (2026-10-08)
+
+### Features
+
+- README e estilos: seção de solução de problemas no `README.md` (sintomas
+  comuns e o que verificar antes de reportar) e componentes revisados em
+  `src/renderer/src/style/styles.css`.
+
+### Bug Fixes
+
+- traduções: revisão das 5 línguas (pt-BR, en, ko, zh-CN e ja) no app e no
+  site: item de privacidade com o texto do link duplicado (zh-CN), ordem de
+  frases e partículas (ko), frases quebradas nas doações e botão de conclusão
+  (ja), pontuação com `…` e textos das doações (pt-BR), concordância e
+  maiúsculas (en); rótulo do pílula de backup (`drivePill.off`) alinhado e
+  `translationNotice.title` traduzido nos 4 idiomas.
+- site: espaço e ponto finais das frases com link saíram do JSX e passaram a
+  viver no dicionário (`*Lead`/`*Mid`/`*End` em `src/i18n/`), removendo os
+  espaçamentos fixos entre termos CJK em `HomeContent` e `PrivacidadeContent`.
+
+### Documentação
+
+- japonês (`ja`) incluído nas listas de idioma que ainda citavam só 4 línguas:
+  `docs/api.md`, `docs/messages.md`, `docs/openapi.yaml`, `README.md`,
+  `AGENTS.md` e, na landing, `doc/i18n.md`, `doc/openapi.yaml`,
+  `doc/paginas.md`, `doc/README.md` e `doc/arquitetura.md` (o idioma já
+  estava no app e no site desde a 1.5.0).
+
 ## [1.5.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.4.0...v1.5.0) (2026-10-07)
 
 ### Features

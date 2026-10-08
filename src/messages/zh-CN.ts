@@ -53,7 +53,7 @@ export const zhCN: Messages = {
     emptyFoundTitle: '没有找到作品',
     emptyFoundText: '换个筛选条件或搜索词试试。',
     emptyLibraryTitle: '书库是空的',
-    emptyLibraryText: '添加第一部作品：封面、标题，并跟踪阅读进度。',
+    emptyLibraryText: '为第一部作品添加封面和标题，并跟踪阅读进度。',
     addFirstWork: '添加第一部作品',
     drivePill: {
       syncing: '同步中…',
@@ -70,7 +70,7 @@ export const zhCN: Messages = {
     bannerTitle: 'Dropbox备份。',
     bannerBody:
       '书库保存在应用专属文件夹中（您账号下的`/Apps/`内）：通过API，只有本应用能看到' +
-      '这个文件夹，Dropbox的其余部分对它完全不可见。由于该文件夹对您可见，所有文件都以' +
+      '这个文件夹，Dropbox的其余部分对它完全不可见。该文件夹在您的账号内可见，所有文件都以' +
       '不可读的文件名和加密内容（AES-256-GCM）上传，因此请在首次备份前在下方设置加密密码。',
     keyringWarning:
       '系统密钥环不可用：备份密码将失去密钥环的额外保护（文件仍仅您本人可读）。如果可以，' +
@@ -108,7 +108,7 @@ export const zhCN: Messages = {
     toastRestored: (works: number): string => `已恢复备份，共${works} 部作品。`,
     toastDisconnected: 'Dropbox账号已断开。',
     translationNotice: {
-      title: 'Translation Notice',
+      title: '翻译提示',
       text: '这些语言中只有葡萄牙语我会说，所有翻译都是由AI完成的。像世间万物一样，可能会有错误，请多包涵。',
       translationNotice2: '如果您想帮助改进翻译，请在项目仓库中提交 issue。',
     },
@@ -237,7 +237,7 @@ export const zhCN: Messages = {
     emptyLibrary: '没有可备份的本地书库。请至少添加一部作品。',
     noBackupFound: (provider: string): string => `在${provider}的应用文件夹中没有找到备份。`,
     invalidLibrary: '备份无效（library.json已损坏）。',
-    invalidListResponse: 'Dropbox API返回无效（文件列表）。',
+    invalidListResponse: 'Dropbox API 返回无效的响应（文件列表）。',
     tokenTimeout: '等待授权超时。',
     authCancelled: '授权已取消。',
     tokenFailed: (status: number): string => `获取令牌失败（${status}）。`,

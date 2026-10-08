@@ -57,7 +57,7 @@ export const ja: Messages = {
     drivePill: {
       syncing: '同期中…',
       connected: 'Dropbox 接続済み',
-      off: 'Dropbox オフ',
+      off: 'Dropbox 切断',
     },
     toastSaveError: '作品を保存できませんでした。',
     toastSaved: '作品を保存しました。',
@@ -70,7 +70,7 @@ export const ja: Messages = {
     bannerBody:
       'ライブラリはアプリ専用フォルダに保存されます（Dropbox の `/Apps/` 以下）。' +
       'API としてはこのアプリだけがそのフォルダを読み書きでき、他の領域は表示されません。' +
-      'フォルダはあなたのアカウントに可視なので、すべてのファイルは解読不能な名前と ' +
+      'フォルダはあなたのアカウント内に見えるので、すべてのファイルは解読不能な名前と ' +
       '暗号化された内容でアップロードされます (AES-256-GCM)。最初のバックアップ前に ' +
       '以下の暗号化パスフレーズを設定してください。',
     keyringWarning:
@@ -91,7 +91,7 @@ export const ja: Messages = {
     lastBackup: '最終バックアップ',
     inDropboxBackup: 'Dropbox バックアップ内',
     translationNotice: {
-      title: 'Translation Notice',
+      title: '翻訳のお知らせ',
       text: 'これらの言語の中でポルトガル語以外は話せません。すべての翻訳はAIによって行われています。世の中のすべてと同じように、間違いがあるかもしれません。少しの寛容をお願いいたします。',
       translationNotice2:
         '翻訳の改善にご協力いただける場合は、プロジェクトのリポジトリで Issue を作成してください。',
@@ -120,7 +120,7 @@ export const ja: Messages = {
   restore: {
     title: 'バックアップパスフレーズ',
     banner:
-      'Dropbox で **バックアップを作成** したときに使った暗号化パスフレーズを入力してください。' +
+      'Dropbox で**バックアップを作成**したときに使った暗号化パスフレーズを入力してください。' +
       'ダウンロードしたファイルを復元するには必須です。',
     passphraseLabel: '暗号化パスフレーズ',
     passphrasePlaceholder: 'バックアップ時に使用したパスフレーズ',
@@ -151,7 +151,7 @@ export const ja: Messages = {
     decrease10: '10 減らす',
     increase10: '10 増やす',
     progressValue: (progress: number): string => `第${progress}話`,
-    finish: '完結にする',
+    finish: '完了にする',
     reset: 'リセット',
     confirmDelete: '削除を確認しますか？',
     deleteAction: '削除',
@@ -205,12 +205,12 @@ export const ja: Messages = {
       'あなたの寄付がアプリ（と忍耐）を継続させます。',
     text3:
       '正直なところ、このプロジェクトは私自身の読書管理のための個人的なものです。' +
-      'あなたも筋金入りのオタクなら、好きなプラットフォームが「極」から「可」に ' +
-      '転落したときに読む物語の進捗を全部失う怖さがわかるはずです。',
+      'あなたも筋金入りのオタクなら、好きなプラットフォームが突然消えて、' +
+      '読みかけの物語の進捗を全部失う怖さがわかるはずです。',
     text4:
       'それでも万が一このプロジェクトに寄付が集まるなら、より完全なものになるよう ' +
-      '全力を尽くし、明日起きてみたらリーダーの履歴が「安・瓶」状態という不安から ' +
-      '遠ざかれるようにします。',
+      '全力を尽くします。そうすれば、翌朝起きたら読書履歴が消えていたかも、と ' +
+      '不安になる必要もなくなるでしょう。',
     openTitle: 'ブラウザで寄付ページを開く',
     donateNow: '今すぐ寄付',
     copyTitle: '寄付リンクをコピー',
@@ -237,7 +237,7 @@ export const ja: Messages = {
   },
 
   providers: {
-    dropboxStorageTarget: '/Apps/Chronos Biblioteca (アカウント内で可視なフォルダ)',
+    dropboxStorageTarget: '/Apps/Chronos Biblioteca (アカウント内で見えるフォルダ)',
     googleStorageTarget: 'appDataFolder (非公開フォルダ。Google ドライブの UI には表示されません)',
     googleUnavailable:
       'Google ドライブはまだ利用できません。Google の要件 (アプリ検証、同意画面、' +

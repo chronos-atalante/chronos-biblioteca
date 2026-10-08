@@ -364,7 +364,7 @@ components:
           description: Senha de criptografia do backup (obrigatória para enviar)
         language:
           type: string
-          enum: [pt-BR, en, ko, zh-CN]
+          enum: [pt-BR, en, ko, zh-CN, ja]
           description: Idioma da interface e das mensagens (padrão pt-BR)
     DriveStatus:
       type: object
