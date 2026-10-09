@@ -289,6 +289,48 @@ export const ja: Messages = {
     invalidId: '作品の ID が無効です。',
   },
 
+  /** シークレット金庫: モーダル、UI バッジ、ドメインエラー。 */
+  vault: {
+    createTitle: 'シークレット金庫を作成',
+    unlockTitle: '金庫のロックを解除',
+    createBody:
+      'このコンピュータのアプリの秘密情報(Dropbox のトークンやバックアップ用パスワード)を' +
+      '守るマスターパスワードを作成します。パスワードを忘れると秘密情報は復元できません。',
+    unlockBody: '保存された秘密情報にアクセスするにはマスターパスワードを入力してください。',
+    passwordLabel: 'マスターパスワード',
+    confirmLabel: 'パスワードの確認',
+    createAction: '金庫を作成',
+    unlockAction: 'ロック解除',
+    hint: '12文字以上で、明らかな繰り返しや連続は避けてください。',
+    mismatch: 'パスワードが一致しません。',
+    strength: {
+      weak: '弱い',
+      fair: 'ふつう',
+      strong: '強い',
+    },
+    createHint: 'アプリの秘密情報を保管するマスターパスワードの金庫を作成します。',
+    closeVault: '金庫をロック',
+    autoLocked: 'しばらく操作がなかったため、金庫は自動的にロックされました。',
+    badge: {
+      open: '金庫を開いている',
+      closed: '金庫はロック中',
+      none: '金庫なし',
+    },
+    lockout: (seconds: number): string =>
+      seconds < 60
+        ? `${seconds} 秒後に再試行してください。`
+        : `${Math.ceil(seconds / 60)} 分後に再試行してください.`,
+    errors: {
+      vaultExists: 'このコンピュータにはすでに金庫があります。',
+      vaultMissing: '金庫が見つかりません。',
+      vaultLocked: '金庫はロックされています。',
+      vaultLockedOut: 'ロック解除の試行が多すぎます。しばらく待ってから再試行してください。',
+      vaultWrongPassword: 'マスターパスワードが正しくありません。',
+      vaultTampered: '金庫が破損するか改ざんされています。',
+      vaultWeakPassword: '推測しやすいパスワードです。より簡単ではないものにしてください。',
+    },
+  },
+
   /** Página HTML que o loopback do OAuth mostra na aba do navegador. */
   oauthPage: {
     deniedTitle: '認証が拒否されました',

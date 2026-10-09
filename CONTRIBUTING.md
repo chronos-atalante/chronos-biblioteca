@@ -102,9 +102,11 @@ Para publicar uma versão (a partir da `main`):
 1. Bump em `package.json` → `version` + entrada nova no `CHANGELOG.md`
    (o tipo dos commits desde a última release indica MINOR/PATCH);
 2. Commit (`chore: release x.y.z`) e push na `main`;
-3. O push dispara o workflow **Publicar .deb**: o job **Verificar versão**
-   compara `package.json` com as Releases existentes e, sendo uma versão
-   nova, cria a tag `vX.Y.Z`, compila (`npm run dist`), anexa o `.deb`
+3. O push dispara o workflow **Publicar .deb**: os jobs **Verificar versão**
+   e **Verificar qualidade** (`npm run check` + `npm test`) rodam em
+   paralelo; só com os dois verdes o job **Gerar e publicar** compara
+   `package.json` com as Releases existentes e, sendo uma versão nova,
+   cria a tag `vX.Y.Z`, compila (`npm run dist`), anexa o `.deb`
    **e o repo APT flat assinado** (`Packages`, `Release`, `InRelease`,
    `public.key` + alias `chronos-biblioteca_amd64.deb`) à Release, e dispara
    o redeploy da landing (via Deploy Hook). Requer os secrets

@@ -284,6 +284,48 @@ export const ko: Messages = {
     invalidId: '잘못된 작품 식별자입니다.',
   },
 
+  /** 비밀 금고: 모달, UI 배지, 도메인 오류. */
+  vault: {
+    createTitle: '비밀 금고 만들기',
+    unlockTitle: '금고 잠금 해제',
+    createBody:
+      '이 컴퓨터의 앱 비밀(Dropbox 토큰 및 백업 비밀번호)을 보호하는 마스터 비밀번호를 ' +
+      '만드세요. 비밀번호를 잃어버리면 비밀을 복구할 수 없습니다.',
+    unlockBody: '저장된 비밀에 접근하려면 마스터 비밀번호를 입력하세요.',
+    passwordLabel: '마스터 비밀번호',
+    confirmLabel: '비밀번호 확인',
+    createAction: '금고 만들기',
+    unlockAction: '잠금 해제',
+    hint: '최소 12자 이상 입력하고, 눈에 띄는 반복이나 연속은 피하세요.',
+    mismatch: '비밀번호가 일치하지 않습니다.',
+    strength: {
+      weak: '약함',
+      fair: '보통',
+      strong: '강함',
+    },
+    createHint: '앱 비밀을 보관할 마스터 비밀번호 금고를 만드세요.',
+    closeVault: '금고 닫기',
+    autoLocked: '비밀 금고가 비활성 상태라 자동으로 잠겼습니다.',
+    badge: {
+      open: '금고 열림',
+      closed: '금고 잠김',
+      none: '금고 없음',
+    },
+    lockout: (seconds: number): string =>
+      seconds < 60
+        ? `${seconds}초 후에 다시 시도하세요.`
+        : `${Math.ceil(seconds / 60)}분 후에 다시 시도하세요.`,
+    errors: {
+      vaultExists: '이 컴퓨터에 이미 금고가 있습니다.',
+      vaultMissing: '금고를 찾을 수 없습니다.',
+      vaultLocked: '금고가 잠겨 있습니다.',
+      vaultLockedOut: '잠금 해제 시도가 너무 많습니다. 잠시 후 다시 시도하세요.',
+      vaultWrongPassword: '마스터 비밀번호가 올바르지 않습니다.',
+      vaultTampered: '금고가 손상되었거나 변경되었습니다.',
+      vaultWeakPassword: '예측하기 쉬운 비밀번호입니다. 더 예측하기 어려운 것으로 바꾸세요.',
+    },
+  },
+
   /** HTML page the OAuth loopback shows in the browser tab. */
   oauthPage: {
     deniedTitle: '인증 거부됨',

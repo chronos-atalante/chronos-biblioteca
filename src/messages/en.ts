@@ -289,6 +289,48 @@ export const en: Messages = {
     invalidId: 'Invalid work identifier.',
   },
 
+  /** Secrets vault: modal, UI badges and domain errors. */
+  vault: {
+    createTitle: 'Create the secrets vault',
+    unlockTitle: 'Unlock the vault',
+    createBody:
+      'Create a master password to protect the app secrets (Dropbox tokens and backup ' +
+      'password) on this computer. If you forget it, the secrets cannot be recovered.',
+    unlockBody: 'Enter the master password to access the stored secrets.',
+    passwordLabel: 'Master password',
+    confirmLabel: 'Confirm password',
+    createAction: 'Create vault',
+    unlockAction: 'Unlock',
+    hint: 'Use at least 12 characters, without obvious sequences or repetitions.',
+    mismatch: 'The passwords do not match.',
+    strength: {
+      weak: 'Weak',
+      fair: 'Fair',
+      strong: 'Strong',
+    },
+    createHint: 'Create a master-password vault to store the app secrets.',
+    closeVault: 'Lock vault',
+    autoLocked: 'The vault locked itself after a period of inactivity.',
+    badge: {
+      open: 'Vault open',
+      closed: 'Vault locked',
+      none: 'No vault',
+    },
+    lockout: (seconds: number): string =>
+      seconds < 60
+        ? `Wait ${seconds} seconds before trying again.`
+        : `Wait ${Math.ceil(seconds / 60)} minute(s) before trying again.`,
+    errors: {
+      vaultExists: 'A vault already exists on this computer.',
+      vaultMissing: 'No vault found.',
+      vaultLocked: 'The vault is locked.',
+      vaultLockedOut: 'Too many unlock attempts. Wait before trying again.',
+      vaultWrongPassword: 'Incorrect master password.',
+      vaultTampered: 'The vault is damaged or was altered.',
+      vaultWeakPassword: 'Predictable password. Choose something less obvious.',
+    },
+  },
+
   /** HTML page the OAuth loopback shows in the browser tab. */
   oauthPage: {
     deniedTitle: 'Authorization denied',

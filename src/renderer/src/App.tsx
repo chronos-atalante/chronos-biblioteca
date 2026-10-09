@@ -100,6 +100,14 @@ export default function App(): JSX.Element {
     };
   }, [reload]);
 
+  // Auto-lock do cofre (5 min de inatividade): avisa para o usuário reabrir.
+  useEffect(() => {
+    const unsubscribe = window.api.vault.onLocked(() => notify(m.vault.autoLocked, 'info'));
+    return () => {
+      unsubscribe();
+    };
+  }, [notify, m]);
+
   const persist = useCallback(async (work: Work): Promise<void> => {
     const saved = await window.api.library.save(work);
     setWorks(saved);

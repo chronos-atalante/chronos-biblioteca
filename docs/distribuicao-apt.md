@@ -67,6 +67,9 @@ Comparação dos caminhos avaliados:
 ```mermaid
 flowchart TD
     A["push na main (versão nova) / tag v*"] --> B0["job Verificar versão: package.json vs Releases"]
+    A --> Q["job Verificar qualidade: npm run check + npm test"]
+    Q -- "verde" --> B
+    Q -- "falhou" --> X["fim: nada publicado"]
     B0 -->|"Release ainda não existe"| B["publish.yml: gera e anexa os assets"]
     B0 -->|"Release já existe"| P["fim: execução verde e rápida"]
     B --> C["Release: .deb com versão + alias chronos-biblioteca_amd64.deb"]
@@ -82,8 +85,9 @@ flowchart TD
 Onde vive cada parte:
 
 - `Biblioteca/.github/workflows/publish.yml`: decide se há versão nova,
-  gera o `.deb`, anexa os assets da Release, monta e assina o repo APT flat
-  e dispara o redeploy da landing.
+  roda o **gate de qualidade** (`npm run check` + `npm test`, job
+  **Verificar qualidade**) e só então gera o `.deb`, anexa os assets da
+  Release, monta e assina o repo APT flat e dispara o redeploy da landing.
 - `Biblioteca/build/after-pack.cjs`: slim do pacote (idiomas e SwiftShader).
 - `Landing page/scripts/fetch-release.mjs`: lê a Release a cada build e grava
   `src/app/release-info.json` (`version`, `fileName`, `debUrl`), com
@@ -171,15 +175,17 @@ prioridade 500 e a assinatura precisa passar sem avisos.
 
 ### 6. Publicação
 
-O push na `main` dispara o workflow **Publicar .deb**, que no job
-**Verificar versão** lê `package.json` e checa se já existe Release para
-`v<versão>`: se existe, encerra ali (execução verde e rápida); se não
-existe, cria a tag, compila, anexa o `.deb` e o repo APT flat assinado e
-dispara o Deploy Hook da Vercel. O build da landing então lê a Release nova
-e publica a versão atualizada. O ciclo é:
+O push na `main` dispara o workflow **Publicar .deb**: o job **Verificar
+versão** lê `package.json` e checa se já existe Release para `v<versão>`, em
+paralelo com o job **Verificar qualidade** (`npm run check` + `npm test`,
+com o OSV Scanner baixado no runner). Se existe Release, encerra ali
+(execução verde e rápida); se não existe, o job **Gerar e publicar** (que
+só roda com os dois verdes) cria a tag, compila, anexa o `.deb` e o repo
+APT flat assinado e dispara o Deploy Hook da Vercel. O build da landing
+então lê a Release nova e publica a versão atualizada. O ciclo é:
 
 ```text
-push na main (versão nova) → Verificar versão (package.json vs Releases) → cria tag → .deb + APT assinados na Release → deploy hook → build da landing → versão nova no site
+push na main (versão nova) → Verificar versão + Verificar qualidade (check + testes) → cria tag → .deb + APT assinados na Release → deploy hook → build da landing → versão nova no site
 ```
 
 A tag é criada **pelo próprio CI, no commit do push**, então o workflow que
@@ -197,9 +203,12 @@ versão é manual e a **publicação é automática**:
    sobe MINOR ou PATCH.
 2. Commit (`chore: release x.y.z`) e push na `main`.
 3. O workflow **Verificar versão** detecta que `v<versão>` ainda não tem
-   Release e publica sozinho (cria a tag, compila, anexa, assina, notifica o
-   Vercel). Sem bump, ele só confirma que a Release já existe e sai verde.
-4. Aguardar o workflow ficar verde.
+   Release, o **Verificar qualidade** valida a árvore (`check` + testes) e,
+   com os dois verdes, o job de publicação cria a tag, compila, anexa,
+   assina e notifica o Vercel. Sem bump, ele só confirma que a Release já
+   existe e sai verde.
+4. Aguardar o workflow ficar verde (se o gate falhar, nada é publicado:
+   corrija e faça push de novo).
 5. Conferir a sincronia das quatro vias:
    `package.json` (`version`) ≡ tag `v*` ≡ `Packages` (`Version:`) ≡
    `Landing page/src/app/release-info.json` (`version`).

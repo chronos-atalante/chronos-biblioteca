@@ -32,13 +32,18 @@ níveis (método → canal → origem dos dados):
 | `pickCover()`          | `cover:pick`        | diálogo do SO → copia para `covers/`          |
 | `settings.get()`       | `settings:get`      | `settings.json` local                         |
 | `settings.set(cfg)`    | `settings:set`      | normaliza e grava `settings.json` (modo 0600) |
-| `drive.status()`       | `drive:status`      | estado em memória (+ `dropbox-tokens.json`)   |
+| `drive.status()`       | `drive:status`      | estado em memória (+ tokens no cofre/legado)  |
 | `drive.auth()`         | `drive:auth`        | OAuth PKCE + loopback `localhost:17431`       |
 | `drive.backup()`       | `drive:backup`      | criptografa e envia à pasta do app            |
 | `drive.restore(senha)` | `drive:restore`     | baixa, decifra e substitui a biblioteca       |
 | `drive.backupInfo()`   | `drive:backup-info` | metadados do `library.json` remoto            |
-| `drive.disconnect()`   | `drive:disconnect`  | apaga `dropbox-tokens.json` local             |
+| `drive.disconnect()`   | `drive:disconnect`  | apaga a sessão e o segredo dos tokens         |
 | `drive.onStatus(cb)`   | evento (sem invoke) | assina `drive:status-changed`                 |
+| `vault.status()`       | `vault:status`      | container do cofre + sessão em memória        |
+| `vault.create(senha)`  | `vault:create`      | cria o cofre (Argon2id) e o deixa aberto      |
+| `vault.unlock(senha)`  | `vault:unlock`      | trava exponencial + Argon2id                  |
+| `vault.lock()`         | `vault:lock`        | zera a chave da sessão (auto-lock em 5 min)   |
+| `vault.onLocked(cb)`   | evento (sem invoke) | assina `vault:locked` (auto-lock)             |
 
 ---
 
@@ -50,6 +55,10 @@ Métodos do Drive devolvem um envelope de resultado e **nunca lançam**:
 { ok: true, summary?: BackupSummary } // sucesso
 { ok: false, error: 'mensagem' } // falha (no idioma corrente)
 ```
+
+Os canais do cofre seguem a mesma ideia com o envelope `VaultResult` (§6), só
+que a falha carrega um **código** (`VaultErrorCode`) em vez de texto: quem
+exibe localiza a mensagem no bundle corrente (`m.vault.errors[code]`).
 
 Métodos de biblioteca/configurações devolvem os dados direto (ou `null` onde
 indicado). Erros de Drive saem no idioma corrente (`AppSettings.language`,
@@ -178,7 +187,8 @@ Abre o navegador (PKCE, sem `app secret`, com `token_access_type=offline`) e esc
 callback num servidor loopback de **porta fixa** (`localhost:17431`; o Dropbox exige a
 URI de redirect pré-cadastrada no App Console, então a porta não pode ser sorteada;
 se estiver ocupada, cai para uma livre e o Dropbox recusa com `redirect_uri_mismatch`).
-Troca o código por tokens e grava `dropbox-tokens.json` (modo `0600`). Falhas típicas:
+Troca o código por tokens e grava `dropbox.tokens` no cofre quando ele está
+aberto (sem cofre, `dropbox-tokens.json` modo `0600`). Falhas típicas:
 `access_denied` (usuário recusou), `Tempo esgotado aguardando autorização.`,
 `Falha ao obter tokens (HTTP).`. Sem App key (a embutida estando vazia e sem
 `driveClientId` no `settings.json`), recusa antes de abrir o navegador.
@@ -244,7 +254,8 @@ não for uma lista.
 
 ### `drive.disconnect() → Promise<DriveStatus>`
 
-Apaga `dropbox-tokens.json` local e devolve o status desconectado. O backup na
+Apaga os tokens locais (segredo `dropbox.tokens` do cofre, ou
+`dropbox-tokens.json` no caminho legado) e devolve o status desconectado. O backup na
 nuvem **permanece** (apague a pasta `/Apps/Chronos Biblioteca` pelo Dropbox Web, se quiser;
 para cortar o acesso do app, remova-o em `dropbox.com/account/security`).
 
@@ -274,7 +285,64 @@ ao desmontar o componente.
 
 ---
 
-## 6. Protocolos `cover://` e `chronos://`
+## 6. Cofre de segredos
+
+Cofre local com senha mestra que guarda os segredos do app (`dropbox.tokens`,
+`settings.drivePassphrase`, `settings.driveClientId` — ver `docs/credenciais.md`
+e `docs/cofre.md`, da Fase 7 do roadmap). Domínio em
+`src/main/vault/*`; canais registrados em `src/main/index.ts`. Todo fluxo que
+consome segredo (Conectar, Backup, Restaurar, Salvar configurações,
+Desconectar) chama `vault.status()` antes e abre o desbloqueio quando o cofre
+existe fechado; **sem cofre**, o app segue no modo legado de sempre.
+
+### `vault.status() → Promise<VaultStatus>`
+
+| Campo       | Tipo      | Notas                                         |
+| ----------- | --------- | --------------------------------------------- |
+| `exists`    | `boolean` | o arquivo do cofre existe (mesmo ilegível)    |
+| `unlocked`  | `boolean` | há chave na sessão (cofre aberto)             |
+| `attempts`  | `number`  | tentativas erradas consecutivas (0 = nenhuma) |
+| `lockUntil` | `number`  | epoch em ms da trava (0 = sem trava)          |
+
+### `vault.create(password: string) → Promise<VaultResult>`
+
+Cria o cofre já aberto (Argon2id + AES-256-GCM) e re-lê o estado do drive
+(os segredos legados migram para dentro). Recusa senha previsível
+(`vaultWeakPassword`) e cofre já existente (`vaultExists`).
+
+### `vault.unlock(password: string) → Promise<VaultResult>`
+
+Abre o cofre existente. A trava exponencial é checada **antes** do Argon2id
+(`vaultLockedOut` com `retryInMs`); senha errada soma tentativa
+(`vaultWrongPassword`); container adulterado falha fechada (`vaultTampered`).
+Sucesso re-lê o estado do drive.
+
+### `vault.lock() → Promise<VaultStatus>`
+
+Fecha a sessão (zera a chave em memória) e devolve o status. O auto-lock
+derruba sozinho após 5 min de inatividade.
+
+### `vault.onLocked(cb) → () => void`
+
+Assina o evento `vault:locked`, enviado quando o auto-lock fecha o cofre. A UI
+mostra o aviso `m.vault.autoLocked` e o próximo fluxo de segredo pede o
+desbloqueio de novo.
+
+### Códigos de erro (`VaultResult.ok === false`)
+
+| Código               | `retryInMs`     | Quando                                      |
+| -------------------- | --------------- | ------------------------------------------- |
+| `vaultWeakPassword`  | 0               | senha curta ou previsível na criação        |
+| `vaultExists`        | 0               | tentativa de criar um segundo cofre         |
+| `vaultMissing`       | 0               | desbloqueio sem cofre                       |
+| `vaultLocked`        | 0               | operação com a sessão fechada               |
+| `vaultWrongPassword` | espera da volta | senha errada (soma tentativa)               |
+| `vaultLockedOut`     | espera restante | tentativa durante a trava exponencial       |
+| `vaultTampered`      | 0               | container ilegível/alterado (falha fechada) |
+
+---
+
+## 7. Protocolos `cover://` e `chronos://`
 
 Capas servidas como `cover://<arquivo>` (scheme privilegiado: `standard`,
 `secure`, `supportFetchAPI`, `stream`), com `Content-Type` por extensão e
@@ -288,7 +356,7 @@ por `registerAppProtocol`: mapeia o pathname da URL para `out/renderer`, com
 
 ---
 
-## 7. Esquemas
+## 8. Esquemas
 
 ### `Work`
 
@@ -301,7 +369,7 @@ por `registerAppProtocol`: mapeia o pathname da URL para `out/renderer`, com
 | `status`    | `WorkStatus` | sim         | `planejado` `lendo` `pausado` `concluido` `cancelado` |
 | `progress`  | `number`     | sim         | capítulos (`Cap. X`), `>= 0`, sem teto                |
 | `marker`    | `string`     | não         | ex.: `Cap. 45`, `Vol. 3`                              |
-| `coverFile` | `string`     | não         | arquivo em `covers/` (ver §6)                         |
+| `coverFile` | `string`     | não         | arquivo em `covers/` (ver §7)                         |
 | `category`  | `string`     | não         | ex.: `Isekai`                                         |
 | `createdAt` | `string`     | sim         | ISO 8601 (gerado pelo main)                           |
 | `updatedAt` | `string`     | sim         | ISO 8601 (renovado a cada save)                       |
@@ -314,5 +382,6 @@ Marcar `concluido` não altera o número salvo (o card exibe `100%`).
 
 ### Demais esquemas
 
-Ver `AppSettings` (§4), `DriveStatus` e `BackupSummary` (§5) acima; tipos-fonte
-em `src/types/settings.ts` e `src/types/drive.ts`.
+Ver `AppSettings` (§4), `DriveStatus` e `BackupSummary` (§5), `VaultStatus` e
+`VaultResult` (§6) acima; tipos-fonte em `src/types/settings.ts`,
+`src/types/drive.ts` e `src/types/vault.ts`.

@@ -4,6 +4,39 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.7.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.6.1...v1.7.0) (2026-10-09)
+
+### Features
+
+- cofre de segredos: cofre local criptografado (Argon2id, container
+  `vault.zkv`, trava exponencial e auto-lock) guardando a senha de backup e
+  as credenciais; canais IPC `vault:*` com envelope `VaultResult` e
+  `assertAppFrame`, gate `ensureVault` em todos os fluxos que usam segredo e
+  modal `VaultModal` na tela de Configurações (textos nos 5 idiomas;
+  `docs/cofre.md` e `docs/credenciais.md`).
+- empacotamento: confinamento AppArmor real no `.deb`
+  (`build/apparmor-profile` via `deb.appArmorProfile`): escrita só nos
+  diretórios do app, deny-list de credenciais no home (chaveiros, navegadores
+  inclusive Brave, cofre do Guardinha), exec só do pacote + `xdg-open` e rede
+  `stream`/`dgram` (HTTPS e DNS do Dropbox); `build/postrm` custom
+  (`deb.afterRemove`) descarrega o perfil do kernel e limpa o
+  `update-alternatives` na remoção, e o ciclo complain→enforce foi executado
+  numa máquina Linux Mint real (`docs/build.md`).
+
+### Segurança
+
+- CI: job **Verificar qualidade** no `publish.yml` (`npm run check` +
+  `npm test`) vira gate do `build-deb` (`needs:` explícito): falha de tipo,
+  lint, formato, vulnerabilidade ou teste trava a publicação antes de tag ou
+  `.deb`.
+
+### Documentação
+
+- docs novos: `cofre.md`, `credenciais.md`, `testes.md`, `build.md` e
+  `seguranca.md` (mapa medida → arquivo); `SECURITY.md` com o modelo de
+  ameaça do cofre e os riscos do confinamento; índices atualizados em
+  `README.md` e `AGENTS.md`.
+
 ## [1.6.1](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.5.0...v1.6.1) (2026-10-08)
 
 ### Features

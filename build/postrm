@@ -1,7 +1,44 @@
 #!/bin/sh
 set -e
-# Purge remove os dados do usuário nos diretórios que o app realmente usa
-# (XDG, minúsculo; filesystem do Linux é case-sensitive) e as marcas antigas.
+# after-remove custom do .deb (deb.afterRemove; electron-builder roda este
+# arquivo pelo writeConfigFile, que substitui as macros de nome do executável
+# e do produto nos caminhos abaixo — qualquer outra macro derruba o build, e
+# as aspas simples são propositais para o shell não expandir o texto crudo).
+#
+# Substitui o template padrão do electron-builder, então espelha as dele:
+# 1. remove o update-alternatives criado no pós-instalação;
+# 2. descarrega e apaga o perfil AppArmor (sem isso a policy fica imposta no
+#    kernel até o reboot e o arquivo fica para trás em /etc/apparmor.d);
+# 3. no purge, remove os dados do usuário nos diretórios que o app realmente
+#    usa (XDG, minúsculo; filesystem do Linux é case-sensitive) e as marcas
+#    antigas.
+# shellcheck disable=SC2016
+
+# Delete the link to the binary
+# update-alternatives --remove <name> <path>: 'path' must be the registered
+# alternative binary, not the generic symlink; ver man update-alternatives.
+if type update-alternatives >/dev/null 2>&1; then
+  update-alternatives --remove '${executable}' '/opt/${sanitizedProductName}/${executable}'
+else
+  rm -f '/usr/bin/${executable}'
+fi
+
+APPARMOR_PROFILE_DEST='/etc/apparmor.d/${executable}'
+
+# Remove and unload apparmor profile.
+if [ -f "$APPARMOR_PROFILE_DEST" ]; then
+  # Descarrega a profile do kernel antes de apagar o arquivo, senão a policy
+  # antiga continua enforced até o reboot. O guard de chroot espelha o do
+  # after-install padrão (operações vivas de AppArmor não fazem sentido em
+  # chroot). https://wiki.debian.org/AppArmor/HowToUse
+  if apparmor_status --enabled > /dev/null 2>&1; then
+    if ! { [ -x '/usr/bin/ischroot' ] && /usr/bin/ischroot; } && hash apparmor_parser 2>/dev/null; then
+      apparmor_parser --remove "$APPARMOR_PROFILE_DEST" || true
+    fi
+  fi
+  rm -f "$APPARMOR_PROFILE_DEST"
+fi
+
 if [ "$1" = "purge" ]; then
   for home in /home/* /root; do
     [ -d "$home" ] || continue

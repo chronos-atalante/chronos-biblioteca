@@ -1,7 +1,7 @@
 {
   "name": "chronos-biblioteca",
   "productName": "Chronos Biblioteca",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Biblioteca de anotação de progresso em leituras de webtoons, manhwas, manhuas, mangás e livros",
   "main": "out/main/index.js",
   "desktopName": "chronos-biblioteca.desktop",
@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.3.1",
+    "hash-wasm": "^4.12.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
@@ -112,9 +113,8 @@
       "syncDesktopName": true
     },
     "deb": {
-      "fpm": [
-        "--after-remove=build/postrm"
-      ],
+      "appArmorProfile": "build/apparmor-profile",
+      "afterRemove": "build/postrm",
       "priority": "optional",
       "depends": [
         "libgtk-3-0",

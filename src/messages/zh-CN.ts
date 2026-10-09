@@ -267,6 +267,48 @@ export const zhCN: Messages = {
     invalidId: '作品标识符无效。',
   },
 
+  /** 密码库：模态框、界面标识和领域错误。 */
+  vault: {
+    createTitle: '创建密码库',
+    unlockTitle: '解锁密码库',
+    createBody:
+      '创建一个主密码，用来保护本机上的应用机密（Dropbox 令牌和备份密码）。' +
+      '如果忘记密码，这些机密将无法恢复。',
+    unlockBody: '输入主密码以访问已保存的机密。',
+    passwordLabel: '主密码',
+    confirmLabel: '确认密码',
+    createAction: '创建密码库',
+    unlockAction: '解锁',
+    hint: '至少 12 个字符，不要使用明显的序列或重复。',
+    mismatch: '两次输入的密码不一致。',
+    strength: {
+      weak: '弱',
+      fair: '一般',
+      strong: '强',
+    },
+    createHint: '创建一个由主密码保护的密码库来保存应用机密。',
+    closeVault: '锁定密码库',
+    autoLocked: '密码库因长时间无操作已自动锁定。',
+    badge: {
+      open: '密码库已打开',
+      closed: '密码库已锁定',
+      none: '无密码库',
+    },
+    lockout: (seconds: number): string =>
+      seconds < 60
+        ? `请等待 ${seconds} 秒后重试。`
+        : `请等待 ${Math.ceil(seconds / 60)} 分钟后重试。`,
+    errors: {
+      vaultExists: '此计算机上已存在密码库。',
+      vaultMissing: '未找到密码库。',
+      vaultLocked: '密码库已锁定。',
+      vaultLockedOut: '解锁尝试次数过多，请稍候再试。',
+      vaultWrongPassword: '主密码不正确。',
+      vaultTampered: '密码库已损坏或被篡改。',
+      vaultWeakPassword: '密码过于常见，请换一个更难猜的。',
+    },
+  },
+
   /** OAuth回环在浏览器选项卡中显示的HTML页面。 */
   oauthPage: {
     deniedTitle: '授权被拒绝',

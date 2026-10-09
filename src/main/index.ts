@@ -29,15 +29,25 @@ import {
   backupInfo,
   backupNow,
   disconnect,
+  emit,
   getStatus,
   initDrive,
   listProviders,
+  loadState,
   onStatus,
   restoreNow,
 } from '@zero/main/drive';
+import {
+  createVault,
+  isVaultError,
+  lockVault,
+  unlockVault,
+  vaultSession,
+  vaultStatus,
+} from '@zero/main/vault';
 import { currentMessages } from '@zero/main/i18n';
 import { openExternalSafe } from '@zero/main/external';
-import type { AppSettings, DriveStatus, Work } from '@zero/types';
+import type { AppSettings, DriveStatus, VaultResult, VaultStatus, Work } from '@zero/types';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -278,6 +288,18 @@ function assertAppFrame(event: unknown): void {
   }
 }
 
+/**
+ * Converte o `VaultError` do domínio no envelope de resposta dos canais de
+ * cofre (o main nunca lança no IPC: o renderer localiza `code` no bundle).
+ */
+function vaultFailure(error: unknown): VaultResult {
+  if (isVaultError(error)) {
+    return { ok: false, code: error.code, retryInMs: error.retryInMs ?? 0 };
+  }
+  console.error('Erro inesperado no cofre:', error);
+  return { ok: false, code: 'vaultTampered', retryInMs: 0 };
+}
+
 function registerIpc(): void {
   ipcMain.handle('library:get', (event): Work[] => {
     assertAppFrame(event);
@@ -359,6 +381,51 @@ function registerIpc(): void {
   ipcMain.handle('drive:disconnect', (event): DriveStatus => {
     assertAppFrame(event);
     return disconnect();
+  });
+
+  // Com o cofre criado/desbloqueado o estado do drive é relido: os tokens
+  // podem ter migrado para dentro e o renderer recebe o status novo.
+  const reloadDriveState = (): void => {
+    loadState();
+    emit();
+  };
+
+  ipcMain.handle('vault:status', (event): VaultStatus => {
+    assertAppFrame(event);
+    return vaultStatus();
+  });
+
+  ipcMain.handle('vault:create', async (event, password: string): Promise<VaultResult> => {
+    assertAppFrame(event);
+    try {
+      const status = await createVault(password);
+      reloadDriveState();
+      return { ok: true, status };
+    } catch (error) {
+      return vaultFailure(error);
+    }
+  });
+
+  ipcMain.handle('vault:unlock', async (event, password: string): Promise<VaultResult> => {
+    assertAppFrame(event);
+    try {
+      const status = await unlockVault(password);
+      reloadDriveState();
+      return { ok: true, status };
+    } catch (error) {
+      return vaultFailure(error);
+    }
+  });
+
+  ipcMain.handle('vault:lock', (event): VaultStatus => {
+    assertAppFrame(event);
+    return lockVault();
+  });
+
+  vaultSession.onAutoLock(() => {
+    if (mainWindow !== null && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('vault:locked');
+    }
   });
 
   onStatus((status) => {

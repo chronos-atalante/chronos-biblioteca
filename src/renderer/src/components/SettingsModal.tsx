@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type {
   AppSettings,
@@ -6,6 +6,7 @@ import type {
   BackupProviderInfo,
   BackupSummary,
   DriveStatus,
+  VaultStatus,
 } from '@zero/types';
 import { LANGUAGES, LANGUAGE_LABELS, messages } from '@zero/messages';
 import { formatDate } from '@zero/renderer/constants';
@@ -13,6 +14,7 @@ import { richText, useLanguage, useMessages } from '@zero/renderer/i18n';
 import RestorePasswordModal from '@zero/renderer/components/RestorePasswordModal';
 import Select from '@zero/renderer/components/Select';
 import type { SelectOption } from '@zero/renderer/components/Select';
+import VaultModal from '@zero/renderer/components/VaultModal';
 
 /** Ícone de marca por provedor (catálogo fechado em `BackupProviderId`). */
 const PROVIDER_ICONS: Record<BackupProviderId, string> = {
@@ -49,6 +51,10 @@ export default function SettingsModal({
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [promptRestore, setPromptRestore] = useState(false);
+  const [vault, setVault] = useState<VaultStatus | null>(null);
+  const [vaultPrompt, setVaultPrompt] = useState<'create' | 'unlock' | null>(null);
+  // Ação adiada enquanto o cofre está fechado (guardada em ref: não renderiza).
+  const pendingVaultAction = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -77,19 +83,27 @@ export default function SettingsModal({
     const unsubscribe = window.api.drive.onStatus((next) => setStatus(next));
 
     const loadInitial = async (): Promise<void> => {
-      const [loadedSettings, driveStatus, backupSummary, providerCatalog, keyringAvailable] =
-        await Promise.all([
-          window.api.settings.get(),
-          window.api.drive.status(),
-          window.api.drive.backupInfo(),
-          window.api.drive.providers(),
-          window.api.settings.isKeyringAvailable(),
-        ]);
+      const [
+        loadedSettings,
+        driveStatus,
+        backupSummary,
+        providerCatalog,
+        keyringAvailable,
+        vaultStatus,
+      ] = await Promise.all([
+        window.api.settings.get(),
+        window.api.drive.status(),
+        window.api.drive.backupInfo(),
+        window.api.drive.providers(),
+        window.api.settings.isKeyringAvailable(),
+        window.api.vault.status(),
+      ]);
       setSettings(loadedSettings);
       setStatus(driveStatus);
       setInfo(backupSummary);
       setProviders(providerCatalog);
       setKeyring(keyringAvailable);
+      setVault(vaultStatus);
       setLoading(false);
     };
 
@@ -99,6 +113,34 @@ export default function SettingsModal({
       unsubscribe();
     };
   }, []);
+
+  /**
+   * Ponto de passagem dos fluxos que consomem segredos: com o cofre existente
+   * mas fechado, abre o desbloqueio e **adia** a ação; sem cofre, o app segue
+   * no modo legado (a ação roda direto, como sempre).
+   */
+  const ensureVault = async (then: () => void): Promise<void> => {
+    const status = await window.api.vault.status();
+    setVault(status);
+    if (status.exists && !status.unlocked) {
+      pendingVaultAction.current = then;
+      setVaultPrompt('unlock');
+      return;
+    }
+    then();
+  };
+
+  const afterVaultPrompt = (): void => {
+    setVaultPrompt(null);
+    const action = pendingVaultAction.current;
+    pendingVaultAction.current = null;
+    void window.api.vault.status().then(setVault);
+    action?.();
+  };
+
+  const closeVault = async (): Promise<void> => {
+    setVault(await window.api.vault.lock());
+  };
 
   const run = async (label: string, task: () => Promise<void>): Promise<void> => {
     setBusy(label);
@@ -110,46 +152,56 @@ export default function SettingsModal({
   };
 
   const saveSettings = (): Promise<void> =>
-    run('save', async () => {
-      const saved = await window.api.settings.set(settings);
-      setSettings(saved);
-      onLanguageChange(saved.language);
-      // O catálogo e o resumo voltam já no idioma novo (o main relê as config).
-      await Promise.all([refreshProviders(), refreshDriveStatus()]);
-      // Toast no idioma recém-salvo: o provider muda depois deste retorno.
-      notify(messages(saved.language).settings.toastSaved);
+    ensureVault(() => {
+      void run('save', async () => {
+        const saved = await window.api.settings.set(settings);
+        setSettings(saved);
+        onLanguageChange(saved.language);
+        // O catálogo e o resumo voltam já no idioma novo (o main relê as config).
+        await Promise.all([refreshProviders(), refreshDriveStatus()]);
+        // Toast no idioma recém-salvo: o provider muda depois deste retorno.
+        notify(messages(saved.language).settings.toastSaved);
+      });
     });
 
   const connect = (): Promise<void> =>
-    run('auth', async () => {
-      const result = await window.api.drive.auth();
-      if (!result.ok) notify(result.error ?? m.settings.toastAuthFailed, 'error');
-      else notify(m.settings.toastConnected);
-      await refreshDriveStatus();
+    ensureVault(() => {
+      void run('auth', async () => {
+        const result = await window.api.drive.auth();
+        if (!result.ok) notify(result.error ?? m.settings.toastAuthFailed, 'error');
+        else notify(m.settings.toastConnected);
+        await refreshDriveStatus();
+      });
     });
 
   const backup = (): Promise<void> =>
-    run('backup', async () => {
-      const result = await window.api.drive.backup();
-      if (!result.ok) notify(result.error ?? m.settings.toastBackupFailed, 'error');
-      else notify(m.settings.toastBackupDone);
-      await refreshDriveStatus();
+    ensureVault(() => {
+      void run('backup', async () => {
+        const result = await window.api.drive.backup();
+        if (!result.ok) notify(result.error ?? m.settings.toastBackupFailed, 'error');
+        else notify(m.settings.toastBackupDone);
+        await refreshDriveStatus();
+      });
     });
 
   const restore = (passphrase: string): Promise<void> =>
-    run('restore', async () => {
-      const result = await window.api.drive.restore(passphrase);
-      if (!result.ok) notify(result.error ?? m.settings.toastRestoreFailed, 'error');
-      else notify(m.settings.toastRestored(result.works ?? 0));
-      await refreshDriveStatus();
-      window.location.reload();
+    ensureVault(() => {
+      void run('restore', async () => {
+        const result = await window.api.drive.restore(passphrase);
+        if (!result.ok) notify(result.error ?? m.settings.toastRestoreFailed, 'error');
+        else notify(m.settings.toastRestored(result.works ?? 0));
+        await refreshDriveStatus();
+        window.location.reload();
+      });
     });
 
   const disconnect = (): Promise<void> =>
-    run('disconnect', async () => {
-      setStatus(await window.api.drive.disconnect());
-      setInfo(null);
-      notify(m.settings.toastDisconnected);
+    ensureVault(() => {
+      void run('disconnect', async () => {
+        setStatus(await window.api.drive.disconnect());
+        setInfo(null);
+        notify(m.settings.toastDisconnected);
+      });
     });
 
   const languageOptions: SelectOption<AppSettings['language']>[] = LANGUAGES.map((item) => ({
@@ -239,6 +291,51 @@ export default function SettingsModal({
                     setSettings({ ...settings, drivePassphrase: event.target.value })
                   }
                 />
+                <div className="vault-row">
+                  <span
+                    className={`vault-badge${
+                      vault === null ? '' : vault.unlocked ? ' open' : vault.exists ? ' closed' : ''
+                    }`}
+                  >
+                    {vault === null
+                      ? ''
+                      : vault.unlocked
+                        ? m.vault.badge.open
+                        : vault.exists
+                          ? m.vault.badge.closed
+                          : m.vault.badge.none}
+                  </span>
+                  {vault !== null && !vault.exists ? (
+                    <button
+                      className="btn ghost"
+                      onClick={() => setVaultPrompt('create')}
+                      disabled={working}
+                      title={m.vault.createHint}
+                    >
+                      <i className="fa-solid fa-vault" /> {m.vault.createAction}
+                    </button>
+                  ) : null}
+                  {vault?.exists === true && !vault.unlocked ? (
+                    <button
+                      className="btn ghost"
+                      onClick={() => setVaultPrompt('unlock')}
+                      disabled={working}
+                    >
+                      <i className="fa-solid fa-unlock" /> {m.vault.unlockAction}
+                    </button>
+                  ) : null}
+                  {vault?.unlocked === true ? (
+                    <button
+                      className="btn ghost"
+                      onClick={() => {
+                        void closeVault();
+                      }}
+                      disabled={working}
+                    >
+                      <i className="fa-solid fa-lock" /> {m.vault.closeVault}
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </div>
 
@@ -339,6 +436,17 @@ export default function SettingsModal({
             setPromptRestore(false);
             void restore(passphrase);
           }}
+        />
+      ) : null}
+
+      {vaultPrompt !== null ? (
+        <VaultModal
+          mode={vaultPrompt}
+          onClose={() => {
+            setVaultPrompt(null);
+            pendingVaultAction.current = null;
+          }}
+          onUnlocked={afterVaultPrompt}
         />
       ) : null}
     </>

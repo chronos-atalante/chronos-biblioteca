@@ -1,5 +1,6 @@
 import type { BackupProviderInfo, BackupSummary, DriveStatus } from '@zero/types/drive';
 import type { AppSettings } from '@zero/types/settings';
+import type { VaultResult, VaultStatus } from '@zero/types/vault';
 import type { Work } from '@zero/types/work';
 
 export interface ElectronApi {
@@ -25,5 +26,13 @@ export interface ElectronApi {
     backupInfo: () => Promise<BackupSummary | null>;
     disconnect: () => Promise<DriveStatus>;
     onStatus: (cb: (status: DriveStatus) => void) => () => void;
+  };
+  vault: {
+    status: () => Promise<VaultStatus>;
+    create: (password: string) => Promise<VaultResult>;
+    unlock: (password: string) => Promise<VaultResult>;
+    lock: () => Promise<VaultStatus>;
+    /** Avisa quando o auto-lock derruba a sessão do cofre. */
+    onLocked: (cb: () => void) => () => void;
   };
 }

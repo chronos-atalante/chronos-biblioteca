@@ -1342,3 +1342,72 @@ input[type='range']::-webkit-slider-thumb {
     animation: none;
   }
 }
+
+/* Cofre de segredos: medidor de força no VaultModal e badge nas Configurações. */
+.vault-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.vault-badge {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+}
+
+.vault-badge.open {
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.4);
+  color: #a5f3d4;
+}
+
+.vault-badge.closed {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #fde68a;
+}
+
+.vault-strength {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.vault-strength-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.vault-strength-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.15s ease;
+}
+
+.vault-strength-bar.weak {
+  width: 33%;
+  background: #ef6a7a;
+}
+
+.vault-strength-bar.fair {
+  width: 66%;
+  background: #fbbf24;
+}
+
+.vault-strength-bar.strong {
+  width: 100%;
+  background: #34d399;
+}

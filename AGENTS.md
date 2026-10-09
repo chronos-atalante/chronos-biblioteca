@@ -11,7 +11,8 @@ App desktop Electron + TypeScript + React (Vite) para anotar progresso de
 leituras, com backup criptografado no Dropbox, alvo Linux Mint e distribuição
 `.deb`. Versão: `package.json` → `version` é a fonte da verdade.
 
-Camadas (diagrama no `README.md`, seção Arquitetura):
+Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
+`docs/arquitetura.md`):
 
 - `src/main/`: janela, IPC, protocolos `cover://` e `chronos://` (`index.ts`),
   persistência (`library.ts`, `settings.ts`) e backup na nuvem (`drive/`).
@@ -27,7 +28,8 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
   contrato de `window.api` (`docs/api.md`).
 - Persistência local em JSON: obras e capas em `~/.local/share/chronos-biblioteca/`
   (`library.json`, `covers/`) e configurações e tokens em
-  `~/.config/chronos-biblioteca/` (`settings.json`, `dropbox-tokens.json`); a nuvem
+  `~/.config/chronos-biblioteca/` (`settings.json`, cofre `.vault/` e, no modo
+  legado, `dropbox-tokens.json`); a nuvem
   passa pelo contrato `BackupProvider` (`docs/backup-providers.md`), com o
   Dropbox como único provedor operante (App folder, sem credencial embutida).
 - IPC via `ipcRenderer.invoke` e `ipcMain.handle`; canal novo só com tipo em
@@ -112,6 +114,12 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
   `registerAppProtocol` (substitui `file://`); todo handler IPC valida
   `event.senderFrame` com `assertAppFrame`. Fuses de segurança no electron-
   builder via chave `electronFuses`.
+- Confinamento AppArmor no `.deb` (`build/apparmor-profile`, via
+  `deb.appArmorProfile`): escrita só nos diretórios do app, deny-list de
+  credenciais no home, exec só do pacote + `xdg-open`, rede só `stream` e
+  `dgram` (DNS). Negar regra da deny-list ou voltar ao perfil decorativo é
+  regressão de segurança; ciclo complain/enforce e validação em
+  `docs/build.md`.
 - Backup: cifragem AES-256-GCM com nomes opacos (`docs/dropbox.md`); senha
   e conteúdo nunca em log ou mensagem exibida.
 - `.deb` nunca entra no git e a assinatura do repo APT acontece só no
@@ -128,16 +136,25 @@ Camadas (diagrama no `README.md`, seção Arquitetura):
 - Nunca renomear os assets estáveis da Release (`Packages`, `Packages.gz`,
   `Release`, `Release.gpg`, `InRelease`, `public.key` e o alias
   `chronos-biblioteca_amd64.deb`).
-- Passo a passo completo: `docs/distribuicao-apt.md`. Regras do monorepo:
+- Passo a passo completo: `docs/distribuicao-apt.md`; build, `.deb` e gate de
+  qualidade do CI: `docs/build.md`. Regras do monorepo:
   `AGENTS.md` da raiz.
 
 ## Documentação
 
 - Documentação nova vai em `docs/`; o `README.md` é o índice (atualize a
   tabela na mesma mudança).
-- Mapa: `docs/api.md` (contrato `window.api`), `docs/dropbox.md` (backup),
+- Mapa: `docs/visao-geral.md` (visão geral e glossário),
+  `docs/arquitetura.md` (camadas, aliases, IPC),
+  `docs/telas.md` (telas e componentes do renderer),
+  `docs/api.md` (contrato `window.api`), `docs/dropbox.md` (backup),
+  `docs/cofre.md` (cofre de segredos: formato, KDF, sessão),
+  `docs/credenciais.md` (segredos do app e ciclo de vida),
   `docs/backup-providers.md` (provedores de nuvem e status do Google Drive),
   `docs/messages.md` (i18n: bundles e regras de tradução),
+  `docs/testes.md` (suíte Vitest: convenções e cobertura),
   `docs/atribuicoes.md` e `docs/doacoes.md` (páginas do app),
-  `docs/distribuicao-apt.md` (distribuição APT), `docs/openapi.yaml` (API em
+  `docs/distribuicao-apt.md` (distribuição APT), `docs/build.md` (build,
+  `.deb` e gate no `publish.yml`), `docs/seguranca.md` (mapa medida →
+  arquivo), `docs/openapi.yaml` (API em
   OpenAPI 3.1).

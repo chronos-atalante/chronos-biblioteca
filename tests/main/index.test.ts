@@ -79,6 +79,10 @@ const expectedChannels = [
   'drive:restore',
   'drive:backup-info',
   'drive:disconnect',
+  'vault:status',
+  'vault:create',
+  'vault:unlock',
+  'vault:lock',
 ];
 
 beforeAll(async () => {

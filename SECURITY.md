@@ -1,5 +1,9 @@
 # Política de segurança
 
+> O **mapa** medida → arquivo (para quem vai mexer no código) está em
+> [`docs/seguranca.md`](docs/seguranca.md). Este documento é o texto
+> normativo: o que já protege, o que aceitamos e como reportar.
+
 ## Versões suportadas
 
 | Versão | Suporte             |
@@ -24,7 +28,15 @@ contrário).
 
 ## Proteções já existentes
 
-- **Tokens só na máquina**: `dropbox-tokens.json` com permissão `0600`, nunca em
+- **Cofre de segredos**: tokens do Dropbox, senha de backup e App key
+  alternativa sob uma senha mestra (Argon2id de 128 MiB + AES-256-GCM),
+  guardados em `~/.config/chronos-biblioteca/.vault/vault.zkv` (`0600`,
+  escrita atômica). Container fail-closed (leitura inválida = adulterado),
+  chave-mestra só na memória da sessão, auto-lock de 5 minutos e trava
+  exponencial (10 s → 24 h) checada **antes** do Argon2id; sem cofre, o
+  caminho legado abaixo continua (`docs/cofre.md`).
+- **Tokens só na máquina**: no cofre (`dropbox.tokens`) quando ele existe;
+  senão `dropbox-tokens.json` com permissão `0600`, nunca em
   repositório (coberto pelo `.gitignore`).
 - **Backup sempre criptografado**: AES-256-GCM com chave derivada por scrypt
   explícito (`N=2¹⁷`, `r=8`, `p=1`; mínimo atual do OWASP; salt e IV
@@ -41,7 +53,8 @@ contrário).
   - manifesto cifrado (nome remoto → nome local). Ao Dropbox restam visíveis
     só a quantidade aproximada e o tamanho dos blobs (limitação da API;
     tamanhos exatos não têm como ser ocultados sem padding).
-- **Senha no keyring**: `drivePassphrase` vai para o cofre do SO
+- **Senha de backup protegida**: com o cofre criado, `drivePassphrase` mora
+  nele (Argon2id + AES-256-GCM). No caminho legado vai para o cofre do SO
   (`safeStorage`) quando há keyring; sem keyring, em claro com `0600`
   (fallback documentado, com migração automática).
 - **Escopos mínimos**: o Dropbox recebe só `account_info.read`,
@@ -70,8 +83,9 @@ contrário).
   nome de capa importado (defesa em profundidade, classe CVE-2026-21589).
 - **Escrita de JSON atômica**: `library.json`, `settings.json` e
   `dropbox-tokens.json` são gravados em `.tmp` e renomeados por cima (nunca
-  JSON pela metade), com `0600` onde há credencial
-  (`src/main/jsonfile.ts`).
+  JSON pela metade), com `0600` onde há credencial; o container do cofre segue
+  a mesma regra (`vault.zkv.tmp` + `rename`, `0600`)
+  (`src/main/jsonfile.ts`, `src/main/vault/vault.ts`).
 - **IPC fechado por origem**: todo handler confere `event.senderFrame` contra a
   página oficial do app (scheme `chronos://` em produção ou dev server do
   Vite), bloqueando a mensagem antes do domínio tocar.
@@ -82,8 +96,39 @@ contrário).
   `--inspect` desligados, `enableCookieEncryption: true`,
   `onlyLoadAppFromAsar: true`
   no `electron-builder`.
+- **Confinamento AppArmor**: o `.deb` instala um perfil restritivo em
+  `/etc/apparmor.d/chronos-biblioteca` (o `postinst` do electron-builder pula
+  onde AppArmor não suporta `abi/4.0`). O processo instalado só escreve nos
+  próprios diretórios no home, só executa o binário do pacote e o `xdg-open`,
+  e usa rede apenas em `stream` e `dgram` (HTTPS e DNS do Dropbox). A leitura
+  do home é ampla porque o seletor de capa abre arquivo de qualquer pasta,
+  mas uma deny-list cobre credenciais (`.ssh`, `.gnupg`, chaveiros, perfis de
+  navegador inclusive Brave, cofre/Cookies do Guardinha, `.aws`, `.docker`,
+  `.kube`, `.netrc`, `.git-credentials`) (`build/apparmor-profile`; ciclo de
+  teste em `docs/build.md`).
 - **Dependências auditadas**: `npm run security:audit` (OSV Scanner) roda em
-  todo `npm run check`.
+  todo `npm run check`, que com `npm test` é **gate** do `publish.yml`: falha
+  de tipo, lint, formato, vulnerabilidade ou teste interrompe a publicação
+  antes de qualquer tag ou `.deb` (`docs/build.md`).
+
+## Modelo de ameaça do cofre
+
+O cofre protege os segredos do app contra leitura direta do disco: alguém com
+cópia do `vault.zkv` (backup,HD apagado, outro usuário do mesmo PC) vê só
+bytes e precisa da senha mestra, sujeita à trava exponencial. Ele **não**
+protege contra:
+
+- **Atacante com o usuário logado e o app desbloqueado**: a chave está em
+  memória e os fluxos funcionam normalmente; quem está na sessão do SO com o
+  app aberto pode usar (ou despejar) o que o app acessa. Mesma classe do
+  "acesso físico ao PC já desbloqueado", fora de escopo abaixo.
+- **Engenharia social**: a senha mestra é a única barreira; não há recuperação
+  sem ela (esqueceu a senha = refaça o cofre e reconecte o Dropbox).
+- **Malware de usuário no mesmo PC**: rodando com os seus privilégios, lê a
+  memória do processo ou a biblioteca local; nenhum cofre de usuários resolve
+  isso.
+- **Quem controla a nuvem**: o Dropbox vê apenas blobs cifrados do backup
+  (senha separada da mestra), mas o cofre não muda isso.
 
 ## Riscos aceitos (com justificativa)
 
@@ -91,15 +136,26 @@ contrário).
   Console do Dropbox (redirect URI cadastrada). Um processo malicioso na
   mesma máquina poderia escutar nessa porta, mas isso exige acesso local ao
   PC, fora de escopo (ver abaixo).
-- **Senha de backup em claro sem keyring**: quando
-  `safeStorage.isEncryptionAvailable()` é `false` (containers, WSL sem
-  cofre), a `drivePassphrase` vai para `settings.json` com permissão `0600`
-  e migra sozinha para o keyring no próximo save. A tela de Configurações
-  avisa com `settings.keyringWarning` (`settings.isKeyringAvailable()`).
-  Não há alternativa viável nesses ambientes.
+- **Senha de backup em claro sem keyring** (só no modo legado, sem cofre):
+  quando `safeStorage.isEncryptionAvailable()` é `false` (containers, WSL sem
+  cofre do SO), a `drivePassphrase` vai para `settings.json` com permissão
+  `0600` e migra sozinha para o keyring no próximo save. A tela de
+  Configurações avisa com `settings.keyringWarning`
+  (`settings.isKeyringAvailable()`). Criar o cofre do app resolve o caso
+  (a senha passa a morar no cofre); não há alternativa no modo legado.
 - **Dependências sem fix upstream**: problemas reportados em dependências de
   desenvolvimento sem versão corrigida publicada são documentados no README
   da parte correspondente e monitorados (ex.: `braces` na landing).
+- **Leitura ampla do home no perfil AppArmor**: exigida pelo seletor de capa
+  (`cover:pick` lê o arquivo escolhido em qualquer pasta). A deny-list cobre
+  as credenciais usuais, mas pastas sensíveis não listadas ficam legíveis pelo
+  processo — e o AppArmor clássico não filtra host de destino da rede, só o
+  tipo de socket (`stream`/`dgram`), então a barreira contra exfiltração
+  continua sendo a criptografia do backup, não a rede.
+- **`xdg-open` fora do confinamento**: a única execução permitida de fora do
+  pacote é o abridor de URLs do sistema (`ux` no perfil), acionado apenas por
+  `openExternalSafe` com `https:`; a cadeia que ele dispara (shell →
+  navegador) roda sem confinamento.
 
 ## Fora de escopo
 

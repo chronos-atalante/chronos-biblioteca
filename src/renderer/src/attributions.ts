@@ -19,6 +19,12 @@ export const ATTRIBUTIONS: Attribution[] = [
     url: 'https://react.dev',
   },
   {
+    name: 'hash-wasm',
+    license: 'MIT',
+    description: 'Argon2id em WebAssembly usado pelo cofre de segredos (main).',
+    url: 'https://github.com/danilow/hash-wasm',
+  },
+  {
     name: 'Font Awesome Free',
     license: 'MIT (código) · OFL-1.1 (fontes) · CC-BY-4.0 (ícones)',
     description: 'Ícones da interface (busca, cards, modais e cabeçalho).',

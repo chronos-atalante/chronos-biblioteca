@@ -29,7 +29,7 @@ flowchart TD
     D -- não --> E["Erro exibido no app"]
     D -- sim --> F["Dropbox redireciona para<br/>http://localhost:17431/callback?code=..."]
     F --> G["App troca o code por<br/>access_token + refresh_token (PKCE, sem secret)"]
-    G --> H["Salva dropbox-tokens.json<br/>(em configDir, modo 0600)"]
+    G --> H["Grava os tokens no cofre se ele estiver criado<br/>(senão dropbox-tokens.json, modo 0600)"]
     H --> I["Status: conectado"]
     I --> J["Fazer backup agora"]
     J --> K["Criptografa library.json + capas<br/>(AES-256-GCM + scrypt)"]
@@ -95,9 +95,11 @@ contas, é só pedir a produção, bem mais simples que a verificação do Googl
    - O navegador padrão abre a página de consentimento do Dropbox.
    - Após aprovar, o Dropbox redireciona para `http://localhost:17431/callback?code=...`.
    - O app captura o código, troca pelos tokens (PKCE) e mostra o status **Conectado**.
-4. Os tokens ficam em `~/.config/chronos-biblioteca/dropbox-tokens.json`.
-   O `refresh_token` do Dropbox é **duradouro** (só morre se você revogar): nada
-   de reconectar a cada 7 dias.
+4. Os tokens são gravados no **cofre de segredos** quando ele existe
+   (`dropbox.tokens`; ver [`cofre.md`](cofre.md)), senão em
+   `~/.config/chronos-biblioteca/dropbox-tokens.json` (modo `0600`, caminho
+   legado). O `refresh_token` do Dropbox é **duradouro** (só morre se você
+   revogar): nada de reconectar a cada 7 dias.
 
 > Se os escopos pedidos pelo app mudarem um dia, a sessão salva é invalidada e
 > o app exibe “Permissões do Dropbox atualizadas. Reconecte a conta Dropbox.”:
@@ -117,7 +119,7 @@ sequenceDiagram
     D-->>App: redirect localhost:17431/callback?code=...
     App->>D: POST oauth2/token (code + code_verifier, sem secret)
     D-->>App: access_token (curto) + refresh_token (duradouro)
-    App->>App: dropbox-tokens.json (+ versão de escopo)
+    App->>App: grava dropbox.tokens no cofre (+ versão de escopo)
     App-->>U: status "Conectado"
 
     U->>App: Fazer backup agora
@@ -131,11 +133,11 @@ sequenceDiagram
 
 ## 3. Backup e restauração
 
-| Botão                  | O que faz                                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Fazer backup agora** | Criptografa `library.json` e todas as capas e envia para a pasta do app (substitui tudo).              |
-| **Restaurar**          | Abre o modal da **senha de criptografia**, baixa o backup, decifra e **substitui** a biblioteca local. |
-| **Desconectar**        | Apaga `dropbox-tokens.json` local. O backup na nuvem permanece.                                        |
+| Botão                  | O que faz                                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Fazer backup agora** | Criptografa `library.json` e todas as capas e envia para a pasta do app (substitui tudo).                   |
+| **Restaurar**          | Abre o modal da **senha de criptografia**, baixa o backup, decifra e **substitui** a biblioteca local.      |
+| **Desconectar**        | Apaga os tokens locais (segredo do cofre, ou `dropbox-tokens.json` no legado). O backup na nuvem permanece. |
 
 - **Criptografia é obrigatória**: sem senha de criptografia definida nas Configurações, o
   backup é recusado com a mensagem “Defina uma senha de criptografia do backup nas
@@ -181,7 +183,7 @@ sequenceDiagram
 
 ## Segurança
 
-- Os tokens ficam **somente na sua máquina** (`configDir/dropbox-tokens.json`, modo `0600`), nunca em repositório.
+- Os tokens ficam **somente na sua máquina**: no cofre de segredos (`dropbox.tokens`, sob a senha mestra; ver [`cofre.md`](cofre.md)) quando ele existe, ou em `configDir/dropbox-tokens.json` com modo `0600` no caminho legado. Nunca em repositório.
 - **Sem segredo embutido**: com PKCE o `app secret` nem entra no fluxo. A App key é pública por definição e a proteção vem do PKCE + loopback. O segredo de verdade é o `refresh_token`, que nunca sai da sua máquina. Para revogar tudo, desconecte no app **e** remova o app em <https://www.dropbox.com/account/security>.
 - Escopo mínimo: só a **pasta do app** (App folder; o app nem fica sabendo que o resto do seu Dropbox existe) + leitura do e-mail da conta (só para exibir qual conta está conectada).
 - **Criptografia obrigatória** no cliente: AES-256-GCM com chave derivada por scrypt (`N=2¹⁷`, mínimo do OWASP; salt e IV aleatórios por arquivo, autenticação GCM), e o Dropbox guarda apenas blobs cifrados de nome opaco.

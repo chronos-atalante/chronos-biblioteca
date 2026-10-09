@@ -90,8 +90,8 @@ O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
   `/usr/bin/chronos-biblioteca`)
 - Ícone instalado em `/usr/share/icons/hicolor/512x512/apps/chronos-biblioteca.png`
 - Dados: obras e capas em `~/.local/share/chronos-biblioteca/` (`library.json`, `covers/`);
-  configurações e tokens em `~/.config/chronos-biblioteca/` (`settings.json`,
-  `dropbox-tokens.json`)
+  configurações em `~/.config/chronos-biblioteca/` (`settings.json`) junto com o cofre de
+  segredos (`.vault/`); sem cofre criado, os tokens seguem em `dropbox-tokens.json`
 
 ---
 
@@ -250,7 +250,7 @@ flowchart TD
 
     subgraph STORAGE["Persistência"]
         LOKAL[("~/.local/share/chronos-biblioteca/<br/>library.json · covers/")]
-        CFG[("~/.config/chronos-biblioteca/<br/>settings.json · dropbox-tokens.json")]
+        CFG[("~/.config/chronos-biblioteca/<br/>settings.json · .vault/ · dropbox-tokens.json (legado)")]
         DRIVE[("Dropbox · pasta do app /Apps/Chronos Biblioteca")]
     end
 
@@ -315,13 +315,24 @@ sequenceDiagram
 ```
 Webtoons/
 ├── build/
+│   ├── after-pack.cjs        # slim do pacote (locales/SwiftShader; nunca libffmpeg)
+│   ├── apparmor-profile      # perfil AppArmor real instalado no .deb
 │   ├── icon.png              # ícone 512×512 usado no .deb
-│   └── make-icon.py          # gerador do ícone (PIL)
+│   ├── make-icon.py          # gerador do ícone (PIL)
+│   └── postrm                # after-remove: unload do perfil, alternatives e purge
 ├── docs/
+│   ├── visao-geral.md          # visão geral: o que é/não é, dependências, glossário
+│   ├── arquitetura.md          # camadas, aliases @zero/*, IPC e ciclo de vida
+│   ├── telas.md                # telas e componentes do renderer
 │   ├── dropbox.md              # guia do backup + diagramas
+│   ├── cofre.md                # cofre de segredos: container, KDF, trava, sessão
+│   ├── credenciais.md          # segredos do app: o que é guardado e ciclo de vida
 │   ├── backup-providers.md     # provedores de nuvem (Dropbox · Google Drive)
 │   ├── distribuicao-apt.md     # distribuição: Release + repo APT flat assinado
+│   ├── build.md                # build, .deb, fuses e o gate de qualidade no CI
+│   ├── seguranca.md            # mapa de segurança (medida → arquivo)
 │   ├── messages.md             # i18n: bundles pt-BR/en/ko/zh-CN/ja e o que não se traduz
+│   ├── testes.md               # testes: como rodar, inventário, convenções, cobertura
 │   ├── atribuicoes.md        # página de Atribuições (créditos em loop)
 │   ├── doacoes.md            # página de Doações (Mercado Pago)
 │   └── api.md                # referência da API interna
@@ -329,8 +340,9 @@ Webtoons/
 │   ├── main/                 # processo main (Electron)
 │   │   ├── index.ts          # janela, IPC, protocolo cover://, F11 em tela cheia
 │   │   ├── library.ts        # library.json + cópia/limpeza de capas
-│   │   ├── settings.ts       # App key, senha do backup e idioma
+│   │   ├── settings.ts       # App key, idioma e leitura/gravação no cofre
 │   │   ├── i18n.ts           # currentMessages() (idioma corrente no main)
+│   │   ├── vault/            # cofre de segredos (Argon2id, container, sessão)
 │   │   └── drive/            # provedores de nuvem, OAuth PKCE, backup/restauração
 │   │       ├── index.ts      # barrel da API pública (authorize, backupNow…)
 │   │       ├── provider.ts   # contrato BackupProvider + catálogo de provedores
@@ -358,6 +370,7 @@ Webtoons/
 │   │   ├── work.ts           # Work, WorkType, WorkStatus
 │   │   ├── settings.ts       # AppSettings
 │   │   ├── drive.ts          # DriveStatus, BackupSummary
+│   │   ├── vault.ts          # VaultStatus, VaultResult, ElectronApi.vault
 │   │   └── api.ts            # ElectronApi (contrato do preload)
 │   ├── node.loader.ts        # hooks module.registerHooks() dos aliases @zero/*
 │   └── package.json          # "type": "module" (Node executa src/ direto)
@@ -402,7 +415,9 @@ Detalhes da configuração (campo `build` do `package.json`):
 - `homepage` no `package.json` aponta para o repositório
   (`https://github.com/chronos-atalante/chronos-biblioteca`): o alvo `deb` do
   electron-builder exige uma URL no campo `Homepage:` do controle do pacote
-- `postinst` do electron-builder cuida do AppArmor (Ubuntu/Mint 24+) e do `chrome-sandbox`
+- `postinst` do electron-builder instala o perfil AppArmor real
+  (`build/apparmor-profile`, pulado onde a base é antiga) e cuida do `chrome-sandbox`;
+  o `postrm` (`deb.afterRemove`) descarrega o perfil e limpa o `update-alternatives`
 - Slim via `afterPack` (`build/after-pack.cjs`): remove do pacote locales não usados
   (mantém `pt-BR`/`pt-PT`/`en-US`), SwiftShader/Vulkan e `libffmpeg` (o app é DOM/CSS
   estático, sem WebGL nem mídia), o que economiza ~5 MB no `.deb`, margem contra o
@@ -418,7 +433,8 @@ Fluxo resumido (passo a passo completo em [`docs/dropbox.md`](docs/dropbox.md)):
    vem embutida no app (com PKCE não existe segredo: só a chave identifica o app, e o
    acesso real fica no `refresh_token` guardado na sua máquina).
 2. **Conectar ao Dropbox** → janela do navegador → consentimento → tokens guardados
-   localmente em `dropbox-tokens.json` (PKCE + callback fixo em `localhost:17431`, a URI
+   na sua máquina (no cofre de segredos, quando criado; senão em `dropbox-tokens.json`;
+   PKCE + callback fixo em `localhost:17431`, a URI
    que o Dropbox exige pré-cadastrada).
 3. **Fazer backup agora** → `library.json` + capas sobem **sempre criptografados**
    (AES-256-GCM, nomes de arquivo opacos via HMAC) para a **pasta do app**
@@ -441,7 +457,7 @@ sequenceDiagram
     G-->>App: redirect http://localhost:17431/callback?code=...
     App->>G: POST /oauth2/token (code + code_verifier, sem secret)
     G-->>App: access_token (curto) + refresh_token (duradouro)
-    App->>App: grava dropbox-tokens.json
+    App->>App: grava dropbox.tokens (cofre) ou dropbox-tokens.json (legado)
 
     U->>App: Fazer backup agora
     App->>App: criptografa library.json + capas (nomes opacos + AES-256-GCM)
@@ -476,13 +492,21 @@ Guias e referências (tudo em pt-BR):
 
 | Documento                                              | Conteúdo                                                               |
 | ------------------------------------------------------ | ---------------------------------------------------------------------- |
+| [`docs/visao-geral.md`](docs/visao-geral.md)           | Visão geral: o que o app é (e o que não é), dependências e glossário   |
+| [`docs/arquitetura.md`](docs/arquitetura.md)           | Arquitetura: camadas, aliases `@zero/*`, fluxo de IPC e ciclo de vida  |
+| [`docs/telas.md`](docs/telas.md)                       | Telas e componentes do renderer, com os fluxos de navegação            |
 | [`docs/dropbox.md`](docs/dropbox.md)                   | Guia do backup: OAuth PKCE, App folder, troubleshooting                |
+| [`docs/cofre.md`](docs/cofre.md)                       | Cofre de segredos: formato do container, KDF, trava e sessão           |
+| [`docs/credenciais.md`](docs/credenciais.md)           | Segredos do app: o que é guardado, ciclo de vida e migração            |
 | [`docs/backup-providers.md`](docs/backup-providers.md) | Provedores de backup: contrato, catálogo e Google Drive oculto         |
 | [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md) | Distribuição: Release, repo APT flat assinado e fluxo de release       |
+| [`docs/build.md`](docs/build.md)                       | Build e pacote: comandos, `.deb`, fuses e gate de qualidade no CI      |
+| [`docs/seguranca.md`](docs/seguranca.md)               | Mapa de segurança: onde vive cada medida e o que não enfraquecer       |
 | [`docs/atribuicoes.md`](docs/atribuicoes.md)           | Página de Atribuições: créditos em loop e licenças                     |
 | [`docs/doacoes.md`](docs/doacoes.md)                   | Página de Doações: Mercado Pago                                        |
 | [`docs/messages.md`](docs/messages.md)                 | i18n: bundles de mensagens (pt-BR/en/ko/zh-CN/ja) e regras de tradução |
 | [`docs/api.md`](docs/api.md)                           | Referência da API interna (`window.api` + canais IPC)                  |
+| [`docs/testes.md`](docs/testes.md)                     | Testes: como rodar, inventário, convenções e cobertura                 |
 | [`docs/openapi.yaml`](docs/openapi.yaml)               | Mesma API em OpenAPI 3.1 (abre em Swagger UI/Redoc)                    |
 | [`CHANGELOG.md`](CHANGELOG.md)                         | Histórico de mudanças por versão                                       |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md)                   | Como contribuir (ambiente, scripts, convenções)                        |

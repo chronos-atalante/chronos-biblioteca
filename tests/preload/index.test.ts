@@ -96,4 +96,35 @@ describe('preload (contextBridge)', () => {
     unsubscribe();
     expect(ipcRenderer.removeListener).toHaveBeenCalledWith('drive:status-changed', listener);
   });
+
+  it('encaminha os canais do cofre', async () => {
+    const api = exposedApi();
+    await api.vault.status();
+    await api.vault.create('senha-mestra-123');
+    await api.vault.unlock('senha-mestra-123');
+    await api.vault.lock();
+    expect(ipcRenderer.invoke.mock.calls.map((call) => call[0])).toEqual([
+      'vault:status',
+      'vault:create',
+      'vault:unlock',
+      'vault:lock',
+    ]);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith('vault:create', 'senha-mestra-123');
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith('vault:unlock', 'senha-mestra-123');
+  });
+
+  it('assina e cancela o aviso de auto-lock do cofre', () => {
+    const api = exposedApi();
+    const received: string[] = [];
+    const unsubscribe = api.vault.onLocked(() => received.push('locked'));
+
+    const subscription = ipcRenderer.on.mock.calls.at(-1);
+    expect(subscription?.[0]).toBe('vault:locked');
+    const listener = subscription?.[1];
+    listener?.({}, undefined);
+    expect(received).toEqual(['locked']);
+
+    unsubscribe();
+    expect(ipcRenderer.removeListener).toHaveBeenCalledWith('vault:locked', listener);
+  });
 });

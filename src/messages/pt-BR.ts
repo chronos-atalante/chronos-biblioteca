@@ -295,6 +295,48 @@ export const ptBR = {
     invalidId: 'Identificador de obra inválido.',
   },
 
+  /** Cofre de segredos: modal, badges da UI e erros do domínio. */
+  vault: {
+    createTitle: 'Criar o cofre de segredos',
+    unlockTitle: 'Desbloquear o cofre',
+    createBody:
+      'Crie uma senha mestra para proteger os segredos do app (tokens do Dropbox e senha do ' +
+      'backup) neste computador. Se você esquecer a senha, não há como recuperá-los.',
+    unlockBody: 'Informe a senha mestra para liberar o acesso aos segredos guardados.',
+    passwordLabel: 'Senha mestra',
+    confirmLabel: 'Confirmar a senha',
+    createAction: 'Criar cofre',
+    unlockAction: 'Desbloquear',
+    hint: 'Use pelo menos 12 caracteres, sem sequências nem repetições óbvias.',
+    mismatch: 'As senhas não coincidem.',
+    strength: {
+      weak: 'Fraca',
+      fair: 'Razoável',
+      strong: 'Forte',
+    },
+    createHint: 'Crie um cofre com senha mestra para guardar os segredos do app.',
+    closeVault: 'Fechar cofre',
+    autoLocked: 'O cofre fechou sozinho por inatividade.',
+    badge: {
+      open: 'Cofre aberto',
+      closed: 'Cofre fechado',
+      none: 'Sem cofre',
+    },
+    lockout: (seconds: number): string =>
+      seconds < 60
+        ? `Aguarde ${seconds} segundos para tentar de novo.`
+        : `Aguarde ${Math.ceil(seconds / 60)} minuto(s) para tentar de novo.`,
+    errors: {
+      vaultExists: 'Já existe um cofre neste computador.',
+      vaultMissing: 'Nenhum cofre encontrado.',
+      vaultLocked: 'O cofre está fechado.',
+      vaultLockedOut: 'Muitas tentativas de desbloqueio. Aguarde antes de tentar de novo.',
+      vaultWrongPassword: 'Senha mestra incorreta.',
+      vaultTampered: 'O cofre está danificado ou foi alterado.',
+      vaultWeakPassword: 'Senha previsível. Escolha algo menos óbvio.',
+    },
+  },
+
   /** Página HTML que o loopback do OAuth mostra na aba do navegador. */
   oauthPage: {
     deniedTitle: 'Autorização recusada',

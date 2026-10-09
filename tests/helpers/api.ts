@@ -6,6 +6,8 @@ import type {
   BackupSummary,
   DriveStatus,
   ElectronApi,
+  VaultResult,
+  VaultStatus,
   Work,
 } from '@zero/types';
 import { listProviders } from '@zero/main/drive/provider';
@@ -19,6 +21,7 @@ export interface ApiMockOptions {
   backupInfo?: BackupSummary | null;
   providers?: BackupProviderInfo[];
   keyringAvailable?: boolean;
+  vault?: VaultStatus;
 }
 
 export interface ApiMock {
@@ -39,6 +42,12 @@ export interface ApiMock {
   driveDisconnect: Mock<() => Promise<DriveStatus>>;
   driveOnStatus: Mock<(callback: (status: DriveStatus) => void) => () => void>;
   emitStatus: (status: DriveStatus) => void;
+  vaultStatus: Mock<() => Promise<VaultStatus>>;
+  vaultCreate: Mock<(password: string) => Promise<VaultResult>>;
+  vaultUnlock: Mock<(password: string) => Promise<VaultResult>>;
+  vaultLock: Mock<() => Promise<VaultStatus>>;
+  vaultOnLocked: Mock<(callback: () => void) => () => void>;
+  emitVaultLocked: () => void;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -138,6 +147,41 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     return () => listeners.delete(callback);
   });
 
+  // Padrão sem cofre: o gate do SettingsModal deixa os fluxos passarem.
+  const DEFAULT_VAULT: VaultStatus = { exists: false, unlocked: false, attempts: 0, lockUntil: 0 };
+  let vault: VaultStatus = { ...DEFAULT_VAULT, ...(options.vault ?? {}) };
+  const vaultListeners = new Set<() => void>();
+
+  const vaultStatus = vi.fn((): Promise<VaultStatus> => Promise.resolve({ ...vault }));
+
+  const vaultResult = (status: VaultStatus): VaultResult => ({ ok: true, status });
+
+  const vaultCreate = vi.fn((password: string): Promise<VaultResult> => {
+    if (password === '')
+      return Promise.resolve({ ok: false, code: 'vaultWeakPassword', retryInMs: 0 });
+    vault = { ...vault, exists: true, unlocked: true, attempts: 0, lockUntil: 0 };
+    return Promise.resolve(vaultResult({ ...vault }));
+  });
+
+  const vaultUnlock = vi.fn((password: string): Promise<VaultResult> => {
+    if (password === 'errada') {
+      vault = { ...vault, attempts: vault.attempts + 1, lockUntil: Date.now() + 10_000 };
+      return Promise.resolve({ ok: false, code: 'vaultWrongPassword', retryInMs: 10_000 });
+    }
+    vault = { ...vault, unlocked: true, attempts: 0, lockUntil: 0 };
+    return Promise.resolve(vaultResult({ ...vault }));
+  });
+
+  const vaultLock = vi.fn((): Promise<VaultStatus> => {
+    vault = { ...vault, unlocked: false };
+    return Promise.resolve({ ...vault });
+  });
+
+  const vaultOnLocked = vi.fn((callback: () => void): (() => void) => {
+    vaultListeners.add(callback);
+    return () => vaultListeners.delete(callback);
+  });
+
   const api: ElectronApi = {
     library: {
       get: libraryGet,
@@ -160,6 +204,13 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
       disconnect: driveDisconnect,
       onStatus: driveOnStatus,
     },
+    vault: {
+      status: vaultStatus,
+      create: vaultCreate,
+      unlock: vaultUnlock,
+      lock: vaultLock,
+      onLocked: vaultOnLocked,
+    },
   };
 
   return {
@@ -181,6 +232,14 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     driveOnStatus,
     emitStatus: (status: DriveStatus): void => {
       for (const listener of listeners) listener(status);
+    },
+    vaultStatus,
+    vaultCreate,
+    vaultUnlock,
+    vaultLock,
+    vaultOnLocked,
+    emitVaultLocked: (): void => {
+      for (const listener of vaultListeners) listener();
     },
   };
 }

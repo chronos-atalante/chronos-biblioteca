@@ -31,6 +31,7 @@ nome, licença, descrição curta e URL de cada dependência direta do
 | Dependência                                                           | Licença                                              |
 | --------------------------------------------------------------------- | ---------------------------------------------------- |
 | React, React DOM                                                      | MIT                                                  |
+| hash-wasm                                                             | MIT                                                  |
 | Font Awesome Free                                                     | MIT (código) · OFL-1.1 (fontes) · CC-BY-4.0 (ícones) |
 | Electron, electron-vite, electron-builder, Vite, @vitejs/plugin-react | MIT                                                  |
 | TypeScript                                                            | Apache-2.0                                           |

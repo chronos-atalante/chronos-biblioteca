@@ -1,0 +1,201 @@
+# Perfil AppArmor do Chronos Biblioteca.
+#
+# Substitui o perfil decorativo que o electron-builder gera por padrão
+# (`flags=(unconfined)`, que dá nome ao processo mas não restringe nada);
+# a mesma base do perfil do Guardinha, adaptada para um app ONLINE (Dropbox)
+# e sem helper privilegiado. Objetivo: se o renderer ou uma dependência for
+# comprometido, o processo não lê as pastas sensíveis do usuário, não escreve
+# fora dos diretórios do app e não executa binário arbitrário.
+#
+# O electron-builder roda este arquivo pelo `writeConfigFile`, que troca
+# `${...}` e **derruba o build** se a macro não existir: só `${executable}` e
+# `${sanitizedProductName}` podem aparecer aqui.
+#
+# Ciclo de teste (documentado em docs/build.md): carregar em complain
+# (`apparmor_parser -C -r`), rodar o app, ler as negações no log do kernel
+# (journalctl -k / /var/log/kern.log) e repetir até não sobrar negação de
+# operação legítima; só então promover a enforce (`apparmor_parser -r`).
+# Atenção: regras `deny` explícitas negam SEM gerar linha no journal
+# (comprovado no ciclo complain/enforce de 2026-10-09); valide a deny-list
+# com um teste de leitura direto (EACCES), não pelo log.
+# A instalação/desinstalação do perfil é automática nos templates padrão do
+# electron-builder (after-install carrega; build/postrm descarrega).
+
+abi <abi/4.0>,
+include <tunables/global>
+
+profile ${executable} "/opt/${sanitizedProductName}/${executable}" {
+  # O sandbox do Chromium/Electron monta namespaces de usuário.
+  userns,
+
+  # ---------- base do sistema ----------
+  include <abstractions/base>
+  include <abstractions/ssl_certs>
+  include <abstractions/fonts>
+  include <abstractions/gtk>
+  include <abstractions/dconf>
+  include <abstractions/X>
+  include <abstractions/wayland>
+  include <abstractions/dri-common>
+  include <abstractions/mesa>
+  include <abstractions/vulkan>
+  include <abstractions/dbus-session>
+  include <abstractions/freedesktop.org>
+  include <abstractions/user-tmp>
+  include <abstractions/ibus>
+
+  # NSS do glibc (getpwuid/getgrgid) sem puxar abstractions/nameservice
+  # (redundante: a rede já é necessária para o Dropbox, mas manter o conjunto
+  # mínimo deixa o perfil explícito sobre o que lê de /etc).
+  @{etc_ro}/passwd         r,
+  @{etc_ro}/group          r,
+  @{etc_ro}/nsswitch.conf  r,
+  @{etc_ro}/hosts          r,
+  @{etc_ro}/host.conf      r,
+  @{etc_ro}/resolv.conf    r,
+  @{etc_ro}/machine-id     r,
+  /var/lib/dbus/machine-id r,
+  @{run}/systemd/resolve/** r,
+
+  # ---------- executáveis do pacote ----------
+  # Caminhos entre aspas: o pacote instala em `/opt/Chronos Biblioteca`
+  # (productFilename com espaço; sem aspas o parser do AppArmor quebra).
+  "/opt/${sanitizedProductName}/**"                    mr,
+  "/opt/${sanitizedProductName}/${executable}"         mrix,
+  "/opt/${sanitizedProductName}/chrome_crashpad_handler" ux,
+  "/opt/${sanitizedProductName}/chrome-sandbox"        ux,
+
+  # O app só dispara um programa do sistema: o abridor de URLs do navegador
+  # (shell.openExternal → openExternalSafe, src/main/external.ts). ux entrega
+  # a cadeia inteira (dash, gio, navegador) sem confinamento; é a única porta
+  # de saída do perfil e está registrada como risco aceito no SECURITY.md.
+  /usr/bin/xdg-open ux,
+
+  # ---------- estado do app ----------
+  # userData do Electron redirecionado para o cache
+  # (`app.setPath('userData', cacheDir())` em src/main/index.ts).
+  owner @{HOME}/.cache/chronos-biblioteca/       rw,
+  owner @{HOME}/.cache/chronos-biblioteca/**     rwkl,
+  # settings.json, vault/ e dropbox-tokens.json legado (src/main/paths.ts).
+  owner @{HOME}/.config/chronos-biblioteca/      rw,
+  owner @{HOME}/.config/chronos-biblioteca/**    rwkl,
+  # library.json e covers/ (src/main/library.ts).
+  owner @{HOME}/.local/share/chronos-biblioteca/  rw,
+  owner @{HOME}/.local/share/chronos-biblioteca/** rwkl,
+  owner @{HOME}/.local/state/chronos-biblioteca/  rw,
+  owner @{HOME}/.local/state/chronos-biblioteca/** rwkl,
+
+  # Migração da marca anterior (legacyDirs em src/main/index.ts): só leitura.
+  owner "@{HOME}/.config/Webtoons Biblioteca/"      r,
+  owner "@{HOME}/.config/Webtoons Biblioteca/**"    r,
+  owner "@{HOME}/.config/webtoons-biblioteca/"      r,
+  owner "@{HOME}/.config/webtoons-biblioteca/**"    r,
+
+  # ---------- leitura do home (seletor de capa) ----------
+  # cover:pick (src/main/index.ts) abre o diálogo do SO e lê o arquivo de
+  # qualquer pasta; logo, a leitura do home precisa ser ampla. O que protege
+  # são as negações pontuais abaixo (credenciais de conta/chaveiro) e o fato
+  # de a ESCRITA fora dos diretórios do app seguir negada pela negação padrão.
+  owner @{HOME}/    r,
+  owner @{HOME}/**   r,
+  # O GTK registra o arquivo escolhido nos recentes do desktop.
+  owner @{HOME}/.local/share/recently-used.xbel rw,
+
+  # Deny-list de credenciais: nega vence sobre qualquer allow, então as
+  # regras são sempre em subpastas EXCLUSIVAS (nunca @{HOME}/.config/**,
+  # que englobaria o próprio .config/chronos-biblioteca). O padrão `/**`
+  # não cobre o próprio diretório (opendir), por isso os diretórios
+  # críticos têm também a regra de dir — listagem de nomes também é deny.
+  deny owner @{HOME}/.ssh/                    r,
+  deny owner @{HOME}/.ssh/**                  r,
+  deny owner @{HOME}/.gnupg/                  r,
+  deny owner @{HOME}/.gnupg/**                r,
+  deny owner @{HOME}/.config/gnupg/           r,
+  deny owner @{HOME}/.config/gnupg/**         r,
+  deny owner @{HOME}/.password-store/         r,
+  deny owner @{HOME}/.password-store/**       r,
+  deny owner @{HOME}/.local/share/keyrings/   r,
+  deny owner @{HOME}/.local/share/keyrings/** r,
+  deny owner @{HOME}/.gnupg/**               r,
+  deny owner @{HOME}/.config/gnupg/**        r,
+  deny owner @{HOME}/.password-store/**      r,
+  deny owner @{HOME}/.local/share/keyrings/** r,
+  deny owner @{HOME}/.netrc                  r,
+  deny owner @{HOME}/.git-credentials        r,
+  deny owner @{HOME}/.aws/**                 r,
+  deny owner @{HOME}/.docker/**              r,
+  deny owner @{HOME}/.kube/**                r,
+  deny owner @{HOME}/.mozilla/**             r,
+  deny owner @{HOME}/.thunderbird/**         r,
+  deny owner @{HOME}/.config/google-chrome/** r,
+  deny owner @{HOME}/.config/chromium/**     r,
+  deny owner @{HOME}/.config/firefox/**      r,
+  deny owner @{HOME}/.config/microsoft-edge/** r,
+  deny owner @{HOME}/.config/BraveSoftware/** r,
+  # App irmão (monorepo): userData tem Cookies/Local Storage de sessão.
+  deny owner @{HOME}/.config/guardinha/**    r,
+  deny owner @{HOME}/.config/Guardinha/**    r,
+
+  # ---------- cache do GTK e runtime ----------
+  # Cache de teclado do GTK (Compose table); o GTK recria se faltar.
+  owner @{HOME}/.cache/gtk-3.0/   rw,
+  owner @{HOME}/.cache/gtk-3.0/** rwkl,
+
+  # ---------- memória compartilhada, terminais e runtime ----------
+  /dev/shm/          rw,
+  /dev/shm/**        rwkl,
+  /dev/pts/[0-9]*    rw,
+  /dev/tty           w,
+  owner @{run}/user/[0-9]*/          rw,
+  owner @{run}/user/[0-9]*/dconf/    rw,
+  owner @{run}/user/[0-9]*/dconf/**  rwkl,
+
+  # ---------- /proc e /sys ----------
+  # O zygote do Chromium lê cmdline/stat/fd dos próprios filhos e grava
+  # uid_map/gid_map/setgroups neles durante a montagem do sandbox.
+  @{PROC}/                 r,
+  @{PROC}/sys/**           r,
+  @{PROC}/*/cmdline        r,
+  @{PROC}/*/stat           r,
+  @{PROC}/*/status         r,
+  @{PROC}/*/maps           r,
+  @{PROC}/*/auxv           r,
+  @{PROC}/*/fd/            r,
+  @{PROC}/*/fd/*           r,
+  @{PROC}/*/net/**         r,
+  @{PROC}/*/uid_map        rw,
+  @{PROC}/*/gid_map        rw,
+  @{PROC}/*/setgroups      rw,
+  @{PROC}/@{pid}/**        rw,
+
+  # sysfs é somente leitura: informação pública do kernel (CPU, PCI, tty).
+  @{sys}/**                r,
+
+  # CAP_SYS_ADMIN/CAP_SYS_CHROOT/CAP_SYS_PTRACE só existem dentro do
+  # namespace de usuário que o próprio Chromium monta (sys_chroot e
+  # sys_ptrace são etapas do sandbox dele; sem elas o Electron aborta).
+  capability sys_admin,
+  capability sys_chroot,
+  capability sys_ptrace,
+
+  # Qualquer processo do mesmo usuário pode mandar sinal (o kernel já
+  # separa por uid); sem isso, SIGTERM de um app confinado é recusado.
+  signal (receive),
+
+  # ---------- rede ----------
+  # Diferente do Guardinha (offline total, `deny network inet`): o Chronos
+  # precisa de HTTPS para o Dropbox (api/content.dropboxapi.com). AppArmor
+  # clássico não filtra host/destino, então o ganho aqui é modesto: stream
+  # e dgram (DNS do getaddrinfo/Chromium — sem dgram o create do socket UDP
+  # é negado com "failed type match", comprovado no ciclo complain/enforce)
+  # sim; sockets crudos/pacotes e outros domínios de protocolo não.
+  network unix,
+  network netlink,
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/${executable}>
+}

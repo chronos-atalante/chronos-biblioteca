@@ -6,6 +6,13 @@ import { currentMessages } from '@zero/main/i18n';
 import { writeJsonAtomic } from '@zero/main/jsonfile';
 import { configDir } from '@zero/main/paths';
 import { loadSettings } from '@zero/main/settings';
+import {
+  VAULT_SECRET,
+  clearSecret,
+  readJsonSecret,
+  vaultUnlocked,
+  writeJsonSecret,
+} from '@zero/main/vault/secrets';
 
 export interface Tokens {
   accessToken: string;
@@ -51,14 +58,47 @@ export function loadState(): void {
     // descartado para nunca tentar um `refresh_token` de outro serviço.
     const legacy = path.join(configDir(), 'drive-tokens.json');
     if (fs.existsSync(legacy)) fs.unlinkSync(legacy);
+
+    let candidate: Tokens | null = null;
+    let invalid = false;
+
     const file = statePath();
     if (fs.existsSync(file)) {
       const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf-8'));
-      if (isTokens(parsed) && parsed.scopeVersion === SCOPE_VERSION) {
-        state.tokens = parsed;
+      if (isTokens(parsed)) {
+        candidate = parsed;
+      } else {
+        invalid = true;
+      }
+    }
+
+    // Cofre desbloqueado: o arquivo legado migra para dentro (e sai do disco);
+    // daí em diante a fonte é o cofre. Qualquer erro mantém o que o disco lê.
+    if (vaultUnlocked()) {
+      try {
+        if (candidate !== null) {
+          writeJsonSecret(VAULT_SECRET.dropboxTokens, candidate);
+          fs.unlinkSync(file);
+          invalid = false;
+        }
+        const inVault = readJsonSecret(VAULT_SECRET.dropboxTokens, isTokens);
+        if (inVault !== null) {
+          candidate = inVault;
+          invalid = false;
+        }
+      } catch {
+        // cofre ilegível: mantém a visão do disco
+      }
+    }
+
+    if (candidate !== null) {
+      if (candidate.scopeVersion === SCOPE_VERSION) {
+        state.tokens = candidate;
       } else {
         state.lastError = currentMessages().driveErrors.permissionsUpdated;
       }
+    } else if (invalid) {
+      state.lastError = currentMessages().driveErrors.permissionsUpdated;
     }
   } catch {
     state.tokens = null;
@@ -68,12 +108,22 @@ export function loadState(): void {
 export function persistState(): void {
   ensureConfig();
   if (state.tokens !== null) {
-    // Tokens são credencial: escrita atômica com 0600 (nunca pela metade
-    // nem legível por terceiros).
+    // Com o cofre desbloqueado os tokens vão para lá (e o legado é removido);
+    // sem ele, valem as regras antigas: escrita atômica com 0600.
+    if (vaultUnlocked()) {
+      try {
+        writeJsonSecret(VAULT_SECRET.dropboxTokens, state.tokens);
+        if (fs.existsSync(statePath())) fs.unlinkSync(statePath());
+        return;
+      } catch {
+        // cofre ilegível ou bloqueado no meio: grava no legado abaixo
+      }
+    }
     writeJsonAtomic(statePath(), state.tokens, 0o600);
-  } else if (fs.existsSync(statePath())) {
-    fs.unlinkSync(statePath());
+    return;
   }
+  if (fs.existsSync(statePath())) fs.unlinkSync(statePath());
+  if (vaultUnlocked()) clearSecret(VAULT_SECRET.dropboxTokens);
 }
 
 export function getStatus(): DriveStatus {
