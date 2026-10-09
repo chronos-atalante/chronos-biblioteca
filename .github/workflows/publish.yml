@@ -123,6 +123,9 @@ jobs:
       - name: OSV Scanner (binário fora do git; versão fixada)
         run: |
           set -euo pipefail
+          # bin/osv-scanner é gitignored: a pasta não existe no checkout do CI
+          # e o curl falharia com exit 23 (não consegue criar o arquivo).
+          mkdir -p bin
           curl -fsSL -o bin/osv-scanner \
             https://github.com/google/osv-scanner/releases/download/v2.6.0/osv-scanner_linux_amd64
           chmod +x bin/osv-scanner
