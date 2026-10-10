@@ -91,13 +91,13 @@ auditoria OSV. Rode os dois antes de concluir qualquer mudança.
   seria apagado antes dos asserts.
 - **Sandbox sempre**: escritas caem em diretório temporário (`setup-env.ts`);
   testes que precisam de um disco limpo chamam `resetSandbox()` no
-  `beforeEach` — ele também apaga a árvore do cofre (`CHRONOS_VAR_LIB` aponta
+  `beforeEach`, que também apaga a árvore do cofre (`CHRONOS_VAR_LIB` aponta
   para o sandbox, e `CHRONOS_VAULT_DIR` nunca está definido fora do
   `npm run dev`). Cofre de teste se cria com `openTestVault()`
   (`tests/helpers/vault.ts`), que recria o arquivo e deixa a sessão aberta.
   **Todos** os testes de cofre derivam com o KDF barato (`FAST_KDF`, 16 MiB /
-  1 iteração): nenhum roda o Argon2id de produção (128 MiB / 3 iterações) — a
-  faixa aceita é coberta por `kdfParamsInRange`, sem derivar. Quem cifra de verdade é o backup: os
+  1 iteração): nenhum roda o Argon2id de produção (128 MiB / 3 iterações).
+  A faixa aceita é coberta por `kdfParamsInRange`, sem derivar. Quem cifra de verdade é o backup: os
   testes de `drive/*` usam scrypt de custo real (`N=2^17`), por isso os
   `describe` de backup/restauração declaram 60 s (o timeout global é 15 s).
 - **`electron` é mock**: nunca importe o Electron real; o alias já aponta para

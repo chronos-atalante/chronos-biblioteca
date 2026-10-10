@@ -99,18 +99,18 @@ existe com tipo em `src/types/` e linha em `api.md`.
 
 ```mermaid
 sequenceDiagram
-    participant N as node (main)
-    participant A as app (Electron)
+    participant N as Processo main
+    participant A as Aplicativo Electron
     participant W as BrowserWindow
 
-    N->>N: ensureAppDirs (dataDir/configDir/covers, melhor esforço)
-    N->>A: requestSingleInstanceLock (sem lock, app.quit)
+    N->>N: ensureAppDirs<br/>(dataDir, configDir e covers; melhor esforço)
+    N->>A: requestSingleInstanceLock<br/>(encerra o app se não obtiver o lock)
     A->>A: whenReady
-    A->>A: registerCoverProtocol + registerAppProtocol
-    A->>A: registerIpc (assertAppFrame em todo canal)
-    A->>A: initDrive (tokens do cofre; falha isolada, não derruba o boot)
-    A->>A: removeApplicationMenu + política de permissões + F11
-    A->>W: createWindow (1200×800, mín. 520×360, DevTools só em dev)
+    A->>A: registerCoverProtocol e registerAppProtocol
+    A->>A: registerIpc<br/>(assertAppFrame em todos os canais)
+    A->>A: initDrive<br/>(carrega tokens do cofre;<br/>falha isolada, não impede a inicialização)
+    A->>A: removeApplicationMenu, política de permissões e F11
+    A->>W: createWindow<br/>(1200 × 800; mínimo de 520 × 360; DevTools só em dev)
     W->>W: ready-to-show → show
 ```
 

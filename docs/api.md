@@ -127,14 +127,14 @@ escolha é explícita em Configurações).
 Os dois segredos (`drivePassphrase`, `driveClientId`) moram **no cofre**
 ([`cofre.md`](cofre.md)); o disco guarda só `language`. Com o cofre fechado
 `settings.get` devolve `''` para os segredos (falha fechada) e `settings.set`
-lança `vaultLocked` **antes** de gravar — a tela abre o cria/desbloqueio do
-cofre e reenvia.
+lança `vaultLocked` **antes** de gravar. A tela abre o fluxo de criação ou
+desbloqueio do cofre e reenvia a operação.
 
 ### `settings.set(cfg: AppSettings) → Promise<AppSettings>`
 
-Normaliza (`trim` no ID, `language` recaído para o valor válido mais próximo),
-grava os segredos no cofre e o `language` em `settings.json` (`0600`, escrita
-atômica), e devolve o valor salvo. Um `''` em `driveClientId` não apaga uma
+Normaliza o ID com `trim` e ajusta `language` para o valor válido mais próximo.
+Também grava os segredos no cofre e `language` em `settings.json` (`0600`, com
+escrita atômica), depois devolve o valor salvo. Um `''` em `driveClientId` não apaga uma
 chave já gravada (a janela não tem campo: ver [`dropbox.md`](dropbox.md) §1).
 
 ---
@@ -281,14 +281,14 @@ ao desmontar o componente.
 
 ## 6. Cofre de segredos
 
-Cofre local com senha mestra que guarda os segredos do app (`dropbox.tokens`,
-`settings.drivePassphrase`, `settings.driveClientId` — ver
-[`credenciais.md`](credenciais.md) e [`cofre.md`](cofre.md)). Domínio em
-`src/main/vault/*`; canais registrados em `src/main/index.ts`. Todo fluxo que
-consome segredo (Conectar, Backup, Restaurar, Salvar configurações,
-Desconectar) chama `vault.status()` antes e abre o cria/desbloqueio do cofre;
-**sem cofre aberto não há segredo nenhum** (falha fechada) e o app nunca grava
-fora dele.
+O cofre local, protegido por senha mestra, guarda os segredos do app:
+`dropbox.tokens`, `settings.drivePassphrase` e `settings.driveClientId`.
+Consulte [`credenciais.md`](credenciais.md) e [`cofre.md`](cofre.md). O domínio
+fica em `src/main/vault/*`, e os canais são registrados em `src/main/index.ts`.
+Todo fluxo que consome um segredo (Conectar, Backup, Restaurar, Salvar
+configurações ou Desconectar) consulta `vault.status()` antes de abrir a tela
+de criação ou desbloqueio do cofre. **Sem cofre aberto, não há segredo
+nenhum** (falha fechada), e o app nunca grava fora dele.
 
 ### `vault.status() → Promise<VaultStatus>`
 
@@ -352,7 +352,7 @@ nome vazio), `500` (URL inválida). Nomes são higienizados com `basename`
 Em produção, a SPA vem pelo scheme `chronos://` (desde a 1.5.0), implementado
 em `src/main/protocols.ts` por `registerAppProtocol`: mapeia o pathname da URL
 para `out/renderer`, com `..` rejeitado (`path.resolve` + verificação de
-prefixo) — não usa `file://`.
+prefixo) e não usa `file://`.
 
 ---
 

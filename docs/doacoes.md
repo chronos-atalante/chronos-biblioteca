@@ -19,7 +19,7 @@ contribuição: link do Mercado Pago.
 
 ## Manutenção
 
-Se o link de doação mudar, atualize em dois lugares:
+Se o link de doação mudar, atualize estes três lugares:
 
 1. `DONATION_URL` / `DONATION_LABEL` em `src/renderer/src/donations.ts`.
 2. Este documento.

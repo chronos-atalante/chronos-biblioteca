@@ -88,18 +88,18 @@ processo instalado:
   `.kube`, `.netrc`, `.git-credentials`); os diretórios críticos têm regra de
   dir porque `/**` não cobre o próprio diretório;
 - **exec** só do binário do pacote e do `xdg-open` (URLs externas);
-- **rede** `inet`/`inet6` em `stream` e `dgram` (HTTPS e DNS do Dropbox) — sem
+- **rede** `inet`/`inet6` em `stream` e `dgram` (HTTPS e DNS do Dropbox), sem
   sockets crudos; AppArmor clássico não filtra host de destino (aceito no
   `SECURITY.md`);
 - base do Electron/GTK (namespaces, capabilities, `/proc`, abstrações X/Wayland,
   dbus e fontes).
 
 **Limitação conhecida:** o perfil não dá `w` nos pais XDG (`~/.config`,
-`~/.local/share`, `~/.cache`), de propósito — liberar o pai deixaria o app
+`~/.local/share`, `~/.cache`), de propósito. Liberar o pai deixaria o app
 capaz de criar entradas arbitrárias em `.config`. Numa sessão normal esses
 diretórios já existem (o login os cria); só num home recém-criado o `mkdir`
-inicial é negado e o app abre em modo degradado (a falha de persistência vira
-`error` no log, sem derrubar a janela — ver `initApp` em `docs/arquitetura.md`).
+inicial é negado e o app abre em modo degradado. A falha de persistência vira
+`error` no log, sem derrubar a janela; consulte `initApp` em `docs/arquitetura.md`.
 Se esse cenário virar requisito, acrescente a regra de pai e registre o custo
 de permissão aqui.
 
@@ -120,7 +120,7 @@ legítima é sinal de regra faltando, **nunca** de regra a remover. A remoção 
 pacote (`postrm` abaixo) descarrega e apaga o perfil.
 
 Dois aprendizados do ciclo real (2026-10-09, Linux Mint 22.3): as regras
-`deny` explícitas da deny-list negam **sem** gerar linha no journal — valide
+`deny` explícitas da deny-list negam **sem** gerar linha no journal. Valide
 a deny-list com um teste de leitura direto (EACCES), não pelo log; e o
 seletor de capa roda no `xdg-desktop-portal` do sistema, fora do confinamento
 (a mediação do perfil acontece na leitura que o próprio app faz do arquivo
@@ -133,8 +133,8 @@ com o template padrão do electron-builder **mais** o que o cofre precisa:
 
 - `install -d -m 0711 root:root /var/lib/.chronos-biblioteca` (oculta, sem
   listagem) e `install -d -m 0700 <SUDO_UID|PKEXEC_UID>` para
-  `/var/lib/.chronos-biblioteca/.vault` — se o instalador não for
-  identificado, o app repara no primeiro uso;
+  `/var/lib/.chronos-biblioteca/.vault`. Se o instalador não for
+  identificado, o app repara a pasta no primeiro uso;
 - a ação do PolicyKit `com.chronos.biblioteca.setup-vault`
   (`/usr/share/polkit-1/actions/com.chronos.biblioteca.policy`), que autoriza
   **só** o helper do pacote (`annotate` com o caminho absoluto);

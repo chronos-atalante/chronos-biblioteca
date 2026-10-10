@@ -3,7 +3,7 @@
 Que segredos o app carrega, onde eles moram e o que acontece com eles ao longo
 do tempo. O destino de todos é o **cofre** ([`cofre.md`](cofre.md)) em
 `/var/lib/.chronos-biblioteca/.vault`: sem cofre aberto não há segredo nenhum
-(falha fechada) — o app pergunta para criar um antes de continuar.
+(falha fechada). O app pergunta se você deseja criar um antes de continuar.
 
 ## O que é segredo
 
@@ -17,7 +17,7 @@ Os nomes canônicos são a constante `VAULT_SECRET`
 (`src/main/vault/secrets.ts`); nenhum consumidor usa string solta.
 
 **Não** são segredos do cofre: a biblioteca (`library.json`), as capas, o
-conteúdo cifrado do backup na nuvem e as preferências comuns — inclusive o
+conteúdo cifrado do backup na nuvem e as preferências comuns, inclusive o
 `language`, que é o **único** campo persistido fora do cofre
 (`settings.json`, `0600`, só idioma).
 

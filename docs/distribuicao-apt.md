@@ -29,7 +29,7 @@ Tudo aponta para um endereço só, o da última Release:
 
 ## Motivo da escolha: um repo só, sem estourar os limites
 
-A decisão precisia satisfazer duas exigências ao mesmo tempo: **não deixar o
+A decisão precisava satisfazer duas exigências ao mesmo tempo: **não deixar o
 projeto fragmentado em vários repositórios** e **não estourar os limites de
 tamanho do GitHub**. As contas são estas:
 
