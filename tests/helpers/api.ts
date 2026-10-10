@@ -6,6 +6,8 @@ import type {
   BackupSummary,
   DriveStatus,
   ElectronApi,
+  LibraryReset,
+  PurgeResult,
   VaultResult,
   VaultStatus,
   Work,
@@ -28,6 +30,7 @@ export interface ApiMock {
   libraryGet: Mock<() => Promise<Work[]>>;
   librarySave: Mock<(work: SaveInput) => Promise<Work[]>>;
   libraryRemove: Mock<(id: string) => Promise<Work[]>>;
+  libraryReset: Mock<() => Promise<LibraryReset>>;
   pickCover: Mock<() => Promise<string | null>>;
   settingsGet: Mock<() => Promise<AppSettings>>;
   settingsSet: Mock<(settings: AppSettings) => Promise<AppSettings>>;
@@ -38,12 +41,15 @@ export interface ApiMock {
   driveRestore: Mock<() => Promise<{ ok: boolean; error?: string; works?: number }>>;
   driveBackupInfo: Mock<() => Promise<BackupSummary | null>>;
   driveDisconnect: Mock<() => Promise<DriveStatus>>;
+  drivePurge: Mock<() => Promise<PurgeResult>>;
   driveOnStatus: Mock<(callback: (status: DriveStatus) => void) => () => void>;
   emitStatus: (status: DriveStatus) => void;
   vaultStatus: Mock<() => Promise<VaultStatus>>;
   vaultCreate: Mock<(password: string) => Promise<VaultResult>>;
   vaultUnlock: Mock<(password: string) => Promise<VaultResult>>;
   vaultLock: Mock<() => Promise<VaultStatus>>;
+  vaultDestroy: Mock<() => Promise<VaultResult>>;
+  vaultTouch: Mock<() => Promise<void>>;
   vaultOnLocked: Mock<(callback: () => void) => () => void>;
   emitVaultLocked: () => void;
 }
@@ -91,6 +97,11 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     return Promise.resolve([...works]);
   });
 
+  const libraryReset = vi.fn((): Promise<LibraryReset> => {
+    works = [];
+    return Promise.resolve({ ok: true, shredded: 0, failed: 0 });
+  });
+
   const pickCover = vi.fn((): Promise<string | null> => Promise.resolve('capa-escolhida.png'));
 
   const settingsGet = vi.fn((): Promise<AppSettings> =>
@@ -135,6 +146,10 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     }),
   );
 
+  const drivePurge = vi.fn((): Promise<PurgeResult> =>
+    Promise.resolve({ ok: true, deleted: 0, failed: 0 }),
+  );
+
   const driveOnStatus = vi.fn((callback: (status: DriveStatus) => void): (() => void) => {
     listeners.add(callback);
     return () => listeners.delete(callback);
@@ -171,6 +186,13 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     return Promise.resolve({ ...vault });
   });
 
+  const vaultDestroy = vi.fn((): Promise<VaultResult> => {
+    vault = { exists: false, unlocked: false, attempts: 0, lockUntil: 0 };
+    return Promise.resolve({ ok: true, status: { ...vault } });
+  });
+
+  const vaultTouch = vi.fn((): Promise<void> => Promise.resolve());
+
   const vaultOnLocked = vi.fn((callback: () => void): (() => void) => {
     vaultListeners.add(callback);
     return () => vaultListeners.delete(callback);
@@ -181,6 +203,7 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
       get: libraryGet,
       save: librarySave,
       remove: libraryRemove,
+      reset: libraryReset,
     },
     pickCover,
     settings: {
@@ -195,6 +218,7 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
       restore: driveRestore,
       backupInfo: driveBackupInfo,
       disconnect: driveDisconnect,
+      purge: drivePurge,
       onStatus: driveOnStatus,
     },
     vault: {
@@ -202,6 +226,8 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
       create: vaultCreate,
       unlock: vaultUnlock,
       lock: vaultLock,
+      destroy: vaultDestroy,
+      touch: vaultTouch,
       onLocked: vaultOnLocked,
     },
   };
@@ -211,6 +237,7 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     libraryGet,
     librarySave,
     libraryRemove,
+    libraryReset,
     pickCover,
     settingsGet,
     settingsSet,
@@ -221,6 +248,7 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     driveRestore,
     driveBackupInfo,
     driveDisconnect,
+    drivePurge,
     driveOnStatus,
     emitStatus: (status: DriveStatus): void => {
       for (const listener of listeners) listener(status);
@@ -229,6 +257,8 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     vaultCreate,
     vaultUnlock,
     vaultLock,
+    vaultDestroy,
+    vaultTouch,
     vaultOnLocked,
     emitVaultLocked: (): void => {
       for (const listener of vaultListeners) listener();

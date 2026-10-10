@@ -3,6 +3,8 @@ import type {
   AppSettings,
   DriveStatus,
   ElectronApi,
+  LibraryReset,
+  PurgeResult,
   VaultResult,
   VaultStatus,
   Work,
@@ -13,6 +15,7 @@ const api: ElectronApi = {
     get: () => ipcRenderer.invoke('library:get'),
     save: (work) => ipcRenderer.invoke('library:save', work),
     remove: (id) => ipcRenderer.invoke('library:delete', id),
+    reset: (): Promise<LibraryReset> => ipcRenderer.invoke('library:reset'),
   },
   pickCover: () => ipcRenderer.invoke('cover:pick'),
   settings: {
@@ -27,6 +30,7 @@ const api: ElectronApi = {
     restore: (passphrase: string) => ipcRenderer.invoke('drive:restore', passphrase),
     backupInfo: () => ipcRenderer.invoke('drive:backup-info'),
     disconnect: () => ipcRenderer.invoke('drive:disconnect'),
+    purge: (): Promise<PurgeResult> => ipcRenderer.invoke('drive:purge'),
     onStatus: (cb: (status: DriveStatus) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, status: DriveStatus): void => cb(status);
       ipcRenderer.on('drive:status-changed', listener);
@@ -40,6 +44,9 @@ const api: ElectronApi = {
     unlock: (password: string): Promise<VaultResult> =>
       ipcRenderer.invoke('vault:unlock', password),
     lock: (): Promise<VaultStatus> => ipcRenderer.invoke('vault:lock'),
+    destroy: (): Promise<VaultResult> => ipcRenderer.invoke('vault:destroy'),
+    /** Registra atividade do usuário para a janela de ociosidade do cofre. */
+    touch: () => ipcRenderer.invoke('vault:touch'),
     onLocked: (cb: () => void) => {
       const listener = (): void => cb();
       ipcRenderer.on('vault:locked', listener);

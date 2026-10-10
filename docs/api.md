@@ -24,27 +24,31 @@ Cada método chama `ipcRenderer.invoke(canal, ...args)`, atendido por um
 `ipcMain.handle(canal, ...)` no processo main. A tabela abaixo cruza os três
 níveis (método → canal → origem dos dados):
 
-| `window.api`           | Canal IPC           | Origem dos dados                            |
-| ---------------------- | ------------------- | ------------------------------------------- |
-| `library.get()`        | `library:get`       | `library.json` local                        |
-| `library.save(obra)`   | `library:save`      | cria/atualiza obra + `library.json`         |
-| `library.remove(id)`   | `library:delete`    | remove obra + limpa capa órfã               |
-| `pickCover()`          | `cover:pick`        | diálogo do SO → copia para `covers/`        |
-| `settings.get()`       | `settings:get`      | idioma do disco + segredos do cofre         |
-| `settings.set(cfg)`    | `settings:set`      | segredos no cofre e `settings.json` (0600)  |
-| `drive.status()`       | `drive:status`      | estado em memória (+ tokens no cofre)       |
-| `drive.providers()`    | `drive:providers`   | catálogo `BackupProvider` (Dropbox, Google) |
-| `drive.auth()`         | `drive:auth`        | OAuth PKCE + loopback `localhost:17431`     |
-| `drive.backup()`       | `drive:backup`      | criptografa e envia à pasta do app          |
-| `drive.restore(senha)` | `drive:restore`     | baixa, decifra e substitui a biblioteca     |
-| `drive.backupInfo()`   | `drive:backup-info` | metadados do `library.json` remoto          |
-| `drive.disconnect()`   | `drive:disconnect`  | apaga a sessão e o segredo dos tokens       |
-| `drive.onStatus(cb)`   | evento (sem invoke) | assina `drive:status-changed`               |
-| `vault.status()`       | `vault:status`      | container do cofre + sessão em memória      |
-| `vault.create(senha)`  | `vault:create`      | cria o cofre (Argon2id) e o deixa aberto    |
-| `vault.unlock(senha)`  | `vault:unlock`      | trava exponencial + Argon2id                |
-| `vault.lock()`         | `vault:lock`        | zera a chave da sessão (auto-lock em 5 min) |
-| `vault.onLocked(cb)`   | evento (sem invoke) | assina `vault:locked` (auto-lock)           |
+| `window.api`           | Canal IPC           | Origem dos dados                              |
+| ---------------------- | ------------------- | --------------------------------------------- |
+| `library.get()`        | `library:get`       | `library.enc` decifrado                       |
+| `library.save(obra)`   | `library:save`      | cria/atualiza obra + regrava `library.enc`    |
+| `library.remove(id)`   | `library:delete`    | remove obra + shred da capa órfã              |
+| `library.reset()`      | `library:reset`     | **destrutivo**: apaga todo o acervo           |
+| `pickCover()`          | `cover:pick`        | diálogo do SO → copia cifrada em `covers/`    |
+| `settings.get()`       | `settings:get`      | idioma do disco + segredos do cofre           |
+| `settings.set(cfg)`    | `settings:set`      | segredos no cofre e `settings.json` (0600)    |
+| `drive.status()`       | `drive:status`      | estado em memória (+ tokens no cofre)         |
+| `drive.providers()`    | `drive:providers`   | catálogo `BackupProvider` (Dropbox, Google)   |
+| `drive.auth()`         | `drive:auth`        | OAuth PKCE + loopback `localhost:17431`       |
+| `drive.backup()`       | `drive:backup`      | criptografa e envia à pasta do app            |
+| `drive.restore(senha)` | `drive:restore`     | baixa, decifra e substitui a biblioteca       |
+| `drive.backupInfo()`   | `drive:backup-info` | metadados do `library.json` remoto            |
+| `drive.disconnect()`   | `drive:disconnect`  | apaga a sessão e o segredo dos tokens         |
+| `drive.purge()`        | `drive:purge`       | **destrutivo**: apaga os blobs na nuvem       |
+| `drive.onStatus(cb)`   | evento (sem invoke) | assina `drive:status-changed`                 |
+| `vault.status()`       | `vault:status`      | container do cofre + sessão em memória        |
+| `vault.create(senha)`  | `vault:create`      | cria o cofre (Argon2id) e o deixa aberto      |
+| `vault.unlock(senha)`  | `vault:unlock`      | trava exponencial + Argon2id                  |
+| `vault.lock()`         | `vault:lock`        | zera a chave da sessão (auto-lock em 5 min)   |
+| `vault.touch()`        | `vault:touch`       | atividade da UI renova a janela de ociosidade |
+| `vault.destroy()`      | `vault:destroy`     | **destrutivo**: apaga cofre e acervo local    |
+| `vault.onLocked(cb)`   | evento (sem invoke) | assina `vault:locked` (auto-lock)             |
 
 ---
 
@@ -74,10 +78,15 @@ uma mensagem de emissor desconhecido é bloqueada com erro.
 
 ## 3. Biblioteca
 
+A biblioteca é **cifrada em disco** (`library.enc`, AES-256-GCM com a chave do
+cofre). Todos os canais abaixo exigem cofre aberto: sem chave eles falham com
+`vaultLocked` antes de tocar em disco.
+
 ### `library.get() → Promise<Work[]>`
 
-Devolve todas as obras salvas (`library.json`). Lista vazia se ainda não há
-obras; nunca `null`.
+Devolve todas as obras salvas. Lista vazia se ainda não há obras; nunca `null`.
+Arquivo cifrado ilegível **não** volta como lista vazia: falha com
+`libraryTampered`, para que o próximo salvamento não sobrescreva o acervo.
 
 ### `library.save(obra) → Promise<Work[]>`
 
@@ -93,16 +102,32 @@ Cria ou atualiza uma obra e devolve a lista completa atualizada.
 
 ### `library.remove(id: string) → Promise<Work[]>`
 
-Remove a obra e apaga o arquivo de capa órfão, se houver. Devolve a lista
-restante. Remover um `id` inexistente devolve a lista inalterada. Um `id`
-fora da régua (`^[A-Za-z0-9_-]{1,64}$`) falha com
+Remove a obra e **sobrescreve** o arquivo de capa antes de apagá-lo, se houver.
+Devolve a lista restante. Remover um `id` inexistente devolve a lista
+inalterada. Um `id` fora da régua (`^[A-Za-z0-9_-]{1,64}$`) falha com
 `Identificador de obra inválido.`
+
+### `library.reset() → Promise<LibraryReset>`
+
+**Destrutivo.** Apaga todo o acervo sobrescrevendo: `library.enc` e toda a pasta
+`covers/`. As pastas continuam prontas para o próximo uso. Não toca no cofre
+nem no backup na nuvem.
+
+```ts
+interface LibraryReset {
+  ok: boolean;
+  shredded: number;
+  failed: number;
+  code?: VaultErrorCode; // presente quando ok === false
+}
+```
 
 ### `pickCover() → Promise<string | null>`
 
-Abre o diálogo nativo (JPG/JPEG/PNG/WebP/GIF/AVIF/BMP), copia a imagem para
-`covers/` com nome único e devolve o nome do arquivo. Devolve `null` se o
-usuário cancelar. A imagem é servida pelo protocolo interno (§6).
+Abre o diálogo nativo (JPG/JPEG/PNG/WebP/GIF/AVIF/BMP), copia a imagem **cifrada**
+para `covers/<nome>.enc` e devolve o nome em claro (`<id>.<ext>`), que é o que
+`Work.coverFile` guarda. Devolve `null` se o usuário cancelar. A imagem é
+decifrada sob demanda pelo protocolo interno (§7).
 
 ---
 
@@ -249,9 +274,29 @@ não for uma lista.
 ### `drive.disconnect() → Promise<DriveStatus>`
 
 Apaga o segredo `dropbox.tokens` do cofre (falha fechada: com o cofre fechado
-nada é apagado às cegas) e devolve o status desconectado. O backup na
-nuvem **permanece** (apague a pasta `/Apps/Chronos Biblioteca` pelo Dropbox Web, se quiser;
-para cortar o acesso do app, remova-o em `dropbox.com/account/security`).
+nada é apagado às cegas) e devolve o status desconectado. **Os blobs na nuvem
+permanecem**: desconectar não é apagar dado, é cortar o acesso do app.
+
+### `drive.purge() → Promise<PurgeResult>`
+
+**Destrutivo.** Apaga **todos** os arquivos da App folder do provedor. Sem a
+senha de backup: os nomes são opacos (HMAC), então identificar "os nossos"
+exigiria decifrar o manifesto, e apagar por engano o backup de outra
+instalação seria pior do que apagar o que sobrou.
+
+```ts
+interface PurgeResult {
+  ok: boolean;
+  deleted: number;
+  failed: number;
+  error?: string;
+}
+```
+
+Falha **parcial** (`ok: false` com `deleted > 0`) é a resposta honesta: parte
+foi apagada, parte ficou, e a conta segue conectada para tentar de novo. Os
+tokens locais só são zerados com `failed === 0` — zerar antes deixaria blobs
+órfãos que o app não tem mais como apagar.
 
 ### `drive.onStatus(cb) → () => void`
 
@@ -316,8 +361,25 @@ Sucesso re-lê o estado do drive.
 
 ### `vault.lock() → Promise<VaultStatus>`
 
-Fecha a sessão (zera a chave em memória) e devolve o status. O auto-lock
-derruba sozinho após 5 min de inatividade.
+Fecha a sessão (zera a chave em memória) e devolve o status. Como o acervo é
+cifrado com essa chave, a UI some com a biblioteca da tela. O auto-lock
+derruba sozinho após 5 min **de ociosidade real** (uso da interface).
+
+### `vault.touch() → Promise<void>`
+
+Registra atividade do usuário e renova a janela de ociosidade. O renderer
+chama em `pointerdown`/`keydown`/`wheel`; o throttle de 30 s é do lado main.
+Ler a chave no main **não** conta como atividade.
+
+### `vault.destroy() → Promise<VaultResult>`
+
+**Destrutivo.** Zera a chave em memória, sobrescreve e apaga `vault.zkv` e o
+`.tmp`, e sobrescreve as capas. O backup na nuvem **não** é tocado: apagar lá
+é `drive.purge`, operação separada e explícita.
+
+Depois da destruição, nada recria o container sem um `vault.create` explícito:
+escritas devolvem `vaultDestroyed` em vez de deixar um container pela metade,
+que o usuário leria como "adulterado".
 
 ### `vault.onLocked(cb) → () => void`
 
@@ -336,6 +398,8 @@ desbloqueio de novo.
 | `vaultWrongPassword`  | espera da volta | senha errada (soma tentativa)                |
 | `vaultLockedOut`      | espera restante | tentativa durante a trava exponencial        |
 | `vaultTampered`       | 0               | container ilegível/alterado (falha fechada)  |
+| `libraryTampered`     | 0               | `library.enc`/capa ilegível (falha fechada)  |
+| `vaultDestroyed`      | 0               | escrita depois da destruição do cofre        |
 | `vaultDirUnavailable` | 0               | pasta do cofre sem permissão de escrita      |
 | `vaultAuthCancelled`  | 0               | usuário dispensou o pedido de senha (pkexec) |
 

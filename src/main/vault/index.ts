@@ -4,6 +4,7 @@ export {
   destroyVault,
   ensureVaultStructure,
   getSecret,
+  isVaultDestroyed,
   isVaultDirUnavailable,
   lockVault,
   setSecret,

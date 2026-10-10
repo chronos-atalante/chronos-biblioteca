@@ -15,6 +15,7 @@ import RestorePasswordModal from '@zero/renderer/components/RestorePasswordModal
 import Select from '@zero/renderer/components/Select';
 import type { SelectOption } from '@zero/renderer/components/Select';
 import VaultModal from '@zero/renderer/components/VaultModal';
+import DangerZone from '@zero/renderer/components/DangerZone';
 
 /** Ícone de marca por provedor (catálogo fechado em `BackupProviderId`). */
 const PROVIDER_ICONS: Record<BackupProviderId, string> = {
@@ -27,12 +28,18 @@ interface SettingsModalProps {
   notify: (message: string, kind?: 'info' | 'error') => void;
   /** Aplica o novo idioma na UI ao salvar (o valor volta do backend normalizado). */
   onLanguageChange: (language: AppSettings['language']) => void;
+  /** Recarrega o acervo depois de uma ação destrutiva. */
+  onLibraryChanged: () => void;
+  /** O cofre sumiu: a janela volta a pedir senha mestra. */
+  onVaultDestroyed: () => void;
 }
 
 export default function SettingsModal({
   onClose,
   notify,
   onLanguageChange,
+  onLibraryChanged,
+  onVaultDestroyed,
 }: SettingsModalProps): JSX.Element {
   const m = useMessages();
   const language = useLanguage();
@@ -355,6 +362,16 @@ export default function SettingsModal({
                 <i className="fa-solid fa-spinner fa-spin" /> {m.settings.syncingBanner}
               </div>
             ) : null}
+
+            <DangerZone
+              connected={connected}
+              notify={notify}
+              onLibraryChanged={onLibraryChanged}
+              onVaultDestroyed={onVaultDestroyed}
+              onCloudChanged={() => {
+                void refreshDriveStatus();
+              }}
+            />
 
             {loading ? <div className="help">{m.common.loading}</div> : null}
           </div>

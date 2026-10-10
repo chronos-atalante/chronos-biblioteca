@@ -8,7 +8,7 @@
 
 | Versão | Suporte             |
 | ------ | ------------------- |
-| 1.5.x  | ✅ Correções ativas |
+| 1.8.x  | ✅ Correções ativas |
 
 Versões anteriores à linha suportada não recebem correções; atualize pelo `.deb` mais
 recente (`npm run dist` gera em `release/`).
@@ -28,6 +28,44 @@ contrário).
 
 ## Proteções já existentes
 
+- **Acervo cifrado em repouso**: a biblioteca é um `library.enc` e cada capa é
+  um `covers/<nome>.enc`, em AES-256-GCM com chave derivada da chave-mestra do
+  cofre por HKDF-SHA512 (`src/main/store-crypto.ts`). Nada do acervo do
+  usuário existe em claro no disco, e os arquivos não guardam chave, salt nem
+  KDF: sozinhos são bytes inúteis. **Sem cofre aberto a biblioteca não existe
+  para o app** — abrir o app pede a senha mestra.
+- **Cryptographic Erase**: destruir o cofre mata a chave-mestra, e com ela todo
+  `.enc` vira ruído irrecuperável sem sobrescrever o acervo inteiro. Por isso o
+  acervo não mora dentro do `vault.zkv`, e a destruição é instantânea mesmo com
+  biblioteca grande.
+- **Falha fechada na leitura do acervo**: arquivo cifrado ilegível falha com
+  `libraryTampered`, **nunca** devolve lista vazia. Devolver `[]` faria o
+  próximo salvamento sobrescrever um acervo que existe.
+- **Sobrescrita segura antes de apagar**: `src/main/shred.ts` sobrescreve o
+  arquivo (passes alternando dado aleatório e zero) e faz `fsync` **antes**
+  do `unlink` e do `fsync` do diretório, sem o que a remoção pode publicar um
+  arquivo cujo conteúdo antigo segue no disco. `O_NOFOLLOW` impede seguir
+  symlink. Vale para obra removida, capa órfã, reset de biblioteca, cofre
+  destruído, `.tmp` órfão e legado em claro.
+- **Nada recria o cofre depois de destruído**: `writeContainer` recusa com
+  `vaultDestroyed` enquanto a marca estiver de pé, e só `createVault` a limpa.
+  Sem isso, uma escrita acidental deixaria o container pela metade e o usuário
+  leria "adulterado" em vez de "destruído".
+- **Legado em claro varrido no boot** (`src/main/cleanup.ts`): `settings.json`
+  com `enc:`, `dropbox-tokens.json`, `drive-tokens.json` e o cofre antigo em
+  `~/.config/chronos-biblioteca/.vault` são sobrescritos e apagados. A
+  verificação é **por existência** (o conteúdo do segredo nunca é lido) e a
+  lista é fechada: o acervo e o `settings.json` vivo nunca são tocados.
+- **Apagar o backup na nuvem** (`drive:purge`, exposto na zona de risco):
+  desconectar só limpa a sessão local, então apagar o que está no Dropbox é
+  operação separada e explícita. Falha **parcial** é contada
+  (`deleted`/`failed`) e a sessão local só é zerada com `failed === 0`; um
+  "apagado" em falso é pior que um erro.
+- **Ações destrutivas com confirmação em duas etapas**: cada uma no seu
+  `DangerZone`, com palavra digitada (`APAGAR`, ou `DESTRUIR` para o cofre).
+- **Auto-lock por ociosidade real**: 5 min sem uso da interface derrubam a
+  sessão. O que conta é atividade da UI (`pointerdown`/`keydown`/`wheel`,
+  canal `vault:touch`, throttle de 30 s), não acesso a segredo.
 - **Cofre de segredos**: tokens do Dropbox, senha de backup e App key
   alternativa sob uma senha mestra (Argon2id de 128 MiB + AES-256-GCM),
   guardados em `/var/lib/.chronos-biblioteca/.vault/vault.zkv` (`0600`,
@@ -38,9 +76,11 @@ contrário).
   inválida = adulterado), chave-mestra só na memória da sessão, auto-lock de 5
   minutos e trava exponencial (10 s → 24 h) checada **antes** do Argon2id
   (`docs/cofre.md`).
-- **Sem cofre não há segredo**: com o cofre fechado ou ausente, `loadSettings`
-  devolve `''`, `loadState` zera os tokens e gravar lança `vaultLocked` antes
-  de tocar em disco (falha fechada). Não existe mais caminho legado com
+- **Sem cofre não há segredo nem acervo**: com o cofre fechado ou ausente,
+  `loadSettings` devolve `''`, `loadState` zera os tokens, e **todo acesso ao
+  acervo** (`library:get`, `library:save`, `library:delete`, `library:reset`,
+  `pickCover`, `cover://`) lança `vaultLocked` antes de tocar em disco (falha
+  fechada). Não existe mais caminho legado com
   `safeStorage`/keyring nem arquivo `dropbox-tokens.json`: o app lê e grava
   segredo **só** no cofre.
 - **Tokens só na máquina**: no cofre (`dropbox.tokens`), nunca em arquivo em
@@ -87,11 +127,11 @@ contrário).
 - **Ids sem caminho**: `isValidWorkId` rejeita `..`, `/` e `\` nos ids aceitos
   pela IPC e nos vindos da nuvem (o id inválido vira UUID novo), inclusive no
   nome de capa importado (defesa em profundidade, classe CVE-2026-21589).
-- **Escrita de JSON atômica**: `library.json`, `settings.json` e
-  `dropbox-tokens.json` são gravados em `.tmp` e renomeados por cima (nunca
-  JSON pela metade), com `0600` onde há credencial; o container do cofre segue
-  a mesma regra (`vault.zkv.tmp` + `rename`, `0600`)
-  (`src/main/jsonfile.ts`, `src/main/vault/vault.ts`).
+- **Escrita atômica do acervo e do JSON**: `library.enc`, as capas e
+  `settings.json` são gravados
+  em `.tmp` e renomeados por cima (nunca JSON pela metade), com `0600` onde há
+  credencial; o container do cofre segue a mesma regra (`vault.zkv.tmp` +
+  `rename`, `0600`) (`src/main/jsonfile.ts`, `src/main/vault/vault.ts`).
 - **IPC fechado por origem**: todo handler confere `event.senderFrame` contra a
   página oficial do app (scheme `chronos://` em produção ou dev server do
   Vite), bloqueando a mensagem antes do domínio tocar.
@@ -140,6 +180,31 @@ contra:
 
 ## Riscos aceitos (com justificativa)
 
+- **Sobrescrita em SSD não é garantia**: com wear leveling e over-provisioning,
+  a escrita pode ir para outro bloco físico e o original ficar no controlador
+  do disco. Onde o arquivo já é cifrado (`.enc`, `vault.zkv`), a proteção é a
+  chave e a sobrescrita é _higiene_; no legacy em claro é o melhor esforço
+  disponível. O TRIM é responsabilidade do sistema (`fstrim.timer`), e o app
+  não roda `fstrim` nem `fallocate`: o perfil AppArmor restringe escrita aos
+  diretórios do app e ao vault.
+- **`string` do V8 não pode ser zerada**: títulos, sinopses e categorias são
+  strings imutáveis, e `library:get` materializa o acervo inteiro em memória a
+  cada chamada. Não há como zerar isso sem mudar o idioma da interface ou
+  serializar por buffer. `mlock` (travar a página na RAM) exigiria
+  `libsodium-wrappers` ou um addon nativo, com custo em `.osv-scanner.toml`,
+  `THIRD-PARTY-NOTICES.txt` e no perfil AppArmor. **Decisão: não fazer** — quem
+  já está na sessão do usuário tem `/proc/<pid>/mem`, então o ganho é pequeno e
+  o custo grande.
+- **Sem PIN de coação, por decisão**: o app guarda credencial do próprio app, e
+  o acervo passou a ser cifrado com a chave do cofre. Um PIN que mostrasse um
+  "cofre vazio" seria **falso**: a biblioteca não ficaria escondida, só a chave
+  sumiria, e a próxima execução recriaria o cofre com um clique. O que existe é
+  **autodestruição manual** em duas etapas (acervo, cofre e nuvem), útil contra
+  perda ou troca de máquina — não contra coação física.
+- **Sem autodestruição por tentativas de senha, por decisão**: cinco erros de
+  digitação apagariam o cofre e a senha de backup, e não há frase de
+  recuperação. A trava exponencial (10 s → 24 h, verificada antes do Argon2id)
+  já cobre o ataque de força bruta, que é o problema real.
 - **Porta fixa do callback OAuth (`localhost:17431`)**: exigência do App
   Console do Dropbox (redirect URI cadastrada). Um processo malicioso na
   mesma máquina poderia escutar nessa porta, mas isso exige acesso local ao

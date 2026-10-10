@@ -28,7 +28,8 @@ app no Dropbox.
 ## O que ele faz
 
 - Mantém a biblioteca em grade com capa, tipo, status e progresso, com busca e
-  filtros por status, e gravação atômica em `library.json`.
+  filtros por status, e gravação atômica em `library.enc` (cifrado com a
+  chave do cofre).
 - Copia a imagem de capa escolhida do disco para a biblioteca local e a serve
   pelo protocolo interno `cover://`.
 - Faz backup do `library.json` e das capas **sempre criptografados**
@@ -60,7 +61,8 @@ desenvolvimento e também não entra no pacote.
 ## Ciclo de vida resumido
 
 1. Primeira execução: a biblioteca nasce vazia em
-   `~/.local/share/chronos-biblioteca/library.json`.
+   `~/.local/share/chronos-biblioteca/library.enc` e `covers/*.enc`, ambos
+   cifrados com a chave do cofre.
 2. Uso corrente: adicionar/editar obras, mover a barra de progresso, buscar e
    filtrar; tudo local e instantâneo (gravação com debounce).
 3. Backup opcional: crie o **cofre de segredos** e defina a senha de

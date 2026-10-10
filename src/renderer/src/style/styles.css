@@ -1352,6 +1352,28 @@ input[type='range']::-webkit-slider-thumb {
   margin-top: 8px;
 }
 
+/* Zona de risco: ações destrutivas com confirmação em duas etapas. */
+.danger-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.danger-actions .btn {
+  color: var(--danger, #e07a5f);
+  border-color: var(--danger, #e07a5f);
+}
+
+.danger-actions .btn:hover:not(:disabled) {
+  background: rgba(224, 122, 95, 0.12);
+}
+
+.danger-actions .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .vault-badge {
   font-size: 12.5px;
   font-weight: 600;

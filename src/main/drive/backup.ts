@@ -1,5 +1,4 @@
 import fs from 'fs';
-import path from 'path';
 import type { BackupSummary, DriveStatus, Work } from '@zero/types';
 import {
   MANIFEST_FILE,
@@ -30,10 +29,24 @@ import {
   state,
   toMessage,
 } from '@zero/main/drive/state';
-import { backupFiles, coversDir, loadLibrary, restoreLibrary } from '@zero/main/library';
+import {
+  backupFiles,
+  coversDir,
+  loadLibrary,
+  restoreLibrary,
+  writeCoverFile,
+} from '@zero/main/library';
 import { currentMessages } from '@zero/main/i18n';
 import { loadSettings } from '@zero/main/settings';
 import { vaultUnlocked } from '@zero/main/vault/secrets';
+
+/** Resultado de `purgeRemote`: contagem real, nunca um "apagado" em falso. */
+export interface PurgeSummary {
+  ok: boolean;
+  deleted: number;
+  failed: number;
+  error?: string;
+}
 
 /** Valida a forma mínima de uma obra vinda do backup. */
 function isWorkRecord(value: unknown): value is Work {
@@ -249,7 +262,9 @@ export async function restoreNow(passphrase: string): Promise<{
         continue;
       }
       const buffer = decryptWith(await provider.downloadFile(file.id), passphrase);
-      fs.writeFileSync(path.join(coversPath, path.basename(local)), buffer);
+      // Grava cifrado com a chave do cofre, como `importCover` faz: o acervo
+      // em disco nunca fica em claro, nem o que acabou de chegar da nuvem.
+      writeCoverFile(local, buffer);
     }
 
     const restored = restoreLibrary(works);
@@ -295,10 +310,79 @@ export async function backupInfo(): Promise<BackupSummary | null> {
 }
 
 /**
- * Desconecta do provedor: limpa os tokens da sessão **e** do cofre. Com o
+ * Apaga o backup do usuário no provedor.
+ *
+ * `disconnect()` só limpa a sessão local: os blobs continuam no Dropbox. Esta
+ * é a operação que faz o que "apagar meus dados" promete. Sem chave na sessão
+ * não há token para agir, e sem token não se apaga nada (falha fechada, nunca
+ * um "apagado" que mentiu).
+ *
+ * A remoção é **de tudo** na App folder, não só dos blobs deste backup: os
+ * nomes são opacos (HMAC com a senha de backup), então identificar os nossos
+ * exigiria a senha e o manifesto, e apagar por engano o backup de outra
+ * instalação seria pior do que apagar o que sobrou.
+ *
+ * Falha parcial é devolvida com contagem, não escondida: um "apagado" em falso
+ * é pior que um erro.
+ */
+export async function purgeRemote(): Promise<PurgeSummary> {
+  if (state.tokens === null) {
+    return {
+      ok: false,
+      deleted: 0,
+      failed: 0,
+      error: currentMessages().driveErrors.connectFirst(currentProvider().label),
+    };
+  }
+  if (!vaultUnlocked()) {
+    return { ok: false, deleted: 0, failed: 0, error: currentMessages().vault.errors.vaultLocked };
+  }
+  state.syncing = true;
+  setError(null);
+  emit();
+  let deleted = 0;
+  let failed = 0;
+  try {
+    const remote = await currentProvider().listAppFiles();
+    for (const file of remote) {
+      try {
+        await currentProvider().deleteFile(file.id);
+        deleted += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    // Só desliga a sessão local quando a nuvem confirma. Sobrar ligado com
+    // alguns blobs pendentes é o estado honesto: ainda dá para tentar de novo.
+    if (failed === 0) {
+      state.tokens = null;
+      persistState();
+    }
+    state.syncing = false;
+    emit();
+    return failed === 0
+      ? { ok: true, deleted, failed }
+      : {
+          ok: false,
+          deleted,
+          failed,
+          error: currentMessages().driveErrors.purgePartial(deleted, failed),
+        };
+  } catch (err) {
+    state.syncing = false;
+    const message = toMessage(err);
+    setError(message);
+    return { ok: false, deleted, failed, error: message };
+  }
+}
+
+/** Desconecta do provedor: limpa os tokens da sessão **e** do cofre. Com o
  * cofre fechado não dá para apagar o que está lá dentro, então nada muda
  * (falha fechada com o erro na barra de status, em vez de um "desconectado"
  * que voltaria na próxima abertura).
+ *
+ * Os blobs do usuário **continuam na nuvem**: para removê-los existe
+ * `purgeRemote()`, que é uma operação à parte e explícita.
  */
 export function disconnect(): DriveStatus {
   setError(null);

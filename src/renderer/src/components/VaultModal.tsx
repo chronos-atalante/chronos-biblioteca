@@ -9,6 +9,11 @@ interface VaultModalProps {
   onClose: () => void;
   /** Chama quando o cofre ficou desbloqueado (criação ou desbloqueio OK). */
   onUnlocked: () => void;
+  /**
+   * `false` quando o cofre é a barreira da tela inteira (abrir o app): sem
+   * ele não há acervo para mostrar, então não há para onde fechar.
+   */
+  closable?: boolean;
 }
 
 /**
@@ -27,7 +32,12 @@ function strengthOf(password: string): Strength {
   return password.length >= 16 ? 'strong' : 'fair';
 }
 
-export default function VaultModal({ mode, onClose, onUnlocked }: VaultModalProps): JSX.Element {
+export default function VaultModal({
+  mode,
+  onClose,
+  onUnlocked,
+  closable = true,
+}: VaultModalProps): JSX.Element {
   const m = useMessages();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -81,7 +91,7 @@ export default function VaultModal({ mode, onClose, onUnlocked }: VaultModalProp
     <div
       className="overlay"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !busy) onClose();
+        if (closable && event.target === event.currentTarget && !busy) onClose();
       }}
     >
       <div className="modal">
@@ -90,9 +100,11 @@ export default function VaultModal({ mode, onClose, onUnlocked }: VaultModalProp
             <i className="fa-solid fa-vault" />{' '}
             {mode === 'create' ? m.vault.createTitle : m.vault.unlockTitle}
           </h2>
-          <button className="modal-close" onClick={onClose} title={m.common.close}>
-            <i className="fa-solid fa-xmark" />
-          </button>
+          {closable ? (
+            <button className="modal-close" onClick={onClose} title={m.common.close}>
+              <i className="fa-solid fa-xmark" />
+            </button>
+          ) : null}
         </div>
 
         <div className="modal-body">
@@ -160,9 +172,13 @@ export default function VaultModal({ mode, onClose, onUnlocked }: VaultModalProp
 
         <div className="modal-footer">
           <span className="spacer" />
-          <button className="btn ghost" onClick={onClose} disabled={busy}>
-            {m.common.cancel}
-          </button>
+          {closable ? (
+            <button className="btn ghost" onClick={onClose} disabled={busy}>
+              {m.common.cancel}
+            </button>
+          ) : (
+            <span className="spacer" />
+          )}
           <button
             className="btn primary"
             onClick={() => {

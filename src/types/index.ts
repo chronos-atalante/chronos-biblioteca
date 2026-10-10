@@ -1,4 +1,4 @@
-export type { ElectronApi } from '@zero/types/api';
+export type { ElectronApi, LibraryReset, PurgeResult } from '@zero/types/api';
 export type {
   BackupProviderId,
   BackupProviderInfo,

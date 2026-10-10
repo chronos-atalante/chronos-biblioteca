@@ -17,6 +17,7 @@ import { VaultError, isVaultError } from '@zero/main/vault/errors';
 import { lockoutState, lockUntilFor } from '@zero/main/vault/lockout';
 import { setupVaultDirectory } from '@zero/main/vault/privilege';
 import { vaultSession } from '@zero/main/vault/session';
+import { shredFile } from '@zero/main/shred';
 
 /**
  * Ciclo de vida do cofre: criar, desbloquear, travar e ler/gravar segredos.
@@ -32,6 +33,13 @@ interface VaultPayload {
   version: number;
   secrets: Record<string, string>;
 }
+
+/**
+ * O cofre foi destruído nesta execução. Enquanto for `true`, nenhuma escrita
+ * recria o container: é o que separa "o usuário apagou o cofre" de "o app
+ * reconstruiu o arquivo e agora acusa adulteração".
+ */
+let vaultDestroyed = false;
 
 /** Diretório do cofre (`/var/lib/.chronos-biblioteca/.vault` por padrão). */
 export function vaultDir(): string {
@@ -89,10 +97,24 @@ function readContainer(): VaultContainer | null {
 }
 
 function writeContainer(container: VaultContainer): void {
+  // Depois de uma destruição explícita, nada recria o cofre sem o usuário
+  // pedir: um `writeContainer` chamado depois deixaria um container pela
+  // metade, sem chave, e o usuário cairia em "adulterado" em vez de
+  // "destruído". Só `createVault` limpa a marca.
+  if (vaultDestroyed) {
+    throw new VaultError('vaultDestroyed');
+  }
   ensureVaultStructure();
   const file = vaultPath();
   const tmp = `${file}.tmp`;
   fs.writeFileSync(tmp, encodeContainer(container), { mode: 0o600 });
+  // `writeFileSync` só aplica o `mode` na criação: um `.tmp` órfão de um crash
+  // anterior herdaria a permissão antiga (mesmo cuidado de `jsonfile.ts`).
+  try {
+    fs.chmodSync(tmp, 0o600);
+  } catch {
+    // melhor esforço: gravar com a permissão mais larga é melhor que não gravar
+  }
   fs.renameSync(tmp, file);
 }
 
@@ -168,6 +190,9 @@ export async function createVault(
 ): Promise<VaultStatus> {
   if (vaultExists()) throw new VaultError('vaultExists');
   if (passwordProblem(password) !== null) throw new VaultError('vaultWeakPassword');
+
+  // A criação é o único caminho que ressuscita um cofre destruído.
+  vaultDestroyed = false;
 
   // A criação da estrutura pode tornar visível um cofre que já existia
   // (pasta sem permissão de listagem); rechega antes de escrever por cima.
@@ -287,9 +312,25 @@ export function deleteSecret(name: string): void {
   writeContainer(container);
 }
 
-/** Apaga o arquivo do cofre (usado em teste e em reset controlado). */
+/**
+ * Destrói o cofre: zera a chave na memória **antes** de tocar no disco (se a
+ * gravação falhar, a RAM já está limpa) e sobrescreve o `vault.zkv` e o
+ * `vault.zkv.tmp` — o temporário importa porque carrega os mesmos blobs de
+ * chave embrulhada que o container.
+ *
+ * Não remove `vaultDir()` nem a raiz em `/var/lib`: elas são do sistema
+ * (`0711 root:root`) e o app não é o dono.
+ *
+ * A partir daqui nada recria o container sem um `createVault` explícito.
+ */
 export function destroyVault(): void {
   vaultSession.wipe();
-  const file = vaultPath();
-  if (fs.existsSync(file)) fs.unlinkSync(file);
+  shredFile(vaultPath());
+  shredFile(`${vaultPath()}.tmp`);
+  vaultDestroyed = true;
+}
+
+/** `true` depois de uma destruição nesta execução (sem leitura em disco). */
+export function isVaultDestroyed(): boolean {
+  return vaultDestroyed;
 }

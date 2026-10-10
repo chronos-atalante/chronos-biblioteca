@@ -108,6 +108,7 @@ export const en: Messages = {
     toastRestoreFailed: 'Restore failed.',
     toastRestored: (works: number): string => `Backup restored: ${works} work(s).`,
     toastDisconnected: 'Dropbox account disconnected.',
+    toastPurgeFailed: 'Could not delete the backup from the cloud.',
     translationNotice: {
       title: 'Translation notice',
       text: "I don't speak any of these languages except Portuguese, and all translations are done by AI. Like everything in this world, there may be errors, so please have a little patience.",
@@ -280,6 +281,35 @@ export const en: Messages = {
       seconds < 60
         ? `Too many failed restore attempts with the wrong password. Try again in ${seconds} seconds.`
         : `Too many failed restore attempts with the wrong password. Try again in ${Math.ceil(seconds / 60)} minutes.`,
+    purgePartial: (deleted: number, failed: number): string =>
+      `${deleted} file(s) deleted from the cloud and ${failed} pending. The account is still connected; try again to delete what is left.`,
+  },
+
+  /** Zona de risco: ações destrutivas, todas com confirmação em 2 etapas. */
+  danger: {
+    zoneLabel: 'Danger zone',
+    zoneBody: 'These actions are irreversible and overwrite the files before deleting them.',
+    resetTitle: 'Delete the library (works and covers)',
+    resetAction: 'Delete library',
+    resetConfirm:
+      'All works and covers will be overwritten and deleted from this computer. The cloud backup is not affected.',
+    resetWord: 'DELETE',
+    purgeTitle: 'Delete the cloud backup',
+    purgeAction: 'Delete backup',
+    purgeConfirm:
+      'Every file of the backup will be deleted from the connected account. There is no going back: the reading history cannot be recovered.',
+    destroyTitle: 'Destroy the vault (deletes library and secrets)',
+    destroyAction: 'Destroy vault',
+    destroyConfirm:
+      'The vault will be overwritten and deleted. The library and the app secrets will be lost. The cloud backup is not affected.',
+    destroyWord: 'DESTROY',
+    typeLabel: (word: string): string => `Type ${word} to confirm. This step cannot be undone.`,
+    confirmAction: 'Confirm',
+    irreversible: 'This action cannot be undone.',
+    libraryReset: 'Library deleted.',
+    vaultDestroyed: 'Vault destroyed. Create a new one to continue.',
+    cloudPurged: 'Backup deleted from the cloud.',
+    libraryLocked: 'Unlock the vault to delete the library.',
   },
 
   /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */
@@ -292,9 +322,10 @@ export const en: Messages = {
     createTitle: 'Create the secrets vault',
     unlockTitle: 'Unlock the vault',
     createBody:
-      'Create a master password to protect the app secrets (Dropbox tokens and backup ' +
-      'password) on this computer. If you forget it, the secrets cannot be recovered.',
-    unlockBody: 'Enter the master password to access the stored secrets.',
+      'Create a master password. It protects **the whole library** (works and covers, encrypted ' +
+      'on disk) and the app secrets (Dropbox tokens and backup password). Without it the library ' +
+      'does not exist for the app. If you forget the password, it cannot be recovered.',
+    unlockBody: 'Enter the master password to decrypt the library and access the stored secrets.',
     passwordLabel: 'Master password',
     confirmLabel: 'Confirm password',
     createAction: 'Create vault',
@@ -325,6 +356,8 @@ export const en: Messages = {
       vaultLockedOut: 'Too many unlock attempts. Wait before trying again.',
       vaultWrongPassword: 'Incorrect master password.',
       vaultTampered: 'The vault is damaged or was altered.',
+      libraryTampered: 'The encrypted library is damaged or was altered. No data was deleted.',
+      vaultDestroyed: 'The vault was destroyed in this session. Create a new one to continue.',
       vaultWeakPassword: 'Predictable password. Choose something less obvious.',
       vaultDirUnavailable: 'Could not create the vault folder. Check the permissions.',
       vaultAuthCancelled: 'Creating the vault folder was cancelled.',

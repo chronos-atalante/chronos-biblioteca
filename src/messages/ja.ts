@@ -113,6 +113,7 @@ export const ja: Messages = {
     toastRestoreFailed: '復元に失敗しました。',
     toastRestored: (works: number): string => `${works} 件の作品を復元しました。`,
     toastDisconnected: 'Dropbox アカウントの接続を解除しました。',
+    toastPurgeFailed: 'クラウドからバックアップを削除できませんでした。',
   },
 
   restore: {
@@ -280,6 +281,36 @@ export const ja: Messages = {
       seconds < 60
         ? `パスフレーズ誤りの復元試行が多すぎます。${seconds} 秒後に再試行してください。`
         : `パスフレーズ誤りの復元試行が多すぎます。${Math.ceil(seconds / 60)} 分後に再試行してください。`,
+    purgePartial: (deleted: number, failed: number): string =>
+      `クラウドで ${deleted} 件のファイルを削除し、${failed} 件が残っています。アカウントは接続したままです。再試行して残りを削除してください。`,
+  },
+
+  /** Zona de risco: ações destrutivas, todas com confirmação em 2 etapas. */
+  danger: {
+    zoneLabel: '危険ゾーン',
+    zoneBody: 'これらの操作は取り消せません。ファイルを削除する前に内容を上書きします。',
+    resetTitle: 'ライブラリを削除(作品とカバー)',
+    resetAction: 'ライブラリを削除',
+    resetConfirm:
+      'すべての作品とカバーがこのコンピューターで上書きされて削除されます。クラウドのバックアップは変更されません。',
+    resetWord: '削除',
+    purgeTitle: 'クラウドのバックアップを削除',
+    purgeAction: 'バックアップを削除',
+    purgeConfirm:
+      'バックアップのすべてのファイルが接続中のアカウントから削除されます。元に戻せず、読書履歴は復元できません。',
+    destroyTitle: '金庫を破棄(ライブラリと秘密情報を削除)',
+    destroyAction: '金庫を破棄',
+    destroyConfirm:
+      '金庫は上書きされて削除されます。ライブラリとアプリの秘密情報は失われます。クラウドのバックアップは変更されません.',
+    destroyWord: '破棄',
+    typeLabel: (word: string): string =>
+      `確認のため ${word} を入力してください。この手順は取り消せません。`,
+    confirmAction: '確認',
+    irreversible: 'この操作は取り消せません。',
+    libraryReset: 'ライブラリを削除しました。',
+    vaultDestroyed: '金庫を破棄しました。続行するには新しい金庫を作成してください。',
+    cloudPurged: 'バックアップをクラウドから削除しました。',
+    libraryLocked: 'ライブラリを削除するには金庫のロックを解除してください。',
   },
 
   /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */
@@ -292,9 +323,11 @@ export const ja: Messages = {
     createTitle: 'シークレット金庫を作成',
     unlockTitle: '金庫のロックを解除',
     createBody:
-      'このコンピュータのアプリの秘密情報(Dropbox のトークンやバックアップ用パスワード)を' +
-      '守るマスターパスワードを作成します。パスワードを忘れると秘密情報は復元できません。',
-    unlockBody: '保存された秘密情報にアクセスするにはマスターパスワードを入力してください。',
+      'マスターパスワードを作成します。これは**ライブラリ全体**(作品とカバー、ディスク上で暗号化)' +
+      'とアプリの秘密情報(Dropbox のトークンやバックアップ用パスワード)を保護します。' +
+      'パスワードがなければアプリはライブラリを読み取れません。忘れると復元できません。',
+    unlockBody:
+      'ライブラリを復号して保存された秘密情報にアクセスするには、マスターパスワードを入力してください。',
     passwordLabel: 'マスターパスワード',
     confirmLabel: 'パスワードの確認',
     createAction: '金庫を作成',
@@ -325,6 +358,10 @@ export const ja: Messages = {
       vaultLockedOut: 'ロック解除の試行が多すぎます。しばらく待ってから再試行してください。',
       vaultWrongPassword: 'マスターパスワードが正しくありません。',
       vaultTampered: '金庫が破損するか改ざんされています。',
+      libraryTampered:
+        '暗号化されたライブラリが破損するか改ざんされています。データは削除されていません。',
+      vaultDestroyed:
+        'このセッションで金庫は破棄されました。続行するには新しい金庫を作成してください。',
       vaultWeakPassword: '推測しやすいパスワードです。より簡単ではないものにしてください。',
       vaultDirUnavailable: '保管庫フォルダーを作成できません。権限を確認してください。',
       vaultAuthCancelled: '保管庫フォルダーの作成をキャンセルしました。',

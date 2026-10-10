@@ -14,6 +14,7 @@ import WorkModal from '@zero/renderer/components/WorkModal';
 import SettingsModal from '@zero/renderer/components/SettingsModal';
 import AttributionsModal from '@zero/renderer/components/AttributionsModal';
 import DonateModal from '@zero/renderer/components/DonateModal';
+import VaultModal from '@zero/renderer/components/VaultModal';
 
 interface EditingState {
   work: Work;
@@ -68,6 +69,8 @@ export default function App(): JSX.Element {
   const [drive, setDrive] = useState<DriveStatus | null>(null);
   const [language, setLanguage] = useState<Language>('pt-BR');
   const [toast, setToast] = useState<{ message: string; kind: 'info' | 'error' } | null>(null);
+  // Cofre fechado: `VaultModal` cobre a tela e nada do acervo é carregado.
+  const [vaultPrompt, setVaultPrompt] = useState<'create' | 'unlock' | null>(null);
 
   const saveTimers = useRef<Map<string, number>>(new Map());
   const toastTimer = useRef<number | undefined>(undefined);
@@ -81,6 +84,17 @@ export default function App(): JSX.Element {
   }, []);
 
   const reload = useCallback(async (): Promise<void> => {
+    // O acervo é cifrado com a chave do cofre: sem cofre aberto não existe
+    // biblioteca para carregar, e pedir os dados ao main só produziria
+    // `vaultLocked`. A checagem vem antes de tudo.
+    const vault = await window.api.vault.status();
+    if (!vault.unlocked) {
+      setWorks([]);
+      setDrive(null);
+      setVaultPrompt(vault.exists ? 'unlock' : 'create');
+      setLoading(false);
+      return;
+    }
     const [library, status, settings] = await Promise.all([
       window.api.library.get(),
       window.api.drive.status(),
@@ -89,6 +103,7 @@ export default function App(): JSX.Element {
     setWorks(library);
     setDrive(status);
     setLanguage(settings.language);
+    setVaultPrompt(null);
     setLoading(false);
   }, []);
 
@@ -100,9 +115,32 @@ export default function App(): JSX.Element {
     };
   }, [reload]);
 
-  // Auto-lock do cofre (5 min de inatividade): avisa para o usuário reabrir.
+  /**
+   * O auto-lock mede ociosidade **real**: sem isto, o timer só correria quando
+   * o main decifrava algo, e quem estava usando o app perdia o cofre no meio
+   * do trabalho. O throttling é do lado main, então aqui é só enviar.
+   */
   useEffect(() => {
-    const unsubscribe = window.api.vault.onLocked(() => notify(m.vault.autoLocked, 'info'));
+    const signal = (): void => {
+      void window.api.vault.touch();
+    };
+    const events: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'wheel'];
+    for (const name of events) window.addEventListener(name, signal, { passive: true });
+    return () => {
+      for (const name of events) window.removeEventListener(name, signal);
+    };
+  }, []);
+
+  // O auto-lock do cofre (5 min sem uso): o acervo some da tela e o app volta
+  // a pedir a senha, porque sem chave a biblioteca não pode ser exibida.
+  useEffect(() => {
+    const unsubscribe = window.api.vault.onLocked(() => {
+      setWorks([]);
+      notify(m.vault.autoLocked, 'info');
+      void window.api.vault
+        .status()
+        .then((status) => setVaultPrompt(status.exists ? 'unlock' : 'create'));
+    });
     return () => {
       unsubscribe();
     };
@@ -363,12 +401,30 @@ export default function App(): JSX.Element {
             onClose={() => setShowSettings(false)}
             notify={notify}
             onLanguageChange={setLanguage}
+            onLibraryChanged={() => {
+              void reload();
+            }}
+            onVaultDestroyed={() => {
+              setShowSettings(false);
+              setVaultPrompt('create');
+            }}
           />
         ) : null}
 
         {showAttributions ? <AttributionsModal onClose={() => setShowAttributions(false)} /> : null}
 
         {showDonate ? <DonateModal onClose={() => setShowDonate(false)} /> : null}
+
+        {vaultPrompt !== null ? (
+          <VaultModal
+            mode={vaultPrompt}
+            closable={false}
+            onClose={() => setVaultPrompt(null)}
+            onUnlocked={() => {
+              void reload();
+            }}
+          />
+        ) : null}
 
         {toast !== null ? (
           <div className={`toast${toast.kind === 'error' ? ' error' : ''}`}>{toast.message}</div>

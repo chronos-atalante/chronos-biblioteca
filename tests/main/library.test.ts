@@ -22,12 +22,35 @@ import {
   upsertWork,
   userDataDir,
 } from '@zero/main/library';
-import { makeDraft, makeWork, flushAsync } from '../helpers/fixtures.ts';
+import { resetLibrary, writeCoverFile } from '@zero/main/library';
+import { isVaultError } from '@zero/main/vault/errors';
+import { lockVault, unlockVault } from '@zero/main/vault';
+import { makeDraft, makeWork } from '../helpers/fixtures.ts';
 import { resetSandbox, sandboxPath } from '../helpers/sandbox.ts';
+import { FAST_KDF, PASSWORD } from '../helpers/vault.ts';
+import { createVault, destroyVault } from '@zero/main/vault';
 
+/** Escreve uma capa cifrada pelo caminho normal do app (como `importCover`). */
 function writeCoversDirFile(name: string, content = 'img'): void {
-  fs.mkdirSync(coversDir(), { recursive: true });
-  fs.writeFileSync(path.join(coversDir(), name), content, 'utf-8');
+  writeCoverFile(name, Buffer.from(content, 'utf-8'));
+}
+
+/** Pasta do acervo cifrado: `library.enc` e `covers/<nome>.enc`. */
+function libraryFile(): string {
+  return path.join(dataDir(), 'library.enc');
+}
+
+function coverOnDisk(name: string): string {
+  return path.join(coversDir(), `${name}.enc`);
+}
+
+/**
+ * O acervo é cifrado com a chave do cofre, então toda suíte que o toca precisa
+ * de cofre aberto. `resetSandbox` apaga a árvore do cofre junto, então a
+ * criação vem depois dele.
+ */
+async function openVault(): Promise<void> {
+  await createVault(PASSWORD, FAST_KDF);
 }
 
 describe('diretórios XDG', () => {
@@ -70,23 +93,34 @@ describe('clampProgress', () => {
 });
 
 describe('biblioteca', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetSandbox();
+    destroyVault();
+    await openVault();
   });
 
   it('loadLibrary devolve lista vazia quando não existe arquivo', () => {
     expect(loadLibrary()).toEqual([]);
   });
 
-  it('loadLibrary devolve lista vazia para JSON inválido', () => {
-    fs.mkdirSync(dataDir(), { recursive: true });
-    fs.writeFileSync(path.join(dataDir(), 'library.json'), '{ quebrado', 'utf-8');
-    expect(loadLibrary()).toEqual([]);
+  it('loadLibrary falha fechada quando o arquivo cifrado está corrompido', () => {
+    saveLibrary([makeWork()]);
+    const file = libraryFile();
+    const raw = fs.readFileSync(file);
+    raw[raw.length - 1] = (raw[raw.length - 1] ?? 0) ^ 0xff;
+    fs.writeFileSync(file, raw);
+    expect(() => loadLibrary()).toThrow();
   });
 
-  it('loadLibrary devolve lista vazia quando o arquivo não é uma lista', () => {
+  it('loadLibrary falha fechada quando o arquivo não é um bloco cifrado', () => {
     fs.mkdirSync(dataDir(), { recursive: true });
-    fs.writeFileSync(path.join(dataDir(), 'library.json'), '{"title":"x"}', 'utf-8');
+    fs.writeFileSync(libraryFile(), '{ quebrado', 'utf-8');
+    expect(() => loadLibrary()).toThrow();
+  });
+
+  it('loadLibrary devolve lista vazia quando o conteúdo não é uma lista', () => {
+    saveLibrary([]);
+    // JSON válido e decifrável, mas não uma lista: aqui a lista vazia é o certo.
     expect(loadLibrary()).toEqual([]);
   });
 
@@ -94,8 +128,8 @@ describe('biblioteca', () => {
     const works = [makeWork()];
     expect(saveLibrary(works)).toEqual(works);
     expect(loadLibrary()).toEqual(works);
-    expect(fs.existsSync(path.join(dataDir(), 'library.json'))).toBe(true);
-    expect(fs.existsSync(path.join(dataDir(), 'library.json.tmp'))).toBe(false);
+    expect(fs.existsSync(libraryFile())).toBe(true);
+    expect(fs.existsSync(`${libraryFile()}.tmp`)).toBe(false);
   });
 
   it('newId gera UUIDs únicos', () => {
@@ -134,38 +168,35 @@ describe('biblioteca', () => {
     expect(works[0]?.progress).toBe(0);
   });
 
-  it('upsertWork remove a capa anterior quando troca de capa', async () => {
+  it('upsertWork remove a capa anterior quando troca de capa', () => {
     writeCoversDirFile('antiga.png');
     upsertWork(makeDraft({ id: 'delta', coverFile: 'antiga.png' }));
     writeCoversDirFile('nova.png');
     upsertWork(makeDraft({ id: 'delta', coverFile: 'nova.png' }));
-    await flushAsync();
-    expect(fs.existsSync(path.join(coversDir(), 'antiga.png'))).toBe(false);
-    expect(fs.existsSync(path.join(coversDir(), 'nova.png'))).toBe(true);
+    expect(fs.existsSync(coverOnDisk('antiga.png'))).toBe(false);
+    expect(fs.existsSync(coverOnDisk('nova.png'))).toBe(true);
   });
 
   it('upsertWork mantém capa ainda em uso por outra obra', () => {
     writeCoversDirFile('comum.png');
     upsertWork(makeDraft({ id: 'e1', coverFile: 'comum.png' }));
     upsertWork(makeDraft({ id: 'e2', coverFile: 'comum.png' }));
-    expect(fs.existsSync(path.join(coversDir(), 'comum.png'))).toBe(true);
+    expect(fs.existsSync(coverOnDisk('comum.png'))).toBe(true);
   });
 
-  it('upsertWork remove capas órfãs que ninguém referencia', async () => {
+  it('upsertWork remove capas órfãs que ninguém referencia', () => {
     writeCoversDirFile('orfã.png');
     upsertWork(makeDraft({ id: 'f1' }));
-    await flushAsync();
-    expect(fs.existsSync(path.join(coversDir(), 'orfã.png'))).toBe(false);
+    expect(fs.existsSync(coverOnDisk('orfã.png'))).toBe(false);
   });
 
-  it('deleteWork remove a obra e a capa associada', async () => {
+  it('deleteWork remove a obra e a capa associada', () => {
     writeCoversDirFile('capa.png');
     upsertWork(makeDraft({ id: 'removivel', coverFile: 'capa.png' }));
     const works = deleteWork('removivel');
     expect(works).toEqual([]);
     expect(loadLibrary()).toEqual([]);
-    await flushAsync();
-    expect(fs.existsSync(path.join(coversDir(), 'capa.png'))).toBe(false);
+    expect(fs.existsSync(coverOnDisk('capa.png'))).toBe(false);
   });
 
   it('deleteWork de obra inexistente mantém o restante intacto', () => {
@@ -197,8 +228,10 @@ describe('biblioteca', () => {
 });
 
 describe('capas', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetSandbox();
+    destroyVault();
+    await openVault();
   });
 
   it('importCover devolve null para arquivo inexistente', () => {
@@ -278,8 +311,10 @@ describe('capas', () => {
 });
 
 describe('restoreLibrary', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetSandbox();
+    destroyVault();
+    await openVault();
   });
 
   it('normaliza progresso e datas vazias', () => {
@@ -307,8 +342,10 @@ describe('restoreLibrary', () => {
 });
 
 describe('backupFiles / mimeFor', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetSandbox();
+    destroyVault();
+    await openVault();
   });
 
   it('devolve null quando ainda não existe biblioteca', () => {
@@ -338,8 +375,10 @@ describe('backupFiles / mimeFor', () => {
 });
 
 describe('comportamento de erro resistente', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetSandbox();
+    destroyVault();
+    await openVault();
   });
 
   it('cleanupOrphanCovers não lança quando a pasta de capas não pode ser criada', () => {
@@ -349,5 +388,77 @@ describe('comportamento de erro resistente', () => {
       upsertWork(makeDraft({ id: 'nao-quebra' }));
     }).not.toThrow();
     expect(loadLibrary()).toHaveLength(1);
+  });
+});
+
+describe('acervo cifrado', () => {
+  beforeEach(async () => {
+    resetSandbox();
+    destroyVault();
+    await openVault();
+  });
+
+  it('o arquivo em disco não contém o título nem a sinopse em claro', () => {
+    const titulo = 'TituloQueNaoPodeAparecerEmClaro';
+    const sinopse = 'SinopseQueNaoPodeAparecerEmClaro';
+    saveLibrary([makeWork({ title: titulo, synopsis: sinopse })]);
+
+    const raw = fs.readFileSync(libraryFile()).toString('utf-8');
+    expect(raw).not.toContain(titulo);
+    expect(raw).not.toContain(sinopse);
+    expect(loadLibrary()[0]?.title).toBe(titulo);
+  });
+
+  it('a capa em disco não contém os bytes da imagem', () => {
+    writeCoversDirFile('secreta.png', 'bytes-da-imagem-em-claro');
+    const raw = fs.readFileSync(coverOnDisk('secreta.png')).toString('utf-8');
+    expect(raw).not.toContain('bytes-da-imagem-em-claro');
+    expect(readCoverBuffer('secreta.png')?.toString('utf-8')).toBe('bytes-da-imagem-em-claro');
+  });
+
+  it('sem cofre aberto, ler e gravar falham com vaultLocked antes de tocar em disco', async () => {
+    saveLibrary([makeWork({ title: 'preservado' })]);
+    lockVault();
+
+    for (const run of [() => loadLibrary(), () => saveLibrary([]), () => resetLibrary()]) {
+      try {
+        run();
+        throw new Error('esperava vaultLocked');
+      } catch (error) {
+        expect(isVaultError(error) && error.code).toBe('vaultLocked');
+      }
+    }
+    // Nada foi apagado: a falha é antes do disco.
+    expect(fs.existsSync(libraryFile())).toBe(true);
+
+    return unlockVault(PASSWORD).then(() => {
+      expect(loadLibrary()[0]?.title).toBe('preservado');
+    });
+  });
+
+  it('resetLibrary apaga o acervo inteiro e deixa a pasta de capas pronta', () => {
+    saveLibrary([makeWork()]);
+    writeCoversDirFile('a.png');
+    writeCoversDirFile('b.png');
+    expect(fs.existsSync(libraryFile())).toBe(true);
+
+    resetLibrary();
+
+    expect(fs.existsSync(libraryFile())).toBe(false);
+    expect(fs.readdirSync(coversDir())).toEqual([]);
+    // A pasta continua utilizável para o próximo uso.
+    expect(fs.statSync(coversDir()).isDirectory()).toBe(true);
+    expect(loadLibrary()).toEqual([]);
+  });
+
+  it('a capa em claro de versão anterior é sobrescrita na limpeza de órfãos', () => {
+    // Biblioteca nova (não referencia capa nenhuma) + capa legada em claro.
+    saveLibrary([makeWork({ id: 'nova' })]);
+    const legado = path.join(coversDir(), 'legada.jpg');
+    fs.writeFileSync(legado, 'capa-em-claro-de-versao-anterior');
+
+    upsertWork(makeDraft({ id: 'nova', title: 'editada' }));
+
+    expect(fs.existsSync(legado)).toBe(false);
   });
 });

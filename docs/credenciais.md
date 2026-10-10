@@ -16,7 +16,7 @@ do tempo. O destino de todos é o **cofre** ([`cofre.md`](cofre.md)) em
 Os nomes canônicos são a constante `VAULT_SECRET`
 (`src/main/vault/secrets.ts`); nenhum consumidor usa string solta.
 
-**Não** são segredos do cofre: a biblioteca (`library.json`), as capas, o
+**Não** são segredos do cofre no sentido de _guardados nele como texto_: a biblioteca (`library.enc`), as capas e o
 conteúdo cifrado do backup na nuvem e as preferências comuns, inclusive o
 `language`, que é o **único** campo persistido fora do cofre
 (`settings.json`, `0600`, só idioma).

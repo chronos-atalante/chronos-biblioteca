@@ -106,6 +106,7 @@ export const zhCN: Messages = {
     toastRestoreFailed: '恢复失败。',
     toastRestored: (works: number): string => `已恢复备份，共${works} 部作品。`,
     toastDisconnected: 'Dropbox账号已断开。',
+    toastPurgeFailed: '无法从云端删除备份。',
     translationNotice: {
       title: '翻译提示',
       text: '这些语言中只有葡萄牙语我会说，所有翻译都是由AI完成的。像世间万物一样，可能会有错误，请多包涵。',
@@ -259,6 +260,32 @@ export const zhCN: Messages = {
       seconds < 60
         ? `恢复时密码错误尝试次数过多，请在 ${seconds} 秒后重试。`
         : `恢复时密码错误尝试次数过多，请在 ${Math.ceil(seconds / 60)} 分钟后重试。`,
+    purgePartial: (deleted: number, failed: number): string =>
+      `已在云端删除 ${deleted} 个文件，还有 ${failed} 个待处理。账户仍保持连接，请重试以删除剩余文件。`,
+  },
+
+  /** Zona de risco: ações destrutivas, todas com confirmação em 2 etapas. */
+  danger: {
+    zoneLabel: '危险区域',
+    zoneBody: '这些操作不可撤销，删除文件前会先覆写其内容。',
+    resetTitle: '删除书库（作品与封面）',
+    resetAction: '删除书库',
+    resetConfirm: '所有作品与封面都将被覆写并从本机删除。云端备份不受影响。',
+    resetWord: '删除',
+    purgeTitle: '删除云端备份',
+    purgeAction: '删除备份',
+    purgeConfirm: '备份中的所有文件都将从已连接的账户中删除。无法撤销：阅读历史无法恢复。',
+    destroyTitle: '销毁密码库（同时删除书库与机密）',
+    destroyAction: '销毁密码库',
+    destroyConfirm: '密码库将被覆写并删除。书库与应用机密都会丢失。云端备份不受影响。',
+    destroyWord: '销毁',
+    typeLabel: (word: string): string => `请输入 ${word} 以确认。此步骤无法撤销。`,
+    confirmAction: '确认',
+    irreversible: '此操作无法撤销。',
+    libraryReset: '书库已删除。',
+    vaultDestroyed: '密码库已销毁。请创建一个新的以继续。',
+    cloudPurged: '备份已从云端删除。',
+    libraryLocked: '请解锁密码库以删除书库。',
   },
 
   /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */
@@ -271,9 +298,9 @@ export const zhCN: Messages = {
     createTitle: '创建密码库',
     unlockTitle: '解锁密码库',
     createBody:
-      '创建一个主密码，用来保护本机上的应用机密（Dropbox 令牌和备份密码）。' +
-      '如果忘记密码，这些机密将无法恢复。',
-    unlockBody: '输入主密码以访问已保存的机密。',
+      '创建一个主密码。它保护**整个书库**（作品与封面，在磁盘上加密）以及应用机密' +
+      '（Dropbox 令牌和备份密码）。没有主密码，应用无法读取书库。如果忘记密码，将无法恢复。',
+    unlockBody: '输入主密码以解密书库并访问已保存的机密。',
     passwordLabel: '主密码',
     confirmLabel: '确认密码',
     createAction: '创建密码库',
@@ -304,6 +331,8 @@ export const zhCN: Messages = {
       vaultLockedOut: '解锁尝试次数过多，请稍候再试。',
       vaultWrongPassword: '主密码不正确。',
       vaultTampered: '密码库已损坏或被篡改。',
+      libraryTampered: '加密的书库已损坏或被篡改。没有数据被删除。',
+      vaultDestroyed: '本次会话中密码库已被销毁。请创建一个新的以继续。',
       vaultWeakPassword: '密码过于常见，请换一个更难猜的。',
       vaultDirUnavailable: '无法创建保管库文件夹，请检查权限。',
       vaultAuthCancelled: '已取消创建保管库文件夹。',

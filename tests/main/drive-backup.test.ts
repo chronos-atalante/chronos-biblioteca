@@ -9,7 +9,7 @@ import {
   nameKeyFor,
   remoteName,
 } from '@zero/main/drive/crypto';
-import { loadLibrary, saveLibrary } from '@zero/main/library';
+import { loadLibrary, readCoverBuffer, saveLibrary } from '@zero/main/library';
 import { makeWork } from '../helpers/fixtures.ts';
 import {
   FakeDropbox,
@@ -250,7 +250,10 @@ describe('restoreNow', { timeout: 60_000 }, () => {
     const result = await restoreNow(PASSPHRASE);
     expect(result).toEqual({ ok: true, works: 1 });
     expect(loadLibrary().map((work) => work.id)).toEqual(['restaurada']);
-    expect(fs.readFileSync(coversPath('capa.png')).toString('utf-8')).toBe('bytes-da-capa');
+    // A restauração grava a capa cifrada com a chave do cofre, igual o
+    // `importCover`: o acervo em disco nunca fica em claro.
+    expect(fs.existsSync(coversPath('capa.png.enc'))).toBe(true);
+    expect(readCoverBuffer('capa.png')?.toString('utf-8')).toBe('bytes-da-capa');
   });
 
   it('descriptografa o backup com a senha configurada', async () => {

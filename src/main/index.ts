@@ -19,6 +19,8 @@ import {
   deleteWork,
   importCover,
   loadLibrary,
+  resetLibrary,
+  shredCovers,
   upsertWork,
 } from '@zero/main/library';
 import { loadSettings, saveSettings } from '@zero/main/settings';
@@ -33,20 +35,32 @@ import {
   listProviders,
   loadState,
   onStatus,
+  purgeRemote,
   restoreNow,
 } from '@zero/main/drive';
 import {
   createVault,
+  destroyVault,
   isVaultError,
   lockVault,
   unlockVault,
+  vaultDir,
   vaultSession,
   vaultStatus,
 } from '@zero/main/vault';
+import { runDiskCleanup } from '@zero/main/cleanup';
 import { currentMessages } from '@zero/main/i18n';
 import { openExternalSafe } from '@zero/main/external';
 import { APP_ORIGIN, registerAppProtocol, registerCoverProtocol } from '@zero/main/protocols';
-import type { AppSettings, DriveStatus, VaultResult, VaultStatus, Work } from '@zero/types';
+import type {
+  AppSettings,
+  DriveStatus,
+  LibraryReset,
+  PurgeResult,
+  VaultResult,
+  VaultStatus,
+  Work,
+} from '@zero/types';
 
 app.setPath('userData', cacheDir());
 
@@ -194,6 +208,21 @@ function registerIpc(): void {
     return deleteWork(id);
   });
 
+  // Destrutivo: apaga todo o acervo sobrescrevendo. Devolve a contagem real,
+  // nunca um "foi" genérico.
+  ipcMain.handle('library:reset', (event): LibraryReset => {
+    assertAppFrame(event);
+    try {
+      resetLibrary();
+      return { ok: true, shredded: 0, failed: 0 };
+    } catch (error) {
+      if (isVaultError(error)) {
+        return { ok: false, shredded: 0, failed: 0, code: error.code };
+      }
+      throw error;
+    }
+  });
+
   ipcMain.handle('cover:pick', async (event): Promise<string | null> => {
     assertAppFrame(event);
     const m = currentMessages();
@@ -269,6 +298,10 @@ function registerIpc(): void {
     assertAppFrame(event);
     return disconnect();
   });
+  ipcMain.handle('drive:purge', async (event): Promise<PurgeResult> => {
+    assertAppFrame(event);
+    return purgeRemote();
+  });
 
   // Com o cofre criado/desbloqueado o estado do drive é relido: os tokens
   // podem ter migrado para dentro e o renderer recebe o status novo.
@@ -312,11 +345,30 @@ function registerIpc(): void {
     return status;
   });
 
+  // Destrutivo: apaga o cofre e o acervo local. Sem a chave, todo `.enc` do
+  // acervo já é irrecuperável, mas eles são sobrescritos mesmo assim para não
+  // deixar resíduo ilegível no disco. O backup na nuvem **não** é tocado aqui:
+  // é `drive:purge`, operação separada e explícita.
+  ipcMain.handle('vault:destroy', (event): VaultResult => {
+    assertAppFrame(event);
+    destroyVault();
+    shredCovers();
+    reloadDriveState();
+    return { ok: true, status: vaultStatus() };
+  });
+
   vaultSession.onAutoLock(() => {
     reloadDriveState();
     if (mainWindow !== null && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('vault:locked');
     }
+  });
+
+  // Atividade da interface alimenta a janela de ociosidade do cofre. O
+  // throttling fica na sessão (`touch`): aqui é só repassar o sinal.
+  ipcMain.handle('vault:touch', (event): void => {
+    assertAppFrame(event);
+    vaultSession.touch();
   });
 
   onStatus((status) => {
@@ -373,6 +425,10 @@ function registerVaultShutdown(): void {
  * com caixa de erro, em vez de ficar um processo sem interface.
  */
 function initApp(): void {
+  // Manutenção de disco antes de qualquer handler responder. Não pode derrubar
+  // o app: `runDiskCleanup` engole a própria falha de propósito.
+  runDiskCleanup(vaultDir());
+
   registerCoverProtocol();
   registerAppProtocol();
   registerIpc();

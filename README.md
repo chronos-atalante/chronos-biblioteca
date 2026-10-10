@@ -11,6 +11,14 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 
 ## Recursos
 
+- **Cofre com senha mestra**: obras e capas são gravadas **cifradas** em disco
+  (AES-256-GCM com a chave do cofre). Abrir o app pede a senha; sem ela o acervo
+  não existe para o app, e o auto-lock de 5 min de inatividade fecha a sessão.
+  Ver [`docs/cofre.md`](docs/cofre.md).
+- **Zona de risco**: apagar a biblioteca, apagar o backup na nuvem e destruir o
+  cofre, cada uma em duas etapas com palavra digitada. Arquivos apagados são
+  sobrescritos antes, e destruir o cofre torna todo o acervo irrecuperável sem
+  precisar sobrescrever cada arquivo.
 - **Biblioteca em grade** com capa, título, tipo (webtoon/manhwa/manhua/mangá/livro/outro), status
   (planejado, lendo, pausado, concluído, cancelado) e progresso.
 - **Capa da obra**: escolha uma imagem JPG/PNG/WebP do disco. A imagem é copiada para a
@@ -26,7 +34,8 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 - **Backup no Dropbox**: grava na **pasta do app** (`/Apps/Chronos Biblioteca`, um espaço
   que só este app acessa via API), com login **OAuth + PKCE direto no app** (sem segredo
   embutido e sem servidor intermediário). Arquivos sempre **criptografados** (nomes opacos +
-  AES-256-GCM), com **Fazer backup agora**, **Restaurar** (pede a senha) e **Desconectar**.
+  AES-256-GCM), com **Fazer backup agora**, **Restaurar** (pede a senha), **Desconectar** e
+  **Apagar backup** (que apaga de fato os arquivos na nuvem; desconectar só corta o acesso).
 - **Janela nativa sem barra de menus**: sem botões File/Edit/View no topo (menu da
   aplicação removido por completo); decorações do gerenciador de janelas (encaixe em cantos
   para dividir a tela, maximizar/fechar) e `F11` alterna tela cheia.
@@ -89,7 +98,7 @@ O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
 - Executável: `/opt/Chronos Biblioteca/chronos-biblioteca` (alternativa
   `/usr/bin/chronos-biblioteca`)
 - Ícone instalado em `/usr/share/icons/hicolor/512x512/apps/chronos-biblioteca.png`
-- Dados: obras e capas em `~/.local/share/chronos-biblioteca/` (`library.json`, `covers/`);
+- Dados: obras e capas em `~/.local/share/chronos-biblioteca/` (`library.enc`, `covers/*.enc`), **cifrados** com a chave do cofre;
   configurações em `~/.config/chronos-biblioteca/` (`settings.json`, só o idioma) e
   cofre de segredos em `/var/lib/.chronos-biblioteca/.vault/` (raiz `0711 root`, vault
   `0700` do usuário; criado no `postinst` e reparado pelo PolicyKit)
@@ -241,7 +250,7 @@ flowchart TD
     subgraph MAIN["Main: Electron (src/main)"]
         IDX["index.ts: janela, IPC, ciclo de vida, F11"]
         PRT["protocols.ts: cover:// (capas) e chronos:// (SPA)"]
-        LIB["library.ts: library.json + capas"]
+        LIB["library.ts + store-crypto.ts:<br/>acervo cifrado"]
         SET["settings.ts: App key, senha do backup e idioma"]
         DRV["drive/: provedor Dropbox, OAuth PKCE, backup (AES-256-GCM)"]
     end
@@ -251,7 +260,7 @@ flowchart TD
     end
 
     subgraph STORAGE["Persistência"]
-        LOKAL[("~/.local/share/chronos-biblioteca/<br/>library.json · covers/")]
+        LOKAL[("~/.local/share/chronos-biblioteca/<br/>library.enc · covers/*.enc<br/>(cifrados)")]
         CFG[("~/.config/chronos-biblioteca/<br/>settings.json (só idioma)")]
         VAULT[("/var/lib/.chronos-biblioteca/<br/>.vault/ · vault.zkv")]
         DRIVE[("Dropbox · pasta do app /Apps/Chronos Biblioteca")]
@@ -348,7 +357,7 @@ chronos-biblioteca/
 │   ├── main/                 # processo main (Electron)
 │   │   ├── index.ts          # janela, IPC, ciclo de vida e F11 em tela cheia
 │   │   ├── protocols.ts      # schemes cover:// (capas) e chronos:// (SPA)
-│   │   ├── library.ts        # library.json + cópia/limpeza de capas
+│   │   ├── library.ts        # acervo cifrado + reset destrutivo
 │   │   ├── settings.ts       # App key, idioma e leitura/gravação no cofre
 │   │   ├── jsonfile.ts       # writeJsonAtomic (escrita atômica com mode)
 │   │   ├── paths.ts          # diretórios XDG do app (sem dependências de domínio)
@@ -515,7 +524,7 @@ Guias e referências (tudo em pt-BR):
 | [`docs/arquitetura.md`](docs/arquitetura.md)           | Arquitetura: camadas, aliases `@zero/*`, fluxo de IPC e ciclo de vida  |
 | [`docs/telas.md`](docs/telas.md)                       | Telas e componentes do renderer, com os fluxos de navegação            |
 | [`docs/dropbox.md`](docs/dropbox.md)                   | Guia do backup: OAuth PKCE, App folder, troubleshooting                |
-| [`docs/cofre.md`](docs/cofre.md)                       | Cofre de segredos: formato do container, KDF, trava e sessão           |
+| [`docs/cofre.md`](docs/cofre.md)                       | Cofre: container, KDF, trava, sessão e destruição                      |
 | [`docs/credenciais.md`](docs/credenciais.md)           | Segredos do app: o que é guardado e o ciclo de vida (sem migração)     |
 | [`docs/backup-providers.md`](docs/backup-providers.md) | Provedores de backup: contrato, catálogo e Google Drive oculto         |
 | [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md) | Distribuição: Release, repo APT flat assinado e fluxo de release       |

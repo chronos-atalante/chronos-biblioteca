@@ -28,6 +28,8 @@ interface SetupResult {
   onClose: Mock<() => void>;
   notify: Mock<(message: string, kind?: 'info' | 'error') => void>;
   onLanguageChange: Mock<(language: AppSettings['language']) => void>;
+  onLibraryChanged: Mock<() => void>;
+  onVaultDestroyed: Mock<() => void>;
 }
 
 function setup(options: Parameters<typeof createApiMock>[0] = {}): SetupResult {
@@ -36,8 +38,18 @@ function setup(options: Parameters<typeof createApiMock>[0] = {}): SetupResult {
   const onClose = vi.fn();
   const notify = vi.fn<(message: string, kind?: 'info' | 'error') => void>();
   const onLanguageChange = vi.fn<(language: AppSettings['language']) => void>();
-  render(<SettingsModal onClose={onClose} notify={notify} onLanguageChange={onLanguageChange} />);
-  return { mock, onClose, notify, onLanguageChange };
+  const onLibraryChanged = vi.fn<() => void>();
+  const onVaultDestroyed = vi.fn<() => void>();
+  render(
+    <SettingsModal
+      onClose={onClose}
+      notify={notify}
+      onLanguageChange={onLanguageChange}
+      onLibraryChanged={onLibraryChanged}
+      onVaultDestroyed={onVaultDestroyed}
+    />,
+  );
+  return { mock, onClose, notify, onLanguageChange, onLibraryChanged, onVaultDestroyed };
 }
 
 async function typeCredentials(): Promise<void> {
@@ -130,7 +142,13 @@ describe('SettingsModal: carregamento', () => {
     const unsubscribe = vi.fn();
     mock.driveOnStatus.mockReturnValueOnce(unsubscribe);
     const view = render(
-      <SettingsModal onClose={vi.fn()} notify={vi.fn()} onLanguageChange={vi.fn()} />,
+      <SettingsModal
+        onClose={vi.fn()}
+        notify={vi.fn()}
+        onLanguageChange={vi.fn()}
+        onLibraryChanged={vi.fn()}
+        onVaultDestroyed={vi.fn()}
+      />,
     );
 
     await screen.findByText('Desconectado');

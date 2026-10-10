@@ -124,7 +124,8 @@ Dois aprendizados do ciclo real (2026-10-09, Linux Mint 22.3): as regras
 a deny-list com um teste de leitura direto (EACCES), não pelo log; e o
 seletor de capa roda no `xdg-desktop-portal` do sistema, fora do confinamento
 (a mediação do perfil acontece na leitura que o próprio app faz do arquivo
-escolhido). O registro completo do ciclo está no `Doc/ROADMAP.md`.
+escolhido). O registro completo do ciclo está no `ROADMAP.md` (item 6.3, na
+raiz do monorepo).
 
 ### `after-install` (postinst) e o helper do cofre
 

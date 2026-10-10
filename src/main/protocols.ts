@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { URL } from 'url';
 import { protocol } from 'electron';
-import { coversDir, mimeFor } from '@zero/main/library';
+import { mimeFor, readCoverBuffer } from '@zero/main/library';
 
 /**
  * Scheme da página do app em produção (via `protocol.handle`, no lugar de
@@ -26,15 +26,21 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
+/**
+ * Serve a capa decifrada da biblioteca. O arquivo em disco é `.enc` (AES-256-GCM
+ * com a chave do cofre), então a decifração acontece aqui, a cada requisição:
+ * com o cofre fechado ou a capa ilegível, `readCoverBuffer` devolve `null` e a
+ * imagem simplesmente não aparece. `basename` no nome segue sendo a barreira
+ * de path traversal.
+ */
 export function registerCoverProtocol(): void {
   protocol.handle('cover', (request) => {
     try {
       const url = new URL(request.url);
       const name = path.basename(decodeURIComponent(url.pathname));
       if (name === '') return new Response('Não encontrado', { status: 404 });
-      const full = path.join(coversDir(), name);
-      if (!fs.existsSync(full)) return new Response('Não encontrado', { status: 404 });
-      const buffer = fs.readFileSync(full);
+      const buffer = readCoverBuffer(name);
+      if (buffer === null) return new Response('Não encontrado', { status: 404 });
       return new Response(new Uint8Array(buffer), {
         headers: {
           'Content-Type': mimeFor(name),

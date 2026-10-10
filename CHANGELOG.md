@@ -4,6 +4,65 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.9.1]
+
+### Features
+
+- **a biblioteca passa a ser cifrada em repouso**: obras e capas saem de
+  texto claro e passam para `library.enc` e `covers/<nome>.enc`, em AES-256-GCM
+  com chave derivada da chave-mestra do cofre por HKDF-SHA512
+  (`src/main/store-crypto.ts`). Abrir o app agora pede a senha mestra, porque
+  sem cofre aberto não há acervo para mostrar: o `VaultModal` cobre a tela
+  inteira e o acervo some da grade quando o auto-lock fecha a sessão.
+- **Cryptographic Erase**: destruir o cofre mata a chave-mestra, e com ela todo
+  `.enc` vira ruído irrecuperável sem sobrescrever o acervo. O acervo ficou
+  fora do `vault.zkv` justamente para tornar isso instantâneo.
+- **zona de risco** nas Configurações (`DangerZone`) com três ações, cada uma
+  em duas etapas e com palavra digitada: apagar biblioteca (`APAGAR`),
+  apagar o backup na nuvem (`APAGAR`, só com conta conectada) e destruir o
+  cofre (`DESTRUIR`).
+- **apagar o backup na nuvem** (`drive:purge`): desconectar só limpava a sessão
+  local, então os blobs continuavam no Dropbox. A falha parcial é contada e a
+  sessão local só é zerada quando nada ficou pendente.
+
+### Segurança
+
+- `src/main/shred.ts`: sobrescrita segura antes de apagar, com `fsync` antes do
+  `unlink` (e do diretório), `O_NOFOLLOW` e `lstat` para não seguir symlink.
+  Vale para obra removida, capa órfã, reset, cofre destruído, `.tmp` órfão e
+  legado em claro.
+- o acervo ilegível falha com `libraryTampered` em vez de devolver lista vazia:
+  devolver `[]` faria o próximo salvamento sobrescrever um acervo que existe.
+- `writeContainer` recusa com `vaultDestroyed` depois de uma destruição, e só
+  `createVault` limpa a marca: sem isso, uma escrita acidental recriava o
+  container pela metade e o usuário lia "adulterado" em vez de "destruído".
+- `src/main/cleanup.ts`: o boot apaga o legado em claro que a 1.8 só ignorava
+  (`settings.json` com `enc:`, `dropbox-tokens.json`, `drive-tokens.json` e o
+  cofre antigo em `~/.config/chronos-biblioteca/.vault`) e os `.tmp` órfãos.
+  A verificação é por existência: o conteúdo do segredo nunca é lido, e o
+  acervo e o `settings.json` vivo não são tocados.
+- o auto-lock passou a medir **ociosidade real** (uso da interface, canal
+  `vault:touch` com throttle de 30 s) em vez de acesso a segredo. Antes, quem
+  só editava a biblioteca perdia o cofre no minuto 5, e uma única leitura
+  interna reiniciava a janela inteira.
+- `writeContainer` passou a fazer `chmod` explícito no `.tmp`, como o
+  `jsonfile.ts` já fazia: um temporário órfão de um crash herdava a
+  permissão antiga.
+
+### Corrigido
+
+- documentação que descrevia o estado anterior: `SECURITY.md` com versões
+  suportadas em `1.5.x` (o app está em `1.8.x`) e citando o
+  `dropbox-tokens.json`, removido na 1.8; `docs/build.md` com link para um
+  `Doc/ROADMAP.md` inexistente; `docs/dropbox.md` citando um
+  `drive-tokens.json` que nunca existiu.
+
+**Migração**: não existe. Sem cofre, o app pede a criação de um novo; o acervo
+antigo em texto claro não é lido nem copiado, e quem apagar o arquivo
+`library.json` antigo depois de criar o cofre perde o histórico local (o backup
+na nuvem continua sendo a fonte). A 1.9 é a primeira versão que **exige** senha
+mestra para abrir o app.
+
 ## [1.8.0] - 2026-10-10
 
 ### Features

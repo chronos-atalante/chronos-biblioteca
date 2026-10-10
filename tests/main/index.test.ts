@@ -4,7 +4,14 @@ import os from 'os';
 import path from 'path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppSettings, Work } from '@zero/types';
-import { configDir, coversDir, dataDir } from '@zero/main/library';
+import {
+  configDir,
+  coversDir,
+  dataDir,
+  readCoverBuffer,
+  saveLibrary,
+  writeCoverFile,
+} from '@zero/main/library';
 import { setSecret, vaultSession } from '@zero/main/vault';
 import { VAULT_SECRET } from '@zero/main/vault/secrets';
 import { EMBEDDED_APP_KEY } from '@zero/main/drive/constants';
@@ -69,6 +76,7 @@ const expectedChannels = [
   'library:get',
   'library:save',
   'library:delete',
+  'library:reset',
   'cover:pick',
   'settings:get',
   'settings:set',
@@ -79,24 +87,26 @@ const expectedChannels = [
   'drive:restore',
   'drive:backup-info',
   'drive:disconnect',
+  'drive:purge',
   'vault:status',
   'vault:create',
   'vault:unlock',
   'vault:lock',
+  'vault:destroy',
+  'vault:touch',
 ];
 
 beforeAll(async () => {
-  // Instalação existente no lugar: biblioteca, capas e settings no XDG.
-  fs.mkdirSync(path.join(dataDir(), 'covers'), { recursive: true });
-  fs.writeFileSync(path.join(dataDir(), 'library.json'), JSON.stringify([makeWork()]), 'utf-8');
-  fs.writeFileSync(path.join(dataDir(), 'covers', 'capa.png'), 'cover-image', 'utf-8');
+  // Instalação existente no lugar. O acervo é cifrado com a chave do cofre,
+  // então o cofre de teste precisa existir **antes** do acervo ser gravado.
+  await openTestVault();
+  saveLibrary([makeWork()]);
+  writeCoverFile('capa.png', Buffer.from('cover-image', 'utf-8'));
   fs.mkdirSync(configDir(), { recursive: true });
   fs.writeFileSync(path.join(configDir(), 'settings.json'), JSON.stringify({ language: 'pt-BR' }));
 
   await import('@zero/main/index');
   await vi.waitFor(() => expect(ipcMain.handle).toHaveBeenCalled());
-  // O app não grava segredo sem cofre aberto: a suíte abre um de teste.
-  await openTestVault();
 });
 
 describe('inicialização', () => {
@@ -236,10 +246,15 @@ describe('atalho F11 (tela cheia)', () => {
 
 describe('diretórios do app', () => {
   it('biblioteca, capas e settings ficam no XDG, sem arquivo de token', () => {
-    expect(fs.existsSync(path.join(dataDir(), 'library.json'))).toBe(true);
-    expect(fs.readFileSync(path.join(dataDir(), 'covers', 'capa.png'), 'utf-8')).toBe(
-      'cover-image',
+    // O acervo em disco é cifrado: existe o arquivo, e o conteúdo em claro
+    // não está lá dentro.
+    expect(fs.existsSync(path.join(dataDir(), 'library.enc'))).toBe(true);
+    expect(fs.existsSync(path.join(dataDir(), 'library.json'))).toBe(false);
+    expect(fs.readFileSync(path.join(dataDir(), 'library.enc')).toString('utf-8')).not.toContain(
+      'Solo Leveling',
     );
+    expect(fs.existsSync(path.join(coversDir(), 'capa.png.enc'))).toBe(true);
+    expect(readCoverBuffer('capa.png')?.toString('utf-8')).toBe('cover-image');
     expect(fs.existsSync(path.join(configDir(), 'settings.json'))).toBe(true);
     expect(fs.existsSync(path.join(configDir(), 'drive-tokens.json'))).toBe(false);
     expect(fs.existsSync(path.join(configDir(), 'dropbox-tokens.json'))).toBe(false);
@@ -248,7 +263,7 @@ describe('diretórios do app', () => {
 });
 
 describe('handlers de biblioteca', () => {
-  it('library:get devolve a biblioteca migrada', () => {
+  it('library:get devolve a biblioteca decifrada', () => {
     const works = invoke('library:get') as Work[];
     expect(works).toHaveLength(1);
     expect(works[0]?.title).toBe('Solo Leveling');
@@ -406,9 +421,8 @@ describe('handler cover:pick', () => {
       dialog.showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: [source] });
       const name = await invokeAsync<string | null>('cover:pick');
       expect(name).toMatch(/\.png$/);
-      expect(fs.readFileSync(path.join(coversDir(), name ?? 'x'), 'utf-8')).toBe(
-        'imagem-escolhida',
-      );
+      expect(fs.existsSync(path.join(coversDir(), `${name ?? 'x'}.enc`))).toBe(true);
+      expect(readCoverBuffer(name ?? 'x')?.toString('utf-8')).toBe('imagem-escolhida');
     } finally {
       fs.rmSync(source, { force: true });
     }
@@ -426,7 +440,7 @@ describe('handler cover:pick', () => {
 
 describe('protocolo cover://', () => {
   it('serve a imagem com mime e cache', () => {
-    fs.writeFileSync(path.join(coversDir(), 'existe.png'), 'conteudo-da-capa', 'utf-8');
+    writeCoverFile('existe.png', Buffer.from('conteudo-da-capa', 'utf-8'));
     const response = coverHandler()({ url: 'cover://app/existe.png' });
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('image/png');

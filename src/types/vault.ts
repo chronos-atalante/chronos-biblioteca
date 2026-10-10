@@ -19,6 +19,8 @@ export type VaultErrorCode =
   | 'vaultLockedOut'
   | 'vaultWrongPassword'
   | 'vaultTampered'
+  | 'libraryTampered'
+  | 'vaultDestroyed'
   | 'vaultWeakPassword'
   | 'vaultDirUnavailable'
   | 'vaultAuthCancelled';

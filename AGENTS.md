@@ -129,6 +129,17 @@ Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
   `docs/build.md`.
 - Backup: cifragem AES-256-GCM com nomes opacos (`docs/dropbox.md`); senha
   e conteúdo nunca em log ou mensagem exibida.
+- Acervo cifrado em repouso (`library.enc`, `covers/*.enc`, formato `CLIB1` em
+  `src/main/store-crypto.ts`) com a chave do cofre: sem cofre aberto não há
+  biblioteca (`requireVault` em `library.ts`). Falha fechada: acervo ilegível
+  vira `libraryTampered`, **nunca** lista vazia, porque `[]` faria o próximo
+  salvamento sobrescrever o acervo.
+- Destruição: `shred.ts` recebe **sempre** um caminho já validado pelo domínio
+  (nunca id ou nome cru), sobrescreve com `fsync` antes do `unlink` e não segue
+  symlink. `writeContainer` recusa com `vaultDestroyed` depois de uma
+  destruição, e só `createVault` limpa a marca. Ação destrutiva na interface
+  sempre em duas etapas (`DangerZone.tsx`) e a falha parcial da nuvem é
+  **contada**, nunca escondida.
 - `.deb` nunca entra no git e a assinatura do repo APT acontece só no
   workflow, a partir dos secrets.
 
@@ -155,7 +166,7 @@ Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
   `docs/arquitetura.md` (camadas, aliases, IPC),
   `docs/telas.md` (telas e componentes do renderer),
   `docs/api.md` (contrato `window.api`), `docs/dropbox.md` (backup),
-  `docs/cofre.md` (cofre de segredos: formato, KDF, sessão),
+  `docs/cofre.md` (cofre: container, KDF, sessão, destruição),
   `docs/credenciais.md` (segredos do app e ciclo de vida),
   `docs/backup-providers.md` (provedores de nuvem e status do Google Drive),
   `docs/messages.md` (i18n: bundles e regras de tradução),

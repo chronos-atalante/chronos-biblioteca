@@ -113,6 +113,7 @@ export const ptBR = {
     toastRestoreFailed: 'Falha ao restaurar.',
     toastRestored: (works: number): string => `Backup restaurado com ${works} obra(s).`,
     toastDisconnected: 'Conta Dropbox desconectada.',
+    toastPurgeFailed: 'Não foi possível apagar o backup na nuvem.',
     translationNotice: {
       title: 'Aviso sobre traduções',
       text: 'Eu não falo nenhum desses idiomas com exceção do português, e toda a tradução é feita por IA. Como tudo nesse mundo, pode haver falhas, então peço um pouco de paciência.',
@@ -286,6 +287,36 @@ export const ptBR = {
       seconds < 60
         ? `Muitas tentativas de restauração com senha errada. Tente novamente em ${seconds} segundos.`
         : `Muitas tentativas de restauração com senha errada. Tente novamente em ${Math.ceil(seconds / 60)} minutos.`,
+    purgePartial: (deleted: number, failed: number): string =>
+      `${deleted} arquivo(s) apagado(s) na nuvem e ${failed} pendente(s). A conta continua conectada; tente de novo para apagar o que faltou.`,
+  },
+
+  /** Zona de risco: ações destrutivas, todas com confirmação em 2 etapas. */
+  danger: {
+    zoneLabel: 'Zona de risco',
+    zoneBody: 'Estas ações são irreversíveis e sobrescrevem os arquivos antes de apagá-los.',
+    resetTitle: 'Apagar a biblioteca (obras e capas)',
+    resetAction: 'Apagar biblioteca',
+    resetConfirm:
+      'Todas as obras e capas serão sobrescritas e apagadas deste computador. O backup na nuvem não é alterado.',
+    resetWord: 'APAGAR',
+    purgeTitle: 'Apagar o backup na nuvem',
+    purgeAction: 'Apagar backup',
+    purgeConfirm:
+      'Todos os arquivos do backup serão apagados na conta conectada. Sem volta: o histórico de leitura não pode ser recuperado.',
+    destroyTitle: 'Destruir o cofre (apaga biblioteca e segredos)',
+    destroyAction: 'Destruir cofre',
+    destroyConfirm:
+      'O cofre será sobrescrito e apagado. A biblioteca e os segredos do app serão perdidos. O backup na nuvem não é alterado.',
+    destroyWord: 'DESTRUIR',
+    typeLabel: (word: string): string =>
+      `Digite ${word} para confirmar. Este passo não pode ser desfeito.`,
+    confirmAction: 'Confirmar',
+    irreversible: 'Não há como desfazer esta ação.',
+    libraryReset: 'Biblioteca apagada.',
+    vaultDestroyed: 'Cofre destruído. Crie um novo para continuar.',
+    cloudPurged: 'Backup apagado da nuvem.',
+    libraryLocked: 'Abra o cofre para apagar a biblioteca.',
   },
 
   /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */
@@ -298,9 +329,11 @@ export const ptBR = {
     createTitle: 'Criar o cofre de segredos',
     unlockTitle: 'Desbloquear o cofre',
     createBody:
-      'Crie uma senha mestra para proteger os segredos do app (tokens do Dropbox e senha do ' +
-      'backup) neste computador. Se você esquecer a senha, não há como recuperá-los.',
-    unlockBody: 'Informe a senha mestra para liberar o acesso aos segredos guardados.',
+      'Crie uma senha mestra. Ela protege **a biblioteca inteira** (obras e capas, cifradas em ' +
+      'disco) e os segredos do app (tokens do Dropbox e senha do backup). Sem ela o acervo não ' +
+      'existe para o app. Se você esquecer a senha, não há como recuperá-la.',
+    unlockBody:
+      'Informe a senha mestra para decifrar a biblioteca e liberar os segredos guardados.',
     passwordLabel: 'Senha mestra',
     confirmLabel: 'Confirmar a senha',
     createAction: 'Criar cofre',
@@ -331,6 +364,9 @@ export const ptBR = {
       vaultLockedOut: 'Muitas tentativas de desbloqueio. Aguarde antes de tentar de novo.',
       vaultWrongPassword: 'Senha mestra incorreta.',
       vaultTampered: 'O cofre está danificado ou foi alterado.',
+      libraryTampered:
+        'A biblioteca cifrada está danificada ou foi alterada. Nenhum dado foi apagado.',
+      vaultDestroyed: 'O cofre foi destruído nesta sessão. Crie um novo para continuar.',
       vaultWeakPassword: 'Senha previsível. Escolha algo menos óbvio.',
       vaultDirUnavailable: 'Não foi possível criar a pasta do cofre. Verifique as permissões.',
       vaultAuthCancelled: 'A criação da pasta do cofre foi cancelada.',

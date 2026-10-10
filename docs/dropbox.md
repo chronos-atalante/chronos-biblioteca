@@ -198,8 +198,8 @@ sequenceDiagram
 
 ## Migrado do Google Drive?
 
-As sessões do provedor anterior **não são reaproveitadas**: o arquivo
-`drive-tokens.json` é descartado na primeira inicialização. Conecte a conta
+As sessões do provedor anterior **não são reaproveitadas**: o arquivo de
+tokens do provedor antigo é descartado na primeira inicialização. Conecte a conta
 Dropbox e faça um backup novo: os dados locais (`library.json`, capas, senha)
 são mantidos. Os backups antigos no Google Drive não são lidos nem apagados
 pelo app; remova-os por lá se quiser.

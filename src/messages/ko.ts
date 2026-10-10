@@ -107,6 +107,7 @@ export const ko: Messages = {
     toastRestoreFailed: '복원에 실패했습니다.',
     toastRestored: (works: number): string => `백업에서 ${works}개 작품을 복원했습니다.`,
     toastDisconnected: 'Dropbox 계정 연결이 해제되었습니다.',
+    toastPurgeFailed: '클라우드에서 백업을 삭제하지 못했습니다.',
     translationNotice: {
       title: '번역 안내',
       text: '이 언어들 중에서 포르투갈어를 제외하고는 할 줄 모릅니다. 모든 번역은 AI가 했습니다. 세상의 모든 것과 마찬가지로 오류가 있을 수 있으니 너그러운 양해 부탁드립니다.',
@@ -275,6 +276,36 @@ export const ko: Messages = {
       seconds < 60
         ? `잘못된 암호로 복원 시도가 너무 많습니다. ${seconds}초 후 다시 시도하세요.`
         : `잘못된 암호로 복원 시도가 너무 많습니다. ${Math.ceil(seconds / 60)}분 후 다시 시도하세요.`,
+    purgePartial: (deleted: number, failed: number): string =>
+      `클라우드에서 ${deleted}개 파일을 삭제하고 ${failed}개가 남아 있습니다. 계정이 계속 연결되어 있으니 다시 시도해 나머지를 삭제하세요.`,
+  },
+
+  /** Zona de risco: ações destrutivas, todas com confirmação em 2 etapas. */
+  danger: {
+    zoneLabel: '위험 구역',
+    zoneBody: '이 작업은 되돌릴 수 없으며, 파일을 삭제하기 전에 덮어씁니다.',
+    resetTitle: '라이브러리 삭제(작품과 표지)',
+    resetAction: '라이브러리 삭제',
+    resetConfirm:
+      '모든 작품과 표지가 이 컴퓨터에서 덮어써진 뒤 삭제됩니다. 클라우드 백업은 변경되지 않습니다.',
+    resetWord: '삭제',
+    purgeTitle: '클라우드 백업 삭제',
+    purgeAction: '백업 삭제',
+    purgeConfirm:
+      '백업의 모든 파일이 연결된 계정에서 삭제됩니다. 되돌릴 수 없으며 읽기 기록은 복구할 수 없습니다.',
+    destroyTitle: '금고 파괴(라이브러리와 비밀 삭제)',
+    destroyAction: '금고 파괴',
+    destroyConfirm:
+      '금고가 덮어써진 뒤 삭제됩니다. 라이브러리와 앱의 비밀을 잃게 됩니다. 클라우드 백업은 변경되지 않습니다.',
+    destroyWord: '파괴',
+    typeLabel: (word: string): string =>
+      `${word}를 입력하여 확인하세요. 이 단계는 되돌릴 수 없습니다.`,
+    confirmAction: '확인',
+    irreversible: '이 작업은 되돌릴 수 없습니다.',
+    libraryReset: '라이브러리가 삭제되었습니다.',
+    vaultDestroyed: '금고가 파괴되었습니다. 계속하려면 새 금고를 만드세요.',
+    cloudPurged: '백업이 클라우드에서 삭제되었습니다.',
+    libraryLocked: '라이브러리를 삭제하려면 금고를 잠금 해제하세요.',
   },
 
   /** Erros do domínio de obras (a UI só exibe a mensagem vinda do main). */
@@ -287,9 +318,10 @@ export const ko: Messages = {
     createTitle: '비밀 금고 만들기',
     unlockTitle: '금고 잠금 해제',
     createBody:
-      '이 컴퓨터의 앱 비밀(Dropbox 토큰 및 백업 비밀번호)을 보호하는 마스터 비밀번호를 ' +
-      '만드세요. 비밀번호를 잃어버리면 비밀을 복구할 수 없습니다.',
-    unlockBody: '저장된 비밀에 접근하려면 마스터 비밀번호를 입력하세요.',
+      '마스터 비밀번호를 만드세요. 이 비밀번호는 **라이브러리 전체**(작품과 표지, 디스크에 암호화됨)와 ' +
+      '앱의 비밀(Dropbox 토큰 및 백업 비밀번호)을 보호합니다. 비밀번호가 없으면 앱은 라이브러리를 ' +
+      '볼 수 없습니다. 비밀번호를 잃어버리면 복구할 수 없습니다.',
+    unlockBody: '라이브러리를 복호화하고 저장된 비밀에 접근하려면 마스터 비밀번호를 입력하세요.',
     passwordLabel: '마스터 비밀번호',
     confirmLabel: '비밀번호 확인',
     createAction: '금고 만들기',
@@ -320,6 +352,9 @@ export const ko: Messages = {
       vaultLockedOut: '잠금 해제 시도가 너무 많습니다. 잠시 후 다시 시도하세요.',
       vaultWrongPassword: '마스터 비밀번호가 올바르지 않습니다.',
       vaultTampered: '금고가 손상되었거나 변경되었습니다.',
+      libraryTampered:
+        '암호화된 라이브러리가 손상되었거나 변경되었습니다. 데이터는 삭제되지 않았습니다.',
+      vaultDestroyed: '이 세션에서 금고가 파괴되었습니다. 계속하려면 새 금고를 만드세요.',
       vaultWeakPassword: '예측하기 쉬운 비밀번호입니다. 더 예측하기 어려운 것으로 바꾸세요.',
       vaultDirUnavailable: '보관함 폴더를 만들 수 없습니다. 권한을 확인하세요.',
       vaultAuthCancelled: '보관함 폴더 만들기가 취소되었습니다.',

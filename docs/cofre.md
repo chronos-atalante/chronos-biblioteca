@@ -1,10 +1,36 @@
-# Cofre de segredos
+# Cofre
 
-O cofre guarda os **segredos do próprio app** sob uma senha mestra: tokens do
-Dropbox, senha de criptografia do backup e App key alternativa (tabela em
-[`credenciais.md`](credenciais.md)). É arquivo local, cifrado com Argon2id +
-AES-256-GCM, aberto só enquanto durar a sessão em memória. Não é gerenciador
-de senhas do usuário.
+O cofre é a **chave de tudo**. Sob uma senha mestra, com Argon2id +
+AES-256-GCM, ele protege duas coisas:
+
+1. os **segredos do próprio app**: tokens do Dropbox, senha de criptografia do
+   backup e App key alternativa (tabela em [`credenciais.md`](credenciais.md));
+2. o **acervo do usuário**: a biblioteca inteira e as capas, gravadas em disco
+   já cifradas.
+
+Desde a 1.9 o acervo só existe para o app com o cofre aberto. Abrir o app sem
+a senha mestra mostra a tela de desbloqueio, não a biblioteca. É arquivo local
+em `/var/lib`, fora de `~`, aberto só enquanto durar a sessão em memória. Não é
+gerenciador de senhas do usuário.
+
+## Consequência que vale explicar
+
+O acervo não mora dentro do `vault.zkv`: mora em `library.enc` e
+`covers/<nome>.enc`, cada um cifrado com uma chave derivada da chave-mestra por
+HKDF-SHA512 (`src/main/store-crypto.ts`). Duas propriedades vêm desse desenho:
+
+- **Cryptographic Erase**: destruir o cofre mata a chave-mestra, e com ela todo
+  `.enc` vira ruído irrecuperável, sem precisar sobrescrever o acervo inteiro;
+- os arquivos `.enc` não guardam chave, salt nem KDF: sozinhos são bytes inúteis.
+
+Formato de cada `.enc` (cabeçalho de 38 bytes, big-endian):
+
+| Offset | Tamanho | Campo                            |
+| ------ | ------- | -------------------------------- |
+| `0`    | 5       | magic `CLIB1` (ASCII)            |
+| `5`    | 16      | IV da operação (nonce aleatório) |
+| `21`   | 16      | tag de autenticação de 128 bits  |
+| `37`   | `n`     | texto cifrado                    |
 
 ## Onde mora
 
@@ -104,13 +130,47 @@ Um desbloqueio bem-sucedido zera `attempts` e `lockUntil`.
 A chave-mestra só existe na memória do processo main, dentro do Singleton
 `VaultSessionManager` (`src/main/vault/session.ts`): `adopt` copia os bytes,
 `wipe` zera antes de soltar, e o `before-quit` do Electron zera também. Sem
-chave na sessão, `getSecret`/`setSecret` falham com `vaultLocked`.
+chave na sessão, `getSecret`/`setSecret` e todo acesso ao acervo falham com
+`vaultLocked`.
 
 - **Auto-lock**: 5 minutos de ociosidade (`IDLE_LOCK_MS`) derrubam a sessão e
-  emitem o evento `vault:locked` para a interface, que mostra o aviso.
+  emitem o evento `vault:locked` para a interface, que some com o acervo da
+  tela e volta a pedir a senha.
+- O que conta como ociosidade é **uso da interface** (`pointerdown`, `keydown`,
+  `wheel` no renderer, canal `vault:touch`, com throttle de 30 s do lado main).
+  Ler a chave no main **não** conta: é o app decifrando para uso interno.
+  Antes da 1.9 o timer só corria no acesso a segredo, o que dava o resultado
+  oposto do que o nome promete.
 - **Fechar manualmente**: `vault.lock()` (botão _Fechar cofre_ nas
   Configurações).
 - Reabrir exige a senha mestra de novo (a trava vale, se houver falha).
+
+## Destruição
+
+Três operações destrutivas, todas com confirmação em duas etapas na interface
+(componente `DangerZone`):
+
+| Operação          | Canal           | O que faz                                                           |
+| ----------------- | --------------- | ------------------------------------------------------------------- |
+| Apagar biblioteca | `library:reset` | Sobrescreve e apaga `library.enc` e toda a pasta `covers/`          |
+| Destruir cofre    | `vault:destroy` | Zera a chave, sobrescreve `vault.zkv` e o `.tmp`, e shreda as capas |
+| Apagar backup     | `drive:purge`   | Apaga os blobs na conta de nuvem conectada                          |
+
+Detalhes que valem saber:
+
+- **o que o erase precisa apagar**: o `vault.zkv.tmp` importa tanto quanto o
+  container, porque carrega os mesmos blobs de chave embrulhada;
+- **nada recria o cofre depois**: `writeContainer` recusa com `vaultDestroyed`
+  enquanto a marca estiver de pé, e só `createVault` a limpa. Sem isso, uma
+  escrita acidental deixaria um container pela metade e o usuário leria
+  "adulterado" em vez de "destruído";
+- **falha parcial na nuvem é contada**: `drive:purge` devolve `deleted` e
+  `failed`, e só desliga a sessão local quando `failed === 0`. Um "apagado" em
+  falso é pior que um erro;
+- as três **não** sobrescrevem por garantia em SSD: com wear leveling a escrita
+  pode ir para outro bloco físico. Onde o arquivo já é cifrado, a proteção é a
+  chave; onde não é mais (o `.enc` sem chave), o shred é o melhor esforço
+  disponível.
 
 ## Comportamento fail-closed
 
@@ -156,6 +216,10 @@ produção.
 | `src/main/vault/secrets.ts`   | mapa de nomes + helpers JSON                   |
 | `src/main/vault/errors.ts`    | `VaultError` com `code`/`retryInMs`            |
 | `src/main/vault/index.ts`     | barrel                                         |
+| `src/main/store-crypto.ts`    | formato `CLIB1` e derivação de chave do acervo |
+| `src/main/library.ts`         | acervo cifrado: obras, capas e `resetLibrary`  |
+| `src/main/shred.ts`           | sobrescrita segura antes de apagar             |
+| `src/main/cleanup.ts`         | legados em claro e `.tmp` órfãos no boot       |
 
 ## Ver também
 

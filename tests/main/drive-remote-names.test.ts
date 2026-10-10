@@ -12,7 +12,13 @@ import {
   remoteName,
 } from '@zero/main/drive/crypto';
 import type { Manifest } from '@zero/main/drive/crypto';
-import { coversDir, dataDir, loadLibrary, saveLibrary } from '@zero/main/library';
+import {
+  dataDir,
+  loadLibrary,
+  readCoverBuffer,
+  saveLibrary,
+  writeCoverFile,
+} from '@zero/main/library';
 import { makeWork } from '../helpers/fixtures.ts';
 import { FakeDropbox, PASSPHRASE, connect, resetDrive, stubFetch } from '../helpers/drive.ts';
 
@@ -36,7 +42,8 @@ function readManifest(drive: FakeDropbox): Manifest {
 
 async function backupWithCover(): Promise<FakeDropbox> {
   await connect();
-  fs.writeFileSync(path.join(coversDir(), 'capa.png'), 'bytes-da-capa');
+  // A capa entra cifrada, pelo mesmo caminho que `importCover` usa.
+  writeCoverFile('capa.png', Buffer.from('bytes-da-capa'));
   saveLibrary([makeWork({ id: 'obra-1', coverFile: 'capa.png' })]);
   const drive = new FakeDropbox();
   stubFetch((call) => drive.handle(call));
@@ -116,13 +123,13 @@ describe('nomes remotos opacos', { timeout: 60_000 }, () => {
 
   it('restaura ponta a ponta a partir de nomes opacos', async () => {
     await backupWithCover();
-    fs.rmSync(path.join(dataDir(), 'library.json'), { force: true });
+    fs.rmSync(path.join(dataDir(), 'library.enc'), { force: true });
     fs.rmSync(path.join(dataDir(), 'covers'), { recursive: true, force: true });
 
     const result = await restoreNow(PASSPHRASE);
     expect(result).toEqual({ ok: true, works: 1 });
     expect(loadLibrary().map((work) => work.id)).toEqual(['obra-1']);
-    expect(fs.readFileSync(path.join(coversDir(), 'capa.png'), 'utf-8')).toBe('bytes-da-capa');
+    expect(readCoverBuffer('capa.png')?.toString('utf-8')).toBe('bytes-da-capa');
   });
 
   it('manifesto adulterado falha fechado', async () => {

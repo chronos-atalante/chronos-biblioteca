@@ -360,3 +360,75 @@ describe('App: status do Dropbox', () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('App: portão do cofre', () => {
+  it('pede a senha mestra e não pede a biblioteca quando o cofre está fechado', async () => {
+    const mock = createApiMock({
+      vault: { exists: true, unlocked: false, attempts: 0, lockUntil: 0 },
+    });
+    installApiMock(mock);
+    render(<App />);
+
+    expect(await screen.findByText('Desbloquear o cofre')).toBeInTheDocument();
+    // O acervo é cifrado: sem chave não há biblioteca para carregar.
+    expect(mock.libraryGet).not.toHaveBeenCalled();
+  });
+
+  it('abre a criação quando ainda não existe cofre', async () => {
+    const mock = createApiMock({
+      vault: { exists: false, unlocked: false, attempts: 0, lockUntil: 0 },
+    });
+    installApiMock(mock);
+    render(<App />);
+
+    expect(await screen.findByText('Criar o cofre de segredos')).toBeInTheDocument();
+    expect(mock.libraryGet).not.toHaveBeenCalled();
+  });
+
+  it('o modal de tela cheia não tem como ser fechado', async () => {
+    const mock = createApiMock({
+      vault: { exists: true, unlocked: false, attempts: 0, lockUntil: 0 },
+    });
+    installApiMock(mock);
+    render(<App />);
+
+    await screen.findByText('Desbloquear o cofre');
+    // Sem a senha mestra não há onde fechar: o acervo sumiu da tela.
+    expect(screen.queryByRole('button', { name: 'Fechar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument();
+  });
+
+  it('carrega a biblioteca depois de desbloquear', async () => {
+    const user = userEvent.setup();
+    // O mock já leva o cofre a "aberto" no `vault.unlock`, então o App
+    // recarrega a biblioteca normalmente depois.
+    const mock = createApiMock({
+      works: WORKS,
+      vault: { exists: true, unlocked: false, attempts: 0, lockUntil: 0 },
+    });
+    installApiMock(mock);
+    render(<App />);
+
+    await screen.findByText('Desbloquear o cofre');
+    await user.type(screen.getByLabelText('Senha mestra'), 'senha-qualquer-123');
+    await user.click(screen.getByRole('button', { name: 'Desbloquear' }));
+
+    expect(await screen.findByText('Solo Leveling')).toBeInTheDocument();
+    expect(mock.libraryGet).toHaveBeenCalled();
+  });
+
+  it('o auto-lock some com o acervo e volta a pedir a senha', async () => {
+    const mock = createApiMock({ works: WORKS });
+    installApiMock(mock);
+    render(<App />);
+
+    expect(await screen.findByText('Solo Leveling')).toBeInTheDocument();
+    mock.emitVaultLocked();
+    mock.vaultStatus.mockReturnValue(
+      Promise.resolve({ exists: true, unlocked: false, attempts: 0, lockUntil: 0 }),
+    );
+
+    expect(await screen.findByText('Desbloquear o cofre')).toBeInTheDocument();
+    expect(screen.queryByText('Solo Leveling')).not.toBeInTheDocument();
+  });
+});

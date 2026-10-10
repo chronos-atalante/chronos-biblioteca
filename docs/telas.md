@@ -77,16 +77,31 @@ biblioteca.
 - **Senha de criptografia do backup**: campo de senha ligado ao
   `drivePassphrase`, gravado **no cofre** (nada fica em claro no disco; não há
   banner de keyring: o cofre não depende do `safeStorage` do SO).
-- **Cofre de segredos**: linha com o estado (Aberto/Fechado/Sem cofre) e o
-  botão _Criar cofre_ / _Desbloquear_ / _Fechar cofre_, que abre o
-  `VaultModal`. Todo fluxo que precisa de segredo (Salvar, Conectar, Backup,
-  Restaurar, Desconectar) passa por `ensureVault`: sem cofre abre a
-  **criação**, com ele fechado abre o **desbloqueio**, e a ação só roda depois
-  com o cofre aberto (`docs/credenciais.md`).
+- **Cofre**: linha com o estado (Aberto/Fechado/Sem cofre) e o botão
+  _Criar cofre_ / _Desbloquear_ / _Fechar cofre_, que abre o `VaultModal`.
+  Todo fluxo que precisa de segredo (Salvar, Conectar, Backup, Restaurar,
+  Desconectar) passa por `ensureVault`: sem cofre abre a **criação**, com ele
+  fechado abre o **desbloqueio**, e a ação só roda depois com o cofre aberto
+  (`docs/credenciais.md`).
+- **Zona de risco** (`DangerZone`): as três ações destrutivas, cada uma com
+  **confirmação em duas etapas** (o botão abre o aviso e um campo exige a
+  palavra `APAGAR`, ou `DESTRUIR` no caso do cofre). Apagar backup só aparece
+  habilitado com conta conectada.
 - **Meta do Drive**: conexão, último backup e obras no backup.
 - **Rodapé**: Desconectar, Salvar, Conectar (OAuth), Restaurar (abre
   `RestorePasswordModal`) e Fazer backup agora; ações ocupadas mostram
   spinner e travam o resto.
+
+## VaultModal
+
+Abre em dois contextos:
+
+- **tela inteira** (`App.tsx`): o acervo é cifrado com a chave do cofre, então
+  abrir o app sem ele mostra o modal **sem botão de fechar**. Sem a senha
+  mestra não há biblioteca para mostrar, e o acervo que ficava na tela some
+  quando o auto-lock fecha a sessão.
+- **acionado pelas Configurações**: com fechar e cancelar, para criar,
+  desbloquear ou fechar o cofre sem sair da tela.
 
 ## Erros e avisos
 

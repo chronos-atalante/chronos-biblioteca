@@ -82,7 +82,8 @@ profile ${executable} "/opt/${sanitizedProductName}/${executable}" {
   # settings.json (src/main/paths.ts + src/main/settings.ts).
   owner @{HOME}/.config/chronos-biblioteca/      rw,
   owner @{HOME}/.config/chronos-biblioteca/**    rwkl,
-  # library.json e covers/ (src/main/library.ts).
+  # library.enc e covers/*.enc, ambos cifrados (src/main/library.ts).
+  # A regra é a mesma de antes: escrita e criação de link dentro das pastas.
   owner @{HOME}/.local/share/chronos-biblioteca/  rw,
   owner @{HOME}/.local/share/chronos-biblioteca/** rwkl,
   owner @{HOME}/.local/state/chronos-biblioteca/  rw,

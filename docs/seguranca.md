@@ -9,18 +9,27 @@ que ela protege.
 
 ### Cofre e credenciais
 
-| Medida                                                       | Arquivo principal                                                                   |
-| ------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| Recusa de senha mestra previsível (antes do Argon2id)        | `src/main/vault/crypto.ts` (`passwordProblem`)                                      |
-| Argon2id (128 MiB), AES-256-GCM e HKDF-SHA512                | `src/main/vault/crypto.ts`                                                          |
-| Container `vault.zkv` fail-closed e faixa do KDF na leitura  | `src/main/vault/container.ts`                                                       |
-| Trava exponencial (10 s → 24 h) antes de qualquer derivação  | `src/main/vault/lockout.ts`, `src/main/vault/vault.ts`                              |
-| Chave-mestra só na sessão, auto-lock de 5 min e wipe no quit | `src/main/vault/session.ts` (wipe chamado por `src/main/index.ts` no `before-quit`) |
-| Segredos com nome canônico (sem string solta)                | `src/main/vault/secrets.ts`                                                         |
-| Cofre fora de `~` em `/var/lib` (raiz `0711` + vault `0700`) | `build/scripts/after-install.sh`, `build/scripts/biblioteca-setup`                  |
-| Reparo da pasta do cofre só com PolicyKit (senha do sistema) | `src/main/vault/privilege.ts` (`pkexec` + ação no `.policy`)                        |
-| Sem cofre não há segredo (falha fechada; nada em claro)      | `src/main/settings.ts`, `src/main/drive/state.ts`                                   |
-| Canais `vault:*` com origem validada e envelope sem lançar   | `src/main/index.ts`                                                                 |
+| Medida                                                                    | Arquivo principal                                                                       |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Acervo cifrado em disco (`library.enc`, `covers/*.enc`)                   | `src/main/store-crypto.ts` (formato `CLIB1`), `src/main/library.ts`                     |
+| Chave do acervo derivada da mestra por HKDF, por domínio                  | `src/main/store-crypto.ts`                                                              |
+| Leitura do acervo falha fechada (`libraryTampered`, nunca `[]`)           | `src/main/store-crypto.ts` (`readStoreFile`)                                            |
+| Portão do acervo: sem cofre aberto, nada é lido nem gravado               | `src/main/library.ts` (`requireVault`)                                                  |
+| Sobrescrita segura antes de apagar (`fsync` antes do `unlink`)            | `src/main/shred.ts`                                                                     |
+| Destruição do cofre não ressuscita container                              | `src/main/vault/vault.ts` (marca `vaultDestroyed`)                                      |
+| Legado em claro e `.tmp` órfãos varridos no boot                          | `src/main/cleanup.ts`                                                                   |
+| Apagar o backup na nuvem, com contagem de falha parcial                   | `src/main/drive/backup.ts` (`purgeRemote`)                                              |
+| Recusa de senha mestra previsível (antes do Argon2id)                     | `src/main/vault/crypto.ts` (`passwordProblem`)                                          |
+| Argon2id (128 MiB), AES-256-GCM e HKDF-SHA512                             | `src/main/vault/crypto.ts`                                                              |
+| Container `vault.zkv` fail-closed e faixa do KDF na leitura               | `src/main/vault/container.ts`                                                           |
+| Trava exponencial (10 s → 24 h) antes de qualquer derivação               | `src/main/vault/lockout.ts`, `src/main/vault/vault.ts`                                  |
+| Chave-mestra só na sessão, auto-lock de 5 min e wipe no quit              | `src/main/vault/session.ts` (wipe chamado por `src/main/index.ts` no `before-quit`)     |
+| Auto-lock por ociosidade **real** (atividade da UI, não acesso a segredo) | `src/main/vault/session.ts` (`touch` com throttle), `src/main/index.ts` (`vault:touch`) |
+| Segredos com nome canônico (sem string solta)                             | `src/main/vault/secrets.ts`                                                             |
+| Cofre fora de `~` em `/var/lib` (raiz `0711` + vault `0700`)              | `build/scripts/after-install.sh`, `build/scripts/biblioteca-setup`                      |
+| Reparo da pasta do cofre só com PolicyKit (senha do sistema)              | `src/main/vault/privilege.ts` (`pkexec` + ação no `.policy`)                            |
+| Sem cofre não há segredo (falha fechada; nada em claro)                   | `src/main/settings.ts`, `src/main/drive/state.ts`                                       |
+| Canais `vault:*` com origem validada e envelope sem lançar                | `src/main/index.ts`                                                                     |
 
 ### Backup no Dropbox
 
@@ -35,17 +44,17 @@ que ela protege.
 
 ### Superfície do Electron
 
-| Medida                                                                              | Arquivo principal                                 |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------- |
-| Guarda de origem em todo canal IPC (`assertAppFrame`)                               | `src/main/index.ts`                               |
-| Navegação presa ao app, `window.open` negado, permissões web negadas (só clipboard) | `src/main/index.ts`                               |
-| Capas por `cover://` com `basename` (anti path-traversal)                           | `src/main/protocols.ts` (`registerCoverProtocol`) |
-| SPA em produção por `chronos://` (`path.resolve` + prefixo)                         | `src/main/protocols.ts` (`registerAppProtocol`)   |
-| `shell.openExternal` só para `https:`                                               | `src/main/external.ts` (`openExternalSafe`)       |
-| CSP no HTML da interface                                                            | `src/renderer/index.html`                         |
-| Preload sandboxed (CommonJS) com `contextIsolation`                                 | `src/preload/index.ts`                            |
-| 6 fuses do Electron                                                                 | `package.json` (bloco `build.electronFuses`)      |
-| DevTools desligado no app empacotado                                                | `src/main/index.ts` (`devTools: !app.isPackaged`) |
+| Medida                                                                              | Arquivo principal                                                                            |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Guarda de origem em todo canal IPC (`assertAppFrame`)                               | `src/main/index.ts`                                                                          |
+| Navegação presa ao app, `window.open` negado, permissões web negadas (só clipboard) | `src/main/index.ts`                                                                          |
+| Capas por `cover://` com `basename`, decifradas sob demanda                         | `src/main/protocols.ts` (`registerCoverProtocol`), `src/main/library.ts` (`readCoverBuffer`) |
+| SPA em produção por `chronos://` (`path.resolve` + prefixo)                         | `src/main/protocols.ts` (`registerAppProtocol`)                                              |
+| `shell.openExternal` só para `https:`                                               | `src/main/external.ts` (`openExternalSafe`)                                                  |
+| CSP no HTML da interface                                                            | `src/renderer/index.html`                                                                    |
+| Preload sandboxed (CommonJS) com `contextIsolation`                                 | `src/preload/index.ts`                                                                       |
+| 6 fuses do Electron                                                                 | `package.json` (bloco `build.electronFuses`)                                                 |
+| DevTools desligado no app empacotado                                                | `src/main/index.ts` (`devTools: !app.isPackaged`)                                            |
 
 ### Dados e distribuição
 
@@ -54,6 +63,7 @@ que ela protege.
 | Escrita de JSON atômica (`.tmp` + rename) com `0600` onde há credencial   | `src/main/jsonfile.ts`, `src/main/vault/vault.ts`      |
 | Ids de obra seguros (rejeita `..`, `/`, `\`)                              | `src/main/library.ts` (`isValidWorkId`)                |
 | Erros do cofre por código (nenhum texto/senha em mensagem)                | `src/main/vault/errors.ts`, `src/messages/`            |
+| Ações destrutivas com confirmação em duas etapas na interface             | `src/renderer/src/components/DangerZone.tsx`           |
 | Auditoria de dependências a cada `npm run check` (OSV)                    | `package.json`, `.osv-scanner.toml`, `bin/osv-scanner` |
 | CodeQL no push/PR                                                         | `.github/workflows/codeql.yml`                         |
 | Gate: check + testes antes de qualquer Release                            | `.github/workflows/publish.yml` (job `qualidade`)      |
@@ -81,6 +91,15 @@ nunca conteúdo em claro.
 
 ## O que não enfraquecer
 
+- `requireVault` no acervo: sem ele, `loadLibrary` devolveria `[]` com o cofre
+  fechado e o próximo salvamento **sobrescreveria** um acervo que existe.
+- `readStoreFile` nunca devolvendo lista vazia para arquivo ilegível: o mesmo
+  motivo, com o agravante de que o acervo não tem backup local.
+- `writeContainer` recusando enquanto `vaultDestroyed` estiver de pé: sem a
+  marca, um `setSecret` acidental depois da destruição recria o container pela
+  metade e o usuário lê "adulterado" em vez de "destruído".
+- `purgeRemote` só zerando os tokens locais com `failed === 0`: zerar antes
+  deixa blobs órfãos que o app não tem mais como apagar.
 - `assertAppFrame` em todo canal IPC novo; sem ele o domínio do app fica
   acessível a frame de fora.
 - CSP do `index.html`, os 6 fuses e `contextIsolation`/`sandbox` do preload.
