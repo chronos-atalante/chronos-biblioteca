@@ -89,6 +89,7 @@ export const dialog = {
   showOpenDialog: vi.fn<() => Promise<{ canceled: boolean; filePaths: string[] }>>(() =>
     Promise.resolve({ canceled: true, filePaths: [] }),
   ),
+  showErrorBox: vi.fn<(title: string, content: string) => void>(),
 };
 
 export const shell = {
@@ -145,6 +146,7 @@ export function resetElectronMock(): void {
   protocol.registerSchemesAsPrivileged.mockClear();
   protocol.handle.mockClear();
   dialog.showOpenDialog.mockClear();
+  dialog.showErrorBox.mockClear();
   shell.openExternal.mockClear();
   safeStorage.isEncryptionAvailable.mockClear();
   safeStorage.encryptString.mockClear();

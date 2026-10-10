@@ -31,8 +31,8 @@ function uploadedNames(drive: FakeDropbox): string[] {
 }
 
 describe('backupNow', { timeout: 60_000 }, () => {
-  beforeEach(() => {
-    resetDrive();
+  beforeEach(async () => {
+    await resetDrive();
   });
 
   it('exige conta conectada', async () => {
@@ -228,8 +228,8 @@ describe('backupNow', { timeout: 60_000 }, () => {
 });
 
 describe('restoreNow', { timeout: 60_000 }, () => {
-  beforeEach(() => {
-    resetDrive();
+  beforeEach(async () => {
+    await resetDrive();
   });
 
   it('exige conta conectada', async () => {

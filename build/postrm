@@ -9,9 +9,10 @@ set -e
 # 1. remove o update-alternatives criado no pós-instalação;
 # 2. descarrega e apaga o perfil AppArmor (sem isso a policy fica imposta no
 #    kernel até o reboot e o arquivo fica para trás em /etc/apparmor.d);
-# 3. no purge, remove os dados do usuário nos diretórios que o app realmente
-#    usa (XDG, minúsculo; filesystem do Linux é case-sensitive) e as marcas
-#    antigas.
+# 3. apaga a ação do PolicyKit criada pelo postinst (fora do banco do dpkg);
+# 4. no purge, remove os dados do usuário nos diretórios XDG que o app usa
+#    (XDG, minúsculo; filesystem do Linux é case-sensitive) e o cofre em
+#    /var/lib/.chronos-biblioteca (decisão de produto: purge leva junto).
 # shellcheck disable=SC2016
 
 # Delete the link to the binary
@@ -39,6 +40,10 @@ if [ -f "$APPARMOR_PROFILE_DEST" ]; then
   rm -f "$APPARMOR_PROFILE_DEST"
 fi
 
+# A ação do PolicyKit é criada pelo postinst (fora do banco do dpkg): remove
+# aqui para não deixar uma entrada de administração órfã no sistema.
+rm -f '/usr/share/polkit-1/actions/com.chronos.biblioteca.policy'
+
 if [ "$1" = "purge" ]; then
   for home in /home/* /root; do
     [ -d "$home" ] || continue
@@ -46,10 +51,9 @@ if [ "$1" = "purge" ]; then
       "$home/.config/chronos-biblioteca" \
       "$home/.local/share/chronos-biblioteca" \
       "$home/.cache/chronos-biblioteca" \
-      "$home/.local/state/chronos-biblioteca" \
-      "$home/.config/Chronos Biblioteca" \
-      "$home/.config/Webtoons Biblioteca" \
-      "$home/.config/webtoons-biblioteca"
+      "$home/.local/state/chronos-biblioteca"
   done
+  # Cofre de segredos em /var/lib: root 0711 + pasta do usuário 0700.
+  rm -rf '/var/lib/.chronos-biblioteca'
 fi
 exit 0

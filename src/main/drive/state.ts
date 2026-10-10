@@ -1,10 +1,7 @@
-import fs from 'fs';
-import path from 'path';
 import type { DriveStatus } from '@zero/types';
+import { isVaultError } from '@zero/main/vault/errors';
 import { EMBEDDED_APP_KEY, SCOPE_VERSION } from '@zero/main/drive/constants';
 import { currentMessages } from '@zero/main/i18n';
-import { writeJsonAtomic } from '@zero/main/jsonfile';
-import { configDir } from '@zero/main/paths';
 import { loadSettings } from '@zero/main/settings';
 import {
   VAULT_SECRET,
@@ -36,94 +33,36 @@ export const state: DriveState = { tokens: null, lastError: null, syncing: false
 
 let statusListener: ((status: DriveStatus) => void) | null = null;
 
-function ensureConfig(): void {
-  fs.mkdirSync(configDir(), { recursive: true });
-}
-
-function statePath(): string {
-  return path.join(configDir(), 'dropbox-tokens.json');
-}
-
-/** Valida a forma mínima dos tokens persistidos em disco. */
+/** Valida a forma mínima dos tokens persistidos no cofre. */
 function isTokens(value: unknown): value is Tokens {
   if (typeof value !== 'object' || value === null) return false;
   if (!('accessToken' in value && 'scopeVersion' in value)) return false;
   return typeof value.accessToken === 'string' && typeof value.scopeVersion === 'number';
 }
 
+/**
+ * Recarrega os tokens do cofre. É a **única** fonte: com o cofre fechado não
+ * há sessão do Dropbox em memória nem em disco (falha fechada).
+ */
 export function loadState(): void {
-  ensureConfig();
-  try {
-    // Sessões do provedor anterior (Google) não valem aqui: o arquivo antigo é
-    // descartado para nunca tentar um `refresh_token` de outro serviço.
-    const legacy = path.join(configDir(), 'drive-tokens.json');
-    if (fs.existsSync(legacy)) fs.unlinkSync(legacy);
-
-    let candidate: Tokens | null = null;
-    let invalid = false;
-
-    const file = statePath();
-    if (fs.existsSync(file)) {
-      const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf-8'));
-      if (isTokens(parsed)) {
-        candidate = parsed;
-      } else {
-        invalid = true;
-      }
-    }
-
-    // Cofre desbloqueado: o arquivo legado migra para dentro (e sai do disco);
-    // daí em diante a fonte é o cofre. Qualquer erro mantém o que o disco lê.
-    if (vaultUnlocked()) {
-      try {
-        if (candidate !== null) {
-          writeJsonSecret(VAULT_SECRET.dropboxTokens, candidate);
-          fs.unlinkSync(file);
-          invalid = false;
-        }
-        const inVault = readJsonSecret(VAULT_SECRET.dropboxTokens, isTokens);
-        if (inVault !== null) {
-          candidate = inVault;
-          invalid = false;
-        }
-      } catch {
-        // cofre ilegível: mantém a visão do disco
-      }
-    }
-
-    if (candidate !== null) {
-      if (candidate.scopeVersion === SCOPE_VERSION) {
-        state.tokens = candidate;
-      } else {
-        state.lastError = currentMessages().driveErrors.permissionsUpdated;
-      }
-    } else if (invalid) {
-      state.lastError = currentMessages().driveErrors.permissionsUpdated;
-    }
-  } catch {
-    state.tokens = null;
+  state.tokens = null;
+  if (!vaultUnlocked()) return;
+  const tokens = readJsonSecret(VAULT_SECRET.dropboxTokens, isTokens);
+  if (tokens === null) return;
+  if (tokens.scopeVersion === SCOPE_VERSION) {
+    state.tokens = tokens;
+  } else {
+    state.lastError = currentMessages().driveErrors.permissionsUpdated;
   }
 }
 
+/** Persiste os tokens no cofre (exige cofre desbloqueado, senão lança). */
 export function persistState(): void {
-  ensureConfig();
   if (state.tokens !== null) {
-    // Com o cofre desbloqueado os tokens vão para lá (e o legado é removido);
-    // sem ele, valem as regras antigas: escrita atômica com 0600.
-    if (vaultUnlocked()) {
-      try {
-        writeJsonSecret(VAULT_SECRET.dropboxTokens, state.tokens);
-        if (fs.existsSync(statePath())) fs.unlinkSync(statePath());
-        return;
-      } catch {
-        // cofre ilegível ou bloqueado no meio: grava no legado abaixo
-      }
-    }
-    writeJsonAtomic(statePath(), state.tokens, 0o600);
+    writeJsonSecret(VAULT_SECRET.dropboxTokens, state.tokens);
     return;
   }
-  if (fs.existsSync(statePath())) fs.unlinkSync(statePath());
-  if (vaultUnlocked()) clearSecret(VAULT_SECRET.dropboxTokens);
+  clearSecret(VAULT_SECRET.dropboxTokens);
 }
 
 export function getStatus(): DriveStatus {
@@ -148,8 +87,8 @@ export function onStatus(listener: (status: DriveStatus) => void): void {
  * Chave do aplicativo Dropbox (App key) em uso.
  *
  * Com PKCE não há `app secret` em cliente público; só a chave identifica o
- * app. Vale a chave informada nas Configurações (`driveClientId`, mantido por
- * compatibilidade com o `settings.json` existente) ou a embutida.
+ * app. Vale a chave informada nas Configurações (`driveClientId`, um segredo
+ * do cofre: com o cofre fechado volta a embutida) ou a própria embutida.
  */
 export function appKey(): string {
   const configured = loadSettings().driveClientId.trim();
@@ -163,5 +102,7 @@ export function setError(message: string | null): void {
 }
 
 export function toMessage(error: unknown): string {
+  // Erro de domínio do cofre chega como código; a mensagem é localizada aqui.
+  if (isVaultError(error)) return currentMessages().vault.errors[error.code];
   return error instanceof Error ? error.message : String(error);
 }

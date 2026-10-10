@@ -44,7 +44,6 @@ describe('tipos compartilhados', () => {
   it('configurações e estado do backup', () => {
     expectTypeOf<AppSettings>().toEqualTypeOf<{
       driveClientId: string;
-      driveClientSecret: string;
       drivePassphrase: string;
       language: Language;
     }>();

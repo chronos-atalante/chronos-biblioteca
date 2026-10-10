@@ -30,14 +30,21 @@ contrário).
 
 - **Cofre de segredos**: tokens do Dropbox, senha de backup e App key
   alternativa sob uma senha mestra (Argon2id de 128 MiB + AES-256-GCM),
-  guardados em `~/.config/chronos-biblioteca/.vault/vault.zkv` (`0600`,
-  escrita atômica). Container fail-closed (leitura inválida = adulterado),
-  chave-mestra só na memória da sessão, auto-lock de 5 minutos e trava
-  exponencial (10 s → 24 h) checada **antes** do Argon2id; sem cofre, o
-  caminho legado abaixo continua (`docs/cofre.md`).
-- **Tokens só na máquina**: no cofre (`dropbox.tokens`) quando ele existe;
-  senão `dropbox-tokens.json` com permissão `0600`, nunca em
-  repositório (coberto pelo `.gitignore`).
+  guardados em `/var/lib/.chronos-biblioteca/.vault/vault.zkv` (`0600`,
+  escrita atômica), fora de `~` para sobreviver à limpeza do home. A árvore é
+  criada no `postinst` (raiz `0711 root:root` sem listagem, vault `0700` do
+  usuário) e reparada pelo app só via PolicyKit (`pkexec` + helper do pacote,
+  senha do sistema nunca vista pelo app). Container fail-closed (leitura
+  inválida = adulterado), chave-mestra só na memória da sessão, auto-lock de 5
+  minutos e trava exponencial (10 s → 24 h) checada **antes** do Argon2id
+  (`docs/cofre.md`).
+- **Sem cofre não há segredo**: com o cofre fechado ou ausente, `loadSettings`
+  devolve `''`, `loadState` zera os tokens e gravar lança `vaultLocked` antes
+  de tocar em disco (falha fechada). Não existe mais caminho legado com
+  `safeStorage`/keyring nem arquivo `dropbox-tokens.json`: o app lê e grava
+  segredo **só** no cofre.
+- **Tokens só na máquina**: no cofre (`dropbox.tokens`), nunca em arquivo em
+  claro nem em repositório (coberto pelo `.gitignore`).
 - **Backup sempre criptografado**: AES-256-GCM com chave derivada por scrypt
   explícito (`N=2¹⁷`, `r=8`, `p=1`; mínimo atual do OWASP; salt e IV
   aleatórios por arquivo, tag verificada na leitura). Formato único
@@ -53,10 +60,9 @@ contrário).
   - manifesto cifrado (nome remoto → nome local). Ao Dropbox restam visíveis
     só a quantidade aproximada e o tamanho dos blobs (limitação da API;
     tamanhos exatos não têm como ser ocultados sem padding).
-- **Senha de backup protegida**: com o cofre criado, `drivePassphrase` mora
-  nele (Argon2id + AES-256-GCM). No caminho legado vai para o cofre do SO
-  (`safeStorage`) quando há keyring; sem keyring, em claro com `0600`
-  (fallback documentado, com migração automática).
+- **Senha de backup protegida**: `drivePassphrase` mora no cofre (Argon2id +
+  AES-256-GCM). Não há fallback em claro nem depender do `safeStorage` do SO:
+  sem cofre aberto a senha simplesmente não existe para o app.
 - **Escopos mínimos**: o Dropbox recebe só `account_info.read`,
   `files.metadata.read`, `files.metadata.write`, `files.content.read` e
   `files.content.write`, limitados à App folder. Quando o Google Drive for
@@ -114,9 +120,11 @@ contrário).
 ## Modelo de ameaça do cofre
 
 O cofre protege os segredos do app contra leitura direta do disco: alguém com
-cópia do `vault.zkv` (backup,HD apagado, outro usuário do mesmo PC) vê só
-bytes e precisa da senha mestra, sujeita à trava exponencial. Ele **não**
-protege contra:
+cópia do `vault.zkv` (backup, HD apagado, outro usuário do mesmo PC) vê só
+bytes e precisa da senha mestra, sujeita à trava exponencial; na prática,
+chegar ao arquivo exige sudo (raiz `0711 root:root` em
+`/var/lib/.chronos-biblioteca`, vault `0700` do usuário). Ele **não** protege
+contra:
 
 - **Atacante com o usuário logado e o app desbloqueado**: a chave está em
   memória e os fluxos funcionam normalmente; quem está na sessão do SO com o
@@ -136,13 +144,6 @@ protege contra:
   Console do Dropbox (redirect URI cadastrada). Um processo malicioso na
   mesma máquina poderia escutar nessa porta, mas isso exige acesso local ao
   PC, fora de escopo (ver abaixo).
-- **Senha de backup em claro sem keyring** (só no modo legado, sem cofre):
-  quando `safeStorage.isEncryptionAvailable()` é `false` (containers, WSL sem
-  cofre do SO), a `drivePassphrase` vai para `settings.json` com permissão
-  `0600` e migra sozinha para o keyring no próximo save. A tela de
-  Configurações avisa com `settings.keyringWarning`
-  (`settings.isKeyringAvailable()`). Criar o cofre do app resolve o caso
-  (a senha passa a morar no cofre); não há alternativa no modo legado.
 - **Dependências sem fix upstream**: problemas reportados em dependências de
   desenvolvimento sem versão corrigida publicada são documentados no README
   da parte correspondente e monitorados (ex.: `braces` na landing).

@@ -1,10 +1,11 @@
 import http from 'http';
 import path from 'path';
 import { vi } from 'vitest';
-import { authorize, disconnect, initDrive } from '@zero/main/drive';
+import { authorize, initDrive } from '@zero/main/drive';
 import { saveSettings } from '@zero/main/settings';
 import { shell } from '../mocks/electron.ts';
 import { resetSandbox, sandboxPath } from './sandbox.ts';
+import { openTestVault } from './vault.ts';
 
 export const APP_KEY = 'app-key-do-teste';
 export const PASSPHRASE = 'frase-secreta';
@@ -249,11 +250,14 @@ export class FakeDropbox {
   }
 }
 
-/** Zera o estado em memória e em disco entre os testes. */
-export function resetDrive(): void {
+/**
+ * Zera o estado em memória e em disco entre os testes e deixa um cofre novo
+ * aberto: sem cofre aberto nenhum teste consegue gravar senha nem token.
+ */
+export async function resetDrive(): Promise<void> {
   resetSandbox();
   vi.clearAllMocks();
-  disconnect();
+  await openTestVault();
   initDrive();
 }
 
@@ -261,7 +265,6 @@ export function resetDrive(): void {
 export async function connect(passphrase = PASSPHRASE): Promise<void> {
   saveSettings({
     driveClientId: APP_KEY,
-    driveClientSecret: '',
     drivePassphrase: passphrase,
     language: 'pt-BR',
   });

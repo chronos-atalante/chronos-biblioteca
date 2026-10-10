@@ -14,8 +14,9 @@ leituras, com backup criptografado no Dropbox, alvo Linux Mint e distribuição
 Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
 `docs/arquitetura.md`):
 
-- `src/main/`: janela, IPC, protocolos `cover://` e `chronos://` (`index.ts`),
-  persistência (`library.ts`, `settings.ts`) e backup na nuvem (`drive/`).
+- `src/main/`: janela, IPC e ciclo de vida (`index.ts`), protocolos `cover://`
+  e `chronos://` (`protocols.ts`), persistência (`library.ts`, `settings.ts`)
+  e backup na nuvem (`drive/`).
 - `src/messages/`: textos do app em pt-BR (canônico), en, ko, zh-CN e ja (`@zero/messages`);
   guia em `docs/messages.md`.
 - `src/preload/`: única ponte da UI; monta e expõe `window.api` tipado.
@@ -26,10 +27,12 @@ Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
 
 - Cada arquivo do `main` responde por um domínio; o renderer só conhece o
   contrato de `window.api` (`docs/api.md`).
-- Persistência local em JSON: obras e capas em `~/.local/share/chronos-biblioteca/`
-  (`library.json`, `covers/`) e configurações e tokens em
-  `~/.config/chronos-biblioteca/` (`settings.json`, cofre `.vault/` e, no modo
-  legado, `dropbox-tokens.json`); a nuvem
+- Persistência local: obras e capas em `~/.local/share/chronos-biblioteca/`
+  (`library.json`, `covers/`), idioma em `~/.config/chronos-biblioteca/settings.json`
+  e **todos os segredos** no cofre `/var/lib/.chronos-biblioteca/.vault`
+  (Argon2id + AES-256-GCM; sem cofre aberto não há segredo nem backup, ver
+  `docs/cofre.md`/`docs/credenciais.md`). Não existe caminho legado
+  (`enc:`/keyring, `dropbox-tokens.json`, migração de marca). A nuvem
   passa pelo contrato `BackupProvider` (`docs/backup-providers.md`), com o
   Dropbox como único provedor operante (App folder, sem credencial embutida).
 - IPC via `ipcRenderer.invoke` e `ipcMain.handle`; canal novo só com tipo em
@@ -70,7 +73,7 @@ Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
 - Textos fixos de UI e de mensagem **só em `src/messages/`** (pt-BR é o
   canônico; `en.ts`, `ko.ts`, `zh-CN.ts` e `ja.ts` devem fechar com `Messages`): no renderer use
   `useMessages()`/`richText()` (`src/renderer/src/i18n.tsx`), no main
-  `currentMessages()` (`src/main/i18n.tsx`). Marcadores ricos `**negrito**` e
+  `currentMessages()` (`src/main/i18n.ts`). Marcadores ricos `**negrito**` e
   `` `código` `` só em string exibida. Nomes de marca, dados por dependência
   (`attributions.ts`, `CATEGORIES`) e logs ficam fora dos bundles; regras e
   lista completas do que não se traduz em `docs/messages.md`.
@@ -81,7 +84,9 @@ Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
   antes de concluir qualquer mudança.
 - `npm test` (ou `test:coverage`): Vitest em `tests/**`; cobertura mínima de
   50% por métrica. Comportamento novo vem com teste.
-- `npm run dev` / `build` / `dist`: desenvolvimento, build, `.deb`.
+- `npm run dev` / `build` / `dist`: desenvolvimento, build, `.deb`. O `dev`
+  já exporta `CHRONOS_VAULT_DIR` para a pasta `.dev-vault` (cofre no sandbox,
+  sem tocar em `/var/lib` nem disparar `pkexec`).
 - `node --import ./src/node.loader.ts <arquivo.ts>`: roda `.ts` direto com
   os aliases `@zero/*`.
 - Capture o exit do próprio npm (`npm run check; echo $?`), não o código de
@@ -115,9 +120,11 @@ Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
   `event.senderFrame` com `assertAppFrame`. Fuses de segurança no electron-
   builder via chave `electronFuses`.
 - Confinamento AppArmor no `.deb` (`build/apparmor-profile`, via
-  `deb.appArmorProfile`): escrita só nos diretórios do app, deny-list de
-  credenciais no home, exec só do pacote + `xdg-open`, rede só `stream` e
-  `dgram` (DNS). Negar regra da deny-list ou voltar ao perfil decorativo é
+  `deb.appArmorProfile`): escrita só nos diretórios do app e no vault em
+  `/var/lib/.chronos-biblioteca`, deny-list de credenciais no home, exec só do
+  pacote + `xdg-open`, rede só `stream` e `dgram` (DNS). O reparo da pasta do
+  cofre é só via PolicyKit (`build/scripts/biblioteca-setup` chamado por
+  `src/main/vault/privilege.ts`): nenhum caminho vem do chamador. Negar regra da deny-list ou voltar ao perfil decorativo é
   regressão de segurança; ciclo complain/enforce e validação em
   `docs/build.md`.
 - Backup: cifragem AES-256-GCM com nomes opacos (`docs/dropbox.md`); senha

@@ -89,10 +89,10 @@ Onde vive cada parte:
   **Verificar qualidade**) e só então gera o `.deb`, anexa os assets da
   Release, monta e assina o repo APT flat e dispara o redeploy da landing.
 - `Biblioteca/build/after-pack.cjs`: slim do pacote (idiomas e SwiftShader).
-- `Landing page/scripts/fetch-release.mjs`: lê a Release a cada build e grava
+- `Landing-page/scripts/fetch-release.mjs`: lê a Release a cada build e grava
   `src/app/release-info.json` (`version`, `fileName`, `debUrl`), com
   fallback commitado para builds sem rede.
-- `Landing page/src/app/page.tsx`: constante `APT_BASE` com a base dos
+- `Landing-page/src/app/page.tsx`: constante `APT_BASE` com a base dos
   comandos APT e o botão de download.
 
 ## Passo a passo da implantação
@@ -211,7 +211,7 @@ versão é manual e a **publicação é automática**:
    corrija e faça push de novo).
 5. Conferir a sincronia das quatro vias:
    `package.json` (`version`) ≡ tag `v*` ≡ `Packages` (`Version:`) ≡
-   `Landing page/src/app/release-info.json` (`version`).
+   `Landing-page/src/app/release-info.json` (`version`).
 6. Pedir aos usuários que rodem `sudo apt update && sudo apt upgrade`.
 
 Casos de exceção (o mesmo workflow, sem checar a versão):

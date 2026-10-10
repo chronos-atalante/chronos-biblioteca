@@ -22,37 +22,38 @@ não fala com a rede. Tudo que importa acontece no processo main, e o preload é
 
 | Pasta           | Papel                                                              | Arquivo principal                |
 | --------------- | ------------------------------------------------------------------ | -------------------------------- |
-| `src/main/`     | Janela, IPC, protocolos, persistência e backup em nuvem            | `index.ts`, `library.ts`         |
+| `src/main/`     | Janela, IPC, protocolos, persistência e backup em nuvem            | `index.ts`, `protocols.ts`       |
 | `src/preload/`  | Fachada `window.api` registrada no `contextBridge` (build CJS)     | `index.ts` (entrypoint)          |
 | `src/renderer/` | Interface React: grade, modais, configurações e contexto de idioma | `App.tsx`                        |
 | `src/types/`    | Contratos compartilhados (`Work`, `AppSettings`, `ElectronApi`)    | `index.ts` (barrel)              |
 | `src/messages/` | Textos em pt-BR (canônico), en, ko, zh-CN e ja                     | `pt-BR.ts`, `index.ts`           |
-| `tests/`        | Suíte Vitest (main em Node, renderer em jsdom)                     | `tests/main/`, `tests/renderer/` |
+| `tests/`        | Suíte Vitest (ambiente jsdom, `electron` mockado)                  | `tests/main/`, `tests/renderer/` |
 
 Regras de organização: arquivo `index.ts` só reexporta (exceto os dois
 entrypoints que o Electron exige) e arquivo no teto de ~500 linhas é quebrado.
 
 ### Módulos do processo main
 
-| Arquivo                 | Papel                                                                                                   |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `index.ts`              | Entrypoint: janela, protocolos `cover://`/`chronos://`, política da sessão, canais IPC e push de status |
-| `library.ts`            | `library.json` + cópia/limpeza de capas (gravação atômica)                                              |
-| `settings.ts`           | `settings.json`: App key, senha de backup e idioma                                                      |
-| `jsonfile.ts`           | Escrita atômica (`writeJsonAtomic`) com modo de permissão                                               |
-| `paths.ts`              | Diretórios de dados, configuração e cache da marca atual/legada                                         |
-| `i18n.ts`               | `currentMessages()`: bundle do idioma corrente no main                                                  |
-| `external.ts`           | `openExternalSafe`: `shell.openExternal` só para `https:`                                               |
-| `drive/index.ts`        | Barrel da API pública do backup (authorize, backupNow, restoreNow…)                                     |
-| `drive/provider.ts`     | Contrato `BackupProvider`, catálogo e `currentProvider()`                                               |
-| `drive/providers/`      | Adaptadores: `dropbox.ts` (operante), `google-drive.ts` (não operante)                                  |
-| `drive/oauth.ts`        | Autorização PKCE + loopback + refresh                                                                   |
-| `drive/rest.ts`         | Chamadas REST do Dropbox (pasta do app)                                                                 |
-| `drive/crypto.ts`       | AES-256-GCM do backup e nomes opacos (HMAC)                                                             |
-| `drive/backup.ts`       | Orquestração de backup/restauração/desconexão                                                           |
-| `drive/state.ts`        | Sessão em memória + persistência dos tokens (cofre/legado)                                              |
-| `drive/restore-lock.ts` | Trava contra restauração concorrente                                                                    |
-| `vault/`                | Cofre de segredos: `crypto` (Argon2id/AES-GCM), `container`, `lockout`, `session`, `vault`, `secrets`   |
+| Arquivo                 | Papel                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `index.ts`              | Entrypoint: janela, política da sessão, canais IPC, push de status e ciclo de vida                           |
+| `protocols.ts`          | Schemes `cover://` (capas) e `chronos://` (SPA em produção), registrados na importação                       |
+| `library.ts`            | `library.json` + cópia/limpeza de capas (gravação atômica)                                                   |
+| `settings.ts`           | `settings.json`: App key, senha de backup e idioma                                                           |
+| `jsonfile.ts`           | Escrita atômica (`writeJsonAtomic`) com modo de permissão                                                    |
+| `paths.ts`              | Diretórios XDG de dados, configuração e cache do app                                                         |
+| `i18n.ts`               | `currentMessages()`: bundle do idioma corrente no main                                                       |
+| `external.ts`           | `openExternalSafe`: `shell.openExternal` só para `https:`                                                    |
+| `drive/index.ts`        | Barrel da API pública do backup (authorize, backupNow, restoreNow…)                                          |
+| `drive/provider.ts`     | Contrato `BackupProvider`, catálogo e `currentProvider()`                                                    |
+| `drive/providers/`      | Adaptadores: `dropbox.ts` (operante), `google-drive.ts` (não operante)                                       |
+| `drive/oauth.ts`        | Autorização PKCE + loopback + refresh                                                                        |
+| `drive/rest.ts`         | Chamadas REST do Dropbox (pasta do app)                                                                      |
+| `drive/crypto.ts`       | AES-256-GCM do backup e nomes opacos (HMAC)                                                                  |
+| `drive/backup.ts`       | Orquestração de backup/restauração/desconexão                                                                |
+| `drive/state.ts`        | Sessão em memória + persistência dos tokens no cofre                                                         |
+| `drive/restore-lock.ts` | Trava contra restauração concorrente                                                                         |
+| `vault/`                | Cofre de segredos (`/var/lib`): `crypto`, `container`, `lockout`, `session`, `vault`, `secrets`, `privilege` |
 
 ## Aliases `@zero/*`
 
@@ -102,22 +103,30 @@ sequenceDiagram
     participant A as app (Electron)
     participant W as BrowserWindow
 
-    N->>N: migra dados da marca antiga (Webtoons Biblioteca)
+    N->>N: ensureAppDirs (dataDir/configDir/covers, melhor esforço)
     N->>A: requestSingleInstanceLock (sem lock, app.quit)
     A->>A: whenReady
     A->>A: registerCoverProtocol + registerAppProtocol
     A->>A: registerIpc (assertAppFrame em todo canal)
-    A->>A: initDrive (lê tokens do cofre se aberto; senão legado)
+    A->>A: initDrive (tokens do cofre; falha isolada, não derruba o boot)
     A->>A: removeApplicationMenu + política de permissões + F11
     A->>W: createWindow (1200×800, mín. 520×360, DevTools só em dev)
     W->>W: ready-to-show → show
 ```
 
-Encerramento: `window-all-closed` sai (fora de macOS), `will-quit` desregistra
-os atalhos globais e zera a chave do cofre na sessão (`vaultSession.wipe()`).
-O cofre não tem etapa de boot: sem `vault.zkv` o app segue legado; com cofre
-existente, a primeira ação que precisa de segredo pede a senha mestra (ver
-[`cofre.md`](cofre.md)).
+Cada passo de `initApp` que toca disco ou a nuvem é isolado: um `EACCES`/`EIO`
+em `initDrive` vira `error` no log e o app segue no modo que conseguir, sem
+deixar um processo sem interface; só a falha na janela encerra o processo,
+com `dialog.showErrorBox`.
+
+Encerramento: `window-all-closed` sai (fora de macOS), `before-quit` zera a
+chave do cofre na sessão (`vaultSession.dispose()`) e `will-quit`
+desregistra os atalhos globais.
+O cofre não tem etapa de boot: ele só é tocado quando um fluxo precisa de
+segredo, e aí a UI abre a criação/desbloqueio (sem cofre aberto o app roda
+sem segredo nenhum; ver [`cofre.md`](cofre.md)). A pasta em
+`/var/lib/.chronos-biblioteca/.vault` é criada no `postinst` e reparada pelo
+app via PolicyKit quando faltar permissão.
 
 ## Árvore do repositório
 

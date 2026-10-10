@@ -1,10 +1,10 @@
-import fs from 'fs';
-import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { backupInfo, backupNow, getStatus, initDrive } from '@zero/main/drive';
 import { SCOPE_VERSION } from '@zero/main/drive/constants';
 import { saveLibrary } from '@zero/main/library';
 import { saveSettings } from '@zero/main/settings';
+import { setSecret } from '@zero/main/vault';
+import { VAULT_SECRET } from '@zero/main/vault/secrets';
 import { makeWork } from '../helpers/fixtures.ts';
 import {
   APP_KEY,
@@ -17,7 +17,6 @@ import {
   json,
   resetDrive,
   stubFetch,
-  tokensPath,
 } from '../helpers/drive.ts';
 
 // Este arquivo também cobre o caminho "sem chave nenhuma" (build sem chave
@@ -29,8 +28,8 @@ vi.mock('@zero/main/drive/constants', async (importOriginal) => {
 });
 
 describe('backupInfo', { timeout: 60_000 }, () => {
-  beforeEach(() => {
-    resetDrive();
+  beforeEach(async () => {
+    await resetDrive();
   });
 
   it('devolve null quando não há conta conectada', async () => {
@@ -104,14 +103,13 @@ describe('backupInfo', { timeout: 60_000 }, () => {
 });
 
 describe('renovação de sessão', { timeout: 60_000 }, () => {
-  beforeEach(() => {
-    resetDrive();
+  beforeEach(async () => {
+    await resetDrive();
   });
 
   function seedExpiredTokens(refreshToken: string | undefined): void {
-    fs.mkdirSync(path.dirname(tokensPath()), { recursive: true });
-    fs.writeFileSync(
-      tokensPath(),
+    setSecret(
+      VAULT_SECRET.dropboxTokens,
       JSON.stringify({
         accessToken: 'antigo',
         refreshToken,
@@ -120,11 +118,9 @@ describe('renovação de sessão', { timeout: 60_000 }, () => {
         lastSync: null,
         scopeVersion: SCOPE_VERSION,
       }),
-      'utf-8',
     );
     saveSettings({
       driveClientId: APP_KEY,
-      driveClientSecret: '',
       drivePassphrase: PASSPHRASE,
       language: 'pt-BR',
     });
@@ -167,7 +163,6 @@ describe('renovação de sessão', { timeout: 60_000 }, () => {
     seedExpiredTokens('refresh-legal');
     saveSettings({
       driveClientId: '',
-      driveClientSecret: '',
       drivePassphrase: PASSPHRASE,
       language: 'pt-BR',
     });
@@ -194,8 +189,8 @@ describe('renovação de sessão', { timeout: 60_000 }, () => {
 });
 
 describe('retry após 401', { timeout: 60_000 }, () => {
-  beforeEach(() => {
-    resetDrive();
+  beforeEach(async () => {
+    await resetDrive();
   });
 
   it('renova o token e repete a chamada', async () => {

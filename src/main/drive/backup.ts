@@ -33,6 +33,7 @@ import {
 import { backupFiles, coversDir, loadLibrary, restoreLibrary } from '@zero/main/library';
 import { currentMessages } from '@zero/main/i18n';
 import { loadSettings } from '@zero/main/settings';
+import { vaultUnlocked } from '@zero/main/vault/secrets';
 
 /** Valida a forma mínima de uma obra vinda do backup. */
 function isWorkRecord(value: unknown): value is Work {
@@ -128,6 +129,10 @@ export async function backupNow(): Promise<{
   if (state.tokens === null) {
     return { ok: false, error: currentMessages().driveErrors.connectFirst(provider.label) };
   }
+  // Sem cofre aberto não há senha nem como gravar o horário do backup.
+  if (!vaultUnlocked()) {
+    return { ok: false, error: currentMessages().vault.errors.vaultLocked };
+  }
   const passphrase = loadSettings().drivePassphrase;
   if (passphrase === '') {
     const error = currentMessages().driveErrors.definePassphrase;
@@ -213,6 +218,9 @@ export async function restoreNow(passphrase: string): Promise<{
   if (state.tokens === null) {
     return { ok: false, error: currentMessages().driveErrors.connectFirst(provider.label) };
   }
+  if (!vaultUnlocked()) {
+    return { ok: false, error: currentMessages().vault.errors.vaultLocked };
+  }
   state.syncing = true;
   setError(null);
   emit();
@@ -286,10 +294,21 @@ export async function backupInfo(): Promise<BackupSummary | null> {
   }
 }
 
+/**
+ * Desconecta do provedor: limpa os tokens da sessão **e** do cofre. Com o
+ * cofre fechado não dá para apagar o que está lá dentro, então nada muda
+ * (falha fechada com o erro na barra de status, em vez de um "desconectado"
+ * que voltaria na próxima abertura).
+ */
 export function disconnect(): DriveStatus {
+  setError(null);
+  if (state.tokens !== null && !vaultUnlocked()) {
+    setError(currentMessages().vault.errors.vaultLocked);
+    emit();
+    return getStatus();
+  }
   state.tokens = null;
   state.syncing = false;
-  setError(null);
   persistState();
   emit();
   return getStatus();

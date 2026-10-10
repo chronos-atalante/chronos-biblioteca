@@ -63,6 +63,8 @@ export const ko: Messages = {
     toastSaveError: '작품을 저장할 수 없습니다.',
     toastSaved: '작품이 저장되었습니다.',
     toastRemoved: '작품이 삭제되었습니다.',
+    startupFailed: (detail: string): string =>
+      `Chronos Biblioteca를 시작하지 못했습니다.\n\n기술 세부 정보: ${detail}`,
   },
 
   settings: {
@@ -73,10 +75,6 @@ export const ko: Messages = {
       '앱만 그 폴더를 볼 수 있으며, 나머지 Dropbox는 이 앱에 보이지도 않습니다. 폴더는 ' +
       '계정에서 보이므로, 모든 파일은 알아볼 수 없는 이름과 암호화된 내용(AES-256-GCM)으로 ' +
       '업로드됩니다. 첫 백업 전에 아래에서 암호화 비밀번호를 설정하세요.',
-    keyringWarning:
-      '시스템 키체인을 사용할 수 없습니다: 백업 비밀번호가 키체인의 추가 보호 없이 ' +
-      '저장됩니다(파일은 본인만 읽을 수 있습니다). 가능하다면 시스템 키체인(GNOME Keyring, ' +
-      'KWallet, Keychain, DPAPI)을 활성화하세요.',
     languageLabel: '언어',
     providersLabel: '백업 제공업체',
     hiddenFolder: '숨김 폴더',
@@ -323,6 +321,8 @@ export const ko: Messages = {
       vaultWrongPassword: '마스터 비밀번호가 올바르지 않습니다.',
       vaultTampered: '금고가 손상되었거나 변경되었습니다.',
       vaultWeakPassword: '예측하기 쉬운 비밀번호입니다. 더 예측하기 어려운 것으로 바꾸세요.',
+      vaultDirUnavailable: '보관함 폴더를 만들 수 없습니다. 권한을 확인하세요.',
+      vaultAuthCancelled: '보관함 폴더 만들기가 취소되었습니다.',
     },
   },
 

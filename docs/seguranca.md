@@ -9,16 +9,18 @@ que ela protege.
 
 ### Cofre e credenciais
 
-| Medida                                                       | Arquivo principal                                      |
-| ------------------------------------------------------------ | ------------------------------------------------------ |
-| Recusa de senha mestra previsível (antes do Argon2id)        | `src/main/vault/crypto.ts` (`passwordProblem`)         |
-| Argon2id (128 MiB), AES-256-GCM e HKDF-SHA512                | `src/main/vault/crypto.ts`                             |
-| Container `vault.zkv` fail-closed e faixa do KDF na leitura  | `src/main/vault/container.ts`                          |
-| Trava exponencial (10 s → 24 h) antes de qualquer derivação  | `src/main/vault/lockout.ts`, `src/main/vault/vault.ts` |
-| Chave-mestra só na sessão, auto-lock de 5 min e wipe no quit | `src/main/vault/session.ts`                            |
-| Segredos com nome canônico (sem string solta)                | `src/main/vault/secrets.ts`                            |
-| Migração legado → cofre (disco vence; falha fechada)         | `src/main/settings.ts`, `src/main/drive/state.ts`      |
-| Canais `vault:*` com origem validada e envelope sem lançar   | `src/main/index.ts`                                    |
+| Medida                                                       | Arquivo principal                                                                   |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Recusa de senha mestra previsível (antes do Argon2id)        | `src/main/vault/crypto.ts` (`passwordProblem`)                                      |
+| Argon2id (128 MiB), AES-256-GCM e HKDF-SHA512                | `src/main/vault/crypto.ts`                                                          |
+| Container `vault.zkv` fail-closed e faixa do KDF na leitura  | `src/main/vault/container.ts`                                                       |
+| Trava exponencial (10 s → 24 h) antes de qualquer derivação  | `src/main/vault/lockout.ts`, `src/main/vault/vault.ts`                              |
+| Chave-mestra só na sessão, auto-lock de 5 min e wipe no quit | `src/main/vault/session.ts` (wipe chamado por `src/main/index.ts` no `before-quit`) |
+| Segredos com nome canônico (sem string solta)                | `src/main/vault/secrets.ts`                                                         |
+| Cofre fora de `~` em `/var/lib` (raiz `0711` + vault `0700`) | `build/scripts/after-install.sh`, `build/scripts/biblioteca-setup`                  |
+| Reparo da pasta do cofre só com PolicyKit (senha do sistema) | `src/main/vault/privilege.ts` (`pkexec` + ação no `.policy`)                        |
+| Sem cofre não há segredo (falha fechada; nada em claro)      | `src/main/settings.ts`, `src/main/drive/state.ts`                                   |
+| Canais `vault:*` com origem validada e envelope sem lançar   | `src/main/index.ts`                                                                 |
 
 ### Backup no Dropbox
 
@@ -29,7 +31,7 @@ que ela protege.
 | Trava da restauração (só `PassphraseError` conta)             | `src/main/drive/restore-lock.ts`                         |
 | OAuth PKCE sem `client_secret` + loopback fixo                | `src/main/drive/oauth.ts`, `src/main/drive/constants.ts` |
 | Escopos mínimos, limitados à App folder                       | `src/main/drive/constants.ts`                            |
-| Tokens no cofre (ou `0600` legado), nunca em log/repositório  | `src/main/drive/state.ts`, `.gitignore`                  |
+| Tokens só no cofre, nunca em arquivo em claro/log/repositório | `src/main/drive/state.ts`, `.gitignore`                  |
 
 ### Superfície do Electron
 
@@ -37,8 +39,8 @@ que ela protege.
 | ----------------------------------------------------------------------------------- | ------------------------------------------------- |
 | Guarda de origem em todo canal IPC (`assertAppFrame`)                               | `src/main/index.ts`                               |
 | Navegação presa ao app, `window.open` negado, permissões web negadas (só clipboard) | `src/main/index.ts`                               |
-| Capas por `cover://` com `basename` (anti path-traversal)                           | `src/main/index.ts`                               |
-| SPA em produção por `chronos://` (`path.resolve` + prefixo)                         | `src/main/index.ts` (`registerAppProtocol`)       |
+| Capas por `cover://` com `basename` (anti path-traversal)                           | `src/main/protocols.ts` (`registerCoverProtocol`) |
+| SPA em produção por `chronos://` (`path.resolve` + prefixo)                         | `src/main/protocols.ts` (`registerAppProtocol`)   |
 | `shell.openExternal` só para `https:`                                               | `src/main/external.ts` (`openExternalSafe`)       |
 | CSP no HTML da interface                                                            | `src/renderer/index.html`                         |
 | Preload sandboxed (CommonJS) com `contextIsolation`                                 | `src/preload/index.ts`                            |
@@ -47,23 +49,24 @@ que ela protege.
 
 ### Dados e distribuição
 
-| Medida                                                                     | Arquivo principal                                      |
-| -------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Escrita de JSON atômica (`.tmp` + rename) com `0600` onde há credencial    | `src/main/jsonfile.ts`, `src/main/vault/vault.ts`      |
-| Ids de obra seguros (rejeita `..`, `/`, `\`)                               | `src/main/library.ts` (`isValidWorkId`)                |
-| Erros do cofre por código (nenhum texto/senha em mensagem)                 | `src/main/vault/errors.ts`, `src/messages/`            |
-| Auditoria de dependências a cada `npm run check` (OSV)                     | `package.json`, `.osv-scanner.toml`, `bin/osv-scanner` |
-| CodeQL no push/PR                                                          | `.github/workflows/codeql.yml`                         |
-| Gate: check + testes antes de qualquer Release                             | `.github/workflows/publish.yml` (job `qualidade`)      |
-| `after-pack.cjs` sem mexer em `DT_NEEDED` (lição da 1.1.1)                 | `build/after-pack.cjs`                                 |
-| Confinamento AppArmor do processo instalado (escrita nos dirs do app,      | `build/apparmor-profile`                               |
-| deny de credenciais no home, exec só `xdg-open`, rede só `stream`/`dgram`) |                                                        |
-| `purge` de dados + unload do perfil na remoção                             | `build/postrm`                                         |
+| Medida                                                                    | Arquivo principal                                      |
+| ------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Escrita de JSON atômica (`.tmp` + rename) com `0600` onde há credencial   | `src/main/jsonfile.ts`, `src/main/vault/vault.ts`      |
+| Ids de obra seguros (rejeita `..`, `/`, `\`)                              | `src/main/library.ts` (`isValidWorkId`)                |
+| Erros do cofre por código (nenhum texto/senha em mensagem)                | `src/main/vault/errors.ts`, `src/messages/`            |
+| Auditoria de dependências a cada `npm run check` (OSV)                    | `package.json`, `.osv-scanner.toml`, `bin/osv-scanner` |
+| CodeQL no push/PR                                                         | `.github/workflows/codeql.yml`                         |
+| Gate: check + testes antes de qualquer Release                            | `.github/workflows/publish.yml` (job `qualidade`)      |
+| `after-pack.cjs` sem mexer em `DT_NEEDED` (lição da 1.1.1)                | `build/after-pack.cjs`                                 |
+| Confinamento AppArmor do processo instalado (escrita nos dirs do app e no | `build/apparmor-profile`                               |
+| vault em `/var/lib`, deny de credenciais no home, exec só `xdg-open`,     |                                                        |
+| rede só `stream`/`dgram`)                                                 |                                                        |
+| `purge` de dados + unload do perfil na remoção                            | `build/postrm`                                         |
 
 ## Fluxo de confiança
 
 ```
-Página do app (chron://) → assertAppFrame → regra de domínio → cofre/drive → arquivo cifrado
+Página do app (chronos://) → assertAppFrame → regra de domínio → cofre/drive → arquivo cifrado
                                   ^                              ^                  ^
                                   |                              |                  |
                           só o frame oficial            requireSessionKey    0600 + atômico

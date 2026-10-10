@@ -75,13 +75,14 @@ biblioteca.
 - **Provedores de backup**: catálogo com selo operante/não operante, destino
   (pasta oculta) e motivo da indisponibilidade (`docs/backup-providers.md`).
 - **Senha de criptografia do backup**: campo de senha ligado ao
-  `drivePassphrase`; banner âmbar quando o keyring do SO não está disponível.
+  `drivePassphrase`, gravado **no cofre** (nada fica em claro no disco; não há
+  banner de keyring: o cofre não depende do `safeStorage` do SO).
 - **Cofre de segredos**: linha com o estado (Aberto/Fechado/Sem cofre) e o
   botão _Criar cofre_ / _Desbloquear_ / _Fechar cofre_, que abre o
-  `VaultModal`. Com o cofre existindo fechado, os fluxos que precisam de
-  segredo (Salvar, Conectar, Backup, Restaurar, Desconectar) mostram antes o
-  desbloqueio e só continuam quando a senha mestra for aceita
-  (`docs/credenciais.md`).
+  `VaultModal`. Todo fluxo que precisa de segredo (Salvar, Conectar, Backup,
+  Restaurar, Desconectar) passa por `ensureVault`: sem cofre abre a
+  **criação**, com ele fechado abre o **desbloqueio**, e a ação só roda depois
+  com o cofre aberto (`docs/credenciais.md`).
 - **Meta do Drive**: conexão, último backup e obras no backup.
 - **Rodapé**: Desconectar, Salvar, Conectar (OAuth), Restaurar (abre
   `RestorePasswordModal`) e Fazer backup agora; ações ocupadas mostram

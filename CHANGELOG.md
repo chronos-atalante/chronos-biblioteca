@@ -4,6 +4,50 @@ Todos os lançamentos seguem [versionamento semântico](https://semver.org/lang/
 (`MAJOR.MINOR.PATCH`) e o formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 em português do Brasil.
 
+## [1.8.0] - 2026-10-10
+
+### Features
+
+- cofre de segredos: o cofre passa a morar em
+  `/var/lib/.chronos-biblioteca/.vault`, fora de `~` (raiz `0711 root:root`
+  sem listagem + vault `0700` do usuário), criado no `postinst` e reparado
+  pelo app só via PolicyKit (helper `resources/biblioteca-setup` chamado por
+  `pkexec`, senha do sistema nunca vista pelo app). Códigos novos
+  `vaultDirUnavailable` e `vaultAuthCancelled` com mensagens nos 5 idiomas.
+- remoção do modo legado de credenciais: acabaram `safeStorage`/`enc:`, o
+  arquivo `dropbox-tokens.json`, o canal `settings:keyring`
+  (`isKeyringAvailable`) e a migração de dados de marcas antigas.
+  `settings.json` guarda **só o idioma** e todo segredo vem do cofre; com o
+  cofre fechado `loadSettings` devolve `''`, `loadState` zera os tokens e
+  gravar lança `vaultLocked` antes de tocar no disco (falha fechada).
+- configurações e backup exigem cofre aberto: `SettingsModal` abre a
+  criação/desbloqueio antes de Salvar, Conectar, Backup, Restaurar e
+  Desconectar; `drive.disconnect()` não apaga nada às cegas com o cofre
+  fechado. `npm run dev` já passa `CHRONOS_VAULT_DIR=.dev-vault` (sandbox,
+  sem `pkexec`).
+
+**Migração**: não existe. Um cofre antigo em
+`~/.config/chronos-biblioteca/.vault`, um `settings.json` com `enc:`/keyring
+ou um `dropbox-tokens.json` são ignorados (não lidos, não copiados, não
+apagados); quem usava backup reconecta a conta uma vez e recria o cofre.
+
+### Segurança
+
+- `build/scripts/biblioteca-setup` (root via `pkexec`) aceita **nenhum**
+  caminho do chamador e só cria os dois diretórios fixos do cofre com modos
+  fixos; a ação do PolicyKit anota o caminho absoluto do helper, e o perfil
+  AppArmor ganha as regras de escrita em `/var/lib/.chronos-biblioteca`.
+- `build/postrm` apaga a ação do PolicyKit no `remove` e o cofre em
+  `/var/lib/.chronos-biblioteca` no `purge`.
+
+### Documentação
+
+- `cofre.md`, `credenciais.md`, `dropbox.md`, `api.md`, `openapi.yaml`,
+  `arquitetura.md`, `seguranca.md`, `build.md`, `telas.md`, `testes.md`,
+  `visao-geral.md`, `backup-providers.md`, `README.md`, `SECURITY.md` e
+  `AGENTS.md` passam a descrever o cofre em `/var/lib`, o reparo via
+  PolicyKit e a inexistência de caminho legado.
+
 ## [1.7.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.6.1...v1.7.0) (2026-10-09)
 
 ### Features

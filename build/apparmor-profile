@@ -65,18 +65,21 @@ profile ${executable} "/opt/${sanitizedProductName}/${executable}" {
   "/opt/${sanitizedProductName}/chrome_crashpad_handler" ux,
   "/opt/${sanitizedProductName}/chrome-sandbox"        ux,
 
-  # O app só dispara um programa do sistema: o abridor de URLs do navegador
-  # (shell.openExternal → openExternalSafe, src/main/external.ts). ux entrega
-  # a cadeia inteira (dash, gio, navegador) sem confinamento; é a única porta
-  # de saída do perfil e está registrada como risco aceito no SECURITY.md.
+  # O app dispara dois programas do sistema: o abridor de URLs do navegador
+  # (shell.openExternal → openExternalSafe, src/main/external.ts) e o pkexec,
+  # que só roda o helper do pacote `biblioteca-setup` para criar a pasta do
+  # cofre em /var/lib (src/main/vault/privilege.ts). ux entrega a cadeia
+  # inteira sem confinamento; são as portas de saída do perfil, registradas
+  # como risco aceito no SECURITY.md.
   /usr/bin/xdg-open ux,
+  /usr/bin/pkexec ux,
 
   # ---------- estado do app ----------
   # userData do Electron redirecionado para o cache
   # (`app.setPath('userData', cacheDir())` em src/main/index.ts).
   owner @{HOME}/.cache/chronos-biblioteca/       rw,
   owner @{HOME}/.cache/chronos-biblioteca/**     rwkl,
-  # settings.json, vault/ e dropbox-tokens.json legado (src/main/paths.ts).
+  # settings.json (src/main/paths.ts + src/main/settings.ts).
   owner @{HOME}/.config/chronos-biblioteca/      rw,
   owner @{HOME}/.config/chronos-biblioteca/**    rwkl,
   # library.json e covers/ (src/main/library.ts).
@@ -85,11 +88,15 @@ profile ${executable} "/opt/${sanitizedProductName}/${executable}" {
   owner @{HOME}/.local/state/chronos-biblioteca/  rw,
   owner @{HOME}/.local/state/chronos-biblioteca/** rwkl,
 
-  # Migração da marca anterior (legacyDirs em src/main/index.ts): só leitura.
-  owner "@{HOME}/.config/Webtoons Biblioteca/"      r,
-  owner "@{HOME}/.config/Webtoons Biblioteca/**"    r,
-  owner "@{HOME}/.config/webtoons-biblioteca/"      r,
-  owner "@{HOME}/.config/webtoons-biblioteca/**"    r,
+  # Cofre de segredos em /var/lib (fora do home, sobrevive à limpeza do home).
+  # A raiz é 0711 root (travessia sim, listagem não) e a pasta do usuário,
+  # 0700: `r` nos pais permite alcançar o vault, `owner` restringe a escrita
+  # a arquivos do próprio usuário. /var/lib/dbus acima é leitura; a escrita
+  # negada por padrão continua valendo para o resto de /var/lib.
+  /var/lib/                      r,
+  /var/lib/.chronos-biblioteca/  r,
+  owner /var/lib/.chronos-biblioteca/.vault/   rw,
+  owner /var/lib/.chronos-biblioteca/.vault/** rwkl,
 
   # ---------- leitura do home (seletor de capa) ----------
   # cover:pick (src/main/index.ts) abre o diálogo do SO e lê o arquivo de
@@ -115,10 +122,6 @@ profile ${executable} "/opt/${sanitizedProductName}/${executable}" {
   deny owner @{HOME}/.password-store/         r,
   deny owner @{HOME}/.password-store/**       r,
   deny owner @{HOME}/.local/share/keyrings/   r,
-  deny owner @{HOME}/.local/share/keyrings/** r,
-  deny owner @{HOME}/.gnupg/**               r,
-  deny owner @{HOME}/.config/gnupg/**        r,
-  deny owner @{HOME}/.password-store/**      r,
   deny owner @{HOME}/.local/share/keyrings/** r,
   deny owner @{HOME}/.netrc                  r,
   deny owner @{HOME}/.git-credentials        r,

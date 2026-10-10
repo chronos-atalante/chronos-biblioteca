@@ -36,18 +36,16 @@ export default function SettingsModal({
 }: SettingsModalProps): JSX.Element {
   const m = useMessages();
   const language = useLanguage();
-  // driveClientId é a App key alternativa (override via settings.json, sem campo
-  // na UI: a chave padrão é a embutida); driveClientSecret é legado e ignorado.
+  // driveClientId é a App key alternativa (override via cofre, sem campo na
+  // UI: a chave padrão é a embutida). Os segredos vêm e vão pelo cofre.
   const [settings, setSettings] = useState<AppSettings>({
     driveClientId: '',
-    driveClientSecret: '',
     drivePassphrase: '',
     language: 'pt-BR',
   });
   const [status, setStatus] = useState<DriveStatus | null>(null);
   const [info, setInfo] = useState<BackupSummary | null>(null);
   const [providers, setProviders] = useState<BackupProviderInfo[]>([]);
-  const [keyring, setKeyring] = useState<boolean | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [promptRestore, setPromptRestore] = useState(false);
@@ -83,26 +81,18 @@ export default function SettingsModal({
     const unsubscribe = window.api.drive.onStatus((next) => setStatus(next));
 
     const loadInitial = async (): Promise<void> => {
-      const [
-        loadedSettings,
-        driveStatus,
-        backupSummary,
-        providerCatalog,
-        keyringAvailable,
-        vaultStatus,
-      ] = await Promise.all([
-        window.api.settings.get(),
-        window.api.drive.status(),
-        window.api.drive.backupInfo(),
-        window.api.drive.providers(),
-        window.api.settings.isKeyringAvailable(),
-        window.api.vault.status(),
-      ]);
+      const [loadedSettings, driveStatus, backupSummary, providerCatalog, vaultStatus] =
+        await Promise.all([
+          window.api.settings.get(),
+          window.api.drive.status(),
+          window.api.drive.backupInfo(),
+          window.api.drive.providers(),
+          window.api.vault.status(),
+        ]);
       setSettings(loadedSettings);
       setStatus(driveStatus);
       setInfo(backupSummary);
       setProviders(providerCatalog);
-      setKeyring(keyringAvailable);
       setVault(vaultStatus);
       setLoading(false);
     };
@@ -115,16 +105,17 @@ export default function SettingsModal({
   }, []);
 
   /**
-   * Ponto de passagem dos fluxos que consomem segredos: com o cofre existente
-   * mas fechado, abre o desbloqueio e **adia** a ação; sem cofre, o app segue
-   * no modo legado (a ação roda direto, como sempre).
+   * Ponto de passagem dos fluxos que consomem segredos: sem cofre, abre a
+   * criação; com cofre existente mas fechado, abre o desbloqueio. Nos dois
+   * casos a ação é **adiada** e roda depois, com o cofre aberto (o app não
+   * tem modo legado: sem cofre não há backup).
    */
   const ensureVault = async (then: () => void): Promise<void> => {
     const status = await window.api.vault.status();
     setVault(status);
-    if (status.exists && !status.unlocked) {
+    if (!status.exists || !status.unlocked) {
       pendingVaultAction.current = then;
-      setVaultPrompt('unlock');
+      setVaultPrompt(status.exists ? 'unlock' : 'create');
       return;
     }
     then();
@@ -142,10 +133,19 @@ export default function SettingsModal({
     setVault(await window.api.vault.lock());
   };
 
+  /**
+   * Executa uma ação com o indicador de ocupado. Uma rejeição vira toast de
+   * erro (o Electron embrulha rejeição de IPC em
+   * `Error invoking remote method 'x': ...`, então o prefixo sai da mensagem).
+   */
   const run = async (label: string, task: () => Promise<void>): Promise<void> => {
     setBusy(label);
     try {
       await task();
+    } catch (error) {
+      const raw = error instanceof Error ? error.message : String(error);
+      const wrapped = /Error invoking remote method '[^']+': (?:Error: )?([\s\S]*)$/.exec(raw);
+      notify(wrapped?.[1] ?? raw, 'error');
     } finally {
       setBusy(null);
     }
@@ -236,11 +236,6 @@ export default function SettingsModal({
             <div className="banner info">
               <strong>{m.settings.bannerTitle}</strong> {richText(m.settings.bannerBody)}
             </div>
-            {keyring === false ? (
-              <div className="banner warning">
-                <i className="fa-solid fa-triangle-exclamation" /> {m.settings.keyringWarning}
-              </div>
-            ) : null}
             <div className="banner info">
               <i className="fa-solid fa-circle-info" /> {m.settings.translationNotice.text}
             </div>

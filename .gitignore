@@ -1,6 +1,8 @@
 node_modules
 out
 release
+# cofre de desenvolvimento criado pelo `npm run dev` (CHRONOS_VAULT_DIR)
+.dev-vault
 # workspace temporário do repo APT flat gerado no CI (publish.yml)
 apt
 # bin/osv-scanner é um binário vendored (57 MB, só uso local). Não versionar;

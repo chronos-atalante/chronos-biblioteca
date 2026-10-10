@@ -63,6 +63,8 @@ export const zhCN: Messages = {
     toastSaveError: '无法保存作品。',
     toastSaved: '作品已保存。',
     toastRemoved: '作品已删除。',
+    startupFailed: (detail: string): string =>
+      `无法启动 Chronos Biblioteca。\n\n技术详情：${detail}`,
   },
 
   settings: {
@@ -72,9 +74,6 @@ export const zhCN: Messages = {
       '书库保存在应用专属文件夹中（您账号下的`/Apps/`内）：通过API，只有本应用能看到' +
       '这个文件夹，Dropbox的其余部分对它完全不可见。该文件夹在您的账号内可见，所有文件都以' +
       '不可读的文件名和加密内容（AES-256-GCM）上传，因此请在首次备份前在下方设置加密密码。',
-    keyringWarning:
-      '系统密钥环不可用：备份密码将失去密钥环的额外保护（文件仍仅您本人可读）。如果可以，' +
-      '请启用系统密钥环（GNOME密钥环、KWallet、钥匙串或DPAPI）。',
     languageLabel: '语言',
     providersLabel: '备份服务商',
     hiddenFolder: '隐藏文件夹',
@@ -306,6 +305,8 @@ export const zhCN: Messages = {
       vaultWrongPassword: '主密码不正确。',
       vaultTampered: '密码库已损坏或被篡改。',
       vaultWeakPassword: '密码过于常见，请换一个更难猜的。',
+      vaultDirUnavailable: '无法创建保管库文件夹，请检查权限。',
+      vaultAuthCancelled: '已取消创建保管库文件夹。',
     },
   },
 

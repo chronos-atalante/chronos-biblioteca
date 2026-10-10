@@ -19,7 +19,9 @@ export type VaultErrorCode =
   | 'vaultLockedOut'
   | 'vaultWrongPassword'
   | 'vaultTampered'
-  | 'vaultWeakPassword';
+  | 'vaultWeakPassword'
+  | 'vaultDirUnavailable'
+  | 'vaultAuthCancelled';
 
 /** Estado do cofre exposto ao renderer (`window.api.vault.status()`). */
 export interface VaultStatus {

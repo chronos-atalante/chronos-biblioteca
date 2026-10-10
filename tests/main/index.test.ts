@@ -5,9 +5,12 @@ import path from 'path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppSettings, Work } from '@zero/types';
 import { configDir, coversDir, dataDir } from '@zero/main/library';
+import { setSecret, vaultSession } from '@zero/main/vault';
+import { VAULT_SECRET } from '@zero/main/vault/secrets';
 import { EMBEDDED_APP_KEY } from '@zero/main/drive/constants';
 import { makeDraft, makeWork } from '../helpers/fixtures.ts';
 import { sandboxPath } from '../helpers/sandbox.ts';
+import { openTestVault } from '../helpers/vault.ts';
 import {
   app,
   BrowserWindow,
@@ -21,8 +24,6 @@ import {
   shell,
 } from '../mocks/electron.ts';
 import type { IpcHandler, WindowEventHandler } from '../mocks/electron.ts';
-
-const LEGACY_ROOT = path.join(os.tmpdir(), 'chronos-tests-legacy');
 
 function handler(channel: string): IpcHandler {
   const call = ipcMain.handle.mock.calls.find((entry) => entry[0] === channel);
@@ -71,7 +72,6 @@ const expectedChannels = [
   'cover:pick',
   'settings:get',
   'settings:set',
-  'settings:keyring',
   'drive:status',
   'drive:providers',
   'drive:auth',
@@ -86,21 +86,17 @@ const expectedChannels = [
 ];
 
 beforeAll(async () => {
-  fs.rmSync(LEGACY_ROOT, { recursive: true, force: true });
-  const legacyData = path.join(LEGACY_ROOT, 'Webtoons Biblioteca');
-  fs.mkdirSync(path.join(legacyData, 'covers'), { recursive: true });
-  fs.writeFileSync(path.join(legacyData, 'library.json'), JSON.stringify([makeWork()]), 'utf-8');
-  fs.writeFileSync(path.join(legacyData, 'covers', 'legada.png'), 'legacy-image', 'utf-8');
-  fs.writeFileSync(
-    path.join(legacyData, 'settings.json'),
-    JSON.stringify({ driveClientId: 'id-legado' }),
-    'utf-8',
-  );
-  // Sessão do provedor anterior (Google): o app novo não a reaproveita nem a copia.
+  // Instalação existente no lugar: biblioteca, capas e settings no XDG.
+  fs.mkdirSync(path.join(dataDir(), 'covers'), { recursive: true });
+  fs.writeFileSync(path.join(dataDir(), 'library.json'), JSON.stringify([makeWork()]), 'utf-8');
+  fs.writeFileSync(path.join(dataDir(), 'covers', 'capa.png'), 'cover-image', 'utf-8');
+  fs.mkdirSync(configDir(), { recursive: true });
+  fs.writeFileSync(path.join(configDir(), 'settings.json'), JSON.stringify({ language: 'pt-BR' }));
 
-  app.getPath.mockReturnValue(LEGACY_ROOT);
   await import('@zero/main/index');
   await vi.waitFor(() => expect(ipcMain.handle).toHaveBeenCalled());
+  // O app não grava segredo sem cofre aberto: a suíte abre um de teste.
+  await openTestVault();
 });
 
 describe('inicialização', () => {
@@ -238,11 +234,11 @@ describe('atalho F11 (tela cheia)', () => {
   });
 });
 
-describe('migração de dados legados', () => {
-  it('copia biblioteca, capas e settings antigos (sem sessão do provedor anterior)', () => {
+describe('diretórios do app', () => {
+  it('biblioteca, capas e settings ficam no XDG, sem arquivo de token', () => {
     expect(fs.existsSync(path.join(dataDir(), 'library.json'))).toBe(true);
-    expect(fs.readFileSync(path.join(dataDir(), 'covers', 'legada.png'), 'utf-8')).toBe(
-      'legacy-image',
+    expect(fs.readFileSync(path.join(dataDir(), 'covers', 'capa.png'), 'utf-8')).toBe(
+      'cover-image',
     );
     expect(fs.existsSync(path.join(configDir(), 'settings.json'))).toBe(true);
     expect(fs.existsSync(path.join(configDir(), 'drive-tokens.json'))).toBe(false);
@@ -270,11 +266,10 @@ describe('handlers de biblioteca', () => {
 });
 
 describe('handlers de configurações e Drive', () => {
-  it('settings:get devolve as credenciais migradas', () => {
+  it('settings:get devolve o idioma do disco (segredos vêm do cofre)', () => {
     const settings = invoke('settings:get') as AppSettings;
     expect(settings).toEqual({
-      driveClientId: 'id-legado',
-      driveClientSecret: '',
+      driveClientId: '',
       drivePassphrase: '',
       language: 'pt-BR',
     });
@@ -302,7 +297,6 @@ describe('handlers de configurações e Drive', () => {
   it('drive:auth usa a chave das configurações e roda o OAuth do Dropbox', async () => {
     invoke('settings:set', {
       driveClientId: 'id-do-teste',
-      driveClientSecret: '',
       drivePassphrase: '',
     });
     shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
@@ -326,9 +320,11 @@ describe('handlers de configurações e Drive', () => {
   });
 
   it('drive:auth usa a chave embutida quando o settings não tem override', async () => {
+    // `settings:set` preserva a chave do cofre quando a janela manda `''`
+    // (ela não tem campo): limpar é papel de quem gravou (aqui, o teste).
+    setSecret(VAULT_SECRET.driveClientId, '');
     invoke('settings:set', {
       driveClientId: '',
-      driveClientSecret: '',
       drivePassphrase: '',
     });
     shell.openExternal.mockImplementationOnce((url: string): Promise<void> => {
@@ -376,20 +372,19 @@ describe('handlers de configurações e Drive', () => {
   it('settings:set grava e normaliza as credenciais', () => {
     const saved = invoke('settings:set', {
       driveClientId: '  novo-id  ',
-      driveClientSecret: '  novo-segredo  ',
       drivePassphrase: 'frase',
       language: 'en',
     }) as AppSettings;
     expect(saved).toEqual({
       driveClientId: 'novo-id',
-      driveClientSecret: 'novo-segredo',
       drivePassphrase: 'frase',
       language: 'en',
     });
-    const onDisk = JSON.parse(
+    // O disco guarda só o idioma; os segredos ficam no cofre.
+    const onDisk: unknown = JSON.parse(
       fs.readFileSync(path.join(configDir(), 'settings.json'), 'utf-8'),
-    ) as AppSettings;
-    expect(onDisk).toEqual(saved);
+    );
+    expect(onDisk).toEqual({ language: 'en' });
   });
 });
 
@@ -559,5 +554,17 @@ describe('F11 depois que a janela é fechada', () => {
     if (toggle === undefined) throw new Error('Callback do F11 ausente.');
     toggle();
     expect(win.setFullScreen).not.toHaveBeenCalled();
+  });
+});
+
+describe('encerramento', () => {
+  it('zera a chave do cofre no before-quit', () => {
+    vaultSession.adopt(Buffer.alloc(32, 7));
+    expect(vaultSession.isUnlocked()).toBe(true);
+
+    appListener('before-quit')();
+
+    expect(vaultSession.isUnlocked()).toBe(false);
+    expect(vaultSession.key()).toBeNull();
   });
 });

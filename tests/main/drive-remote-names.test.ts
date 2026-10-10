@@ -46,8 +46,8 @@ async function backupWithCover(): Promise<FakeDropbox> {
 }
 
 describe('nomes remotos opacos', { timeout: 60_000 }, () => {
-  beforeEach(() => {
-    resetDrive();
+  beforeEach(async () => {
+    await resetDrive();
   });
 
   it('backup sobe só nomes opacos com manifesto cifrado', async () => {

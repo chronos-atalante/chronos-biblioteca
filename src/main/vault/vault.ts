@@ -13,15 +13,19 @@ import {
   seal,
   unseal,
 } from '@zero/main/vault/crypto';
-import { VaultError } from '@zero/main/vault/errors';
+import { VaultError, isVaultError } from '@zero/main/vault/errors';
 import { lockoutState, lockUntilFor } from '@zero/main/vault/lockout';
+import { setupVaultDirectory } from '@zero/main/vault/privilege';
 import { vaultSession } from '@zero/main/vault/session';
-import { configDir } from '@zero/main/paths';
 
 /**
  * Ciclo de vida do cofre: criar, desbloquear, travar e ler/gravar segredos.
  * O container mora em `<cofre>/vault.zkv`; a chave-mestra só existe na
  * sessão (`VaultSessionManager`), nunca em variável de módulo nem em disco.
+ *
+ * A pasta fica em `/var/lib/.chronos-biblioteca/.vault` (fora de `~`, para
+ * sobreviver à limpeza do home do usuário) e é criada no `postinst`; quando
+ * o app não tem permissão para criar, `createVault` pede sudo via PolicyKit.
  */
 
 interface VaultPayload {
@@ -29,10 +33,13 @@ interface VaultPayload {
   secrets: Record<string, string>;
 }
 
-/** Diretório do cofre (`CHRONOS_VAULT_DIR` sobrepõe, para testes/dev). */
+/** Diretório do cofre (`/var/lib/.chronos-biblioteca/.vault` por padrão). */
 export function vaultDir(): string {
   const override = process.env.CHRONOS_VAULT_DIR;
-  return override !== undefined && override !== '' ? override : path.join(configDir(), '.vault');
+  if (override !== undefined && override !== '') return override;
+  const varLib = process.env.CHRONOS_VAR_LIB;
+  const base = varLib !== undefined && varLib !== '' ? varLib : '/var/lib';
+  return path.join(base, '.chronos-biblioteca', '.vault');
 }
 
 export function vaultPath(): string {
@@ -41,6 +48,35 @@ export function vaultPath(): string {
 
 export function vaultExists(): boolean {
   return fs.existsSync(vaultPath());
+}
+
+function errnoCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return undefined;
+  const code: unknown = error.code;
+  return typeof code === 'string' ? code : undefined;
+}
+
+/** `EACCES`/`EPERM`/`EROFS`: dá para resolver pedindo sudo (pkexec). */
+export function isVaultDirUnavailable(error: unknown): boolean {
+  if (isVaultError(error)) return error.code === 'vaultDirUnavailable';
+  const code = errnoCode(error);
+  return code === 'EACCES' || code === 'EPERM' || code === 'EROFS';
+}
+
+/**
+ * Garante a árvore do cofre com `0700`. Sem permissão de escrita lança
+ * `VaultError('vaultDirUnavailable')`, que é o sinal para o chamador abrir a
+ * caixinha de senha do sistema (`setupVaultDirectory`) e tentar de novo.
+ */
+export function ensureVaultStructure(): void {
+  const dir = vaultDir();
+  try {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    fs.chmodSync(dir, 0o700);
+  } catch (error) {
+    if (isVaultDirUnavailable(error)) throw new VaultError('vaultDirUnavailable');
+    throw error;
+  }
 }
 
 function readContainer(): VaultContainer | null {
@@ -53,17 +89,30 @@ function readContainer(): VaultContainer | null {
 }
 
 function writeContainer(container: VaultContainer): void {
-  const dir = vaultDir();
-  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  try {
-    fs.chmodSync(dir, 0o700);
-  } catch {
-    // melhor esforço: a escrita do arquivo já garante 0600
-  }
+  ensureVaultStructure();
   const file = vaultPath();
   const tmp = `${file}.tmp`;
   fs.writeFileSync(tmp, encodeContainer(container), { mode: 0o600 });
   fs.renameSync(tmp, file);
+}
+
+/**
+ * Cria a árvore do cofre. Sem permissão em `/var/lib` (máquina onde o
+ * `postinst` não rodou, ou pasta removida pelo usuário), abre a caixinha de
+ * senha do sistema e tenta de novo; recusada pelo usuário o código é
+ * `vaultAuthCancelled`.
+ */
+function ensureVaultStructureWithSetup(): void {
+  try {
+    ensureVaultStructure();
+    return;
+  } catch (error) {
+    if (!isVaultDirUnavailable(error)) throw error;
+    const setup = setupVaultDirectory();
+    if (setup === 'cancelled') throw new VaultError('vaultAuthCancelled');
+    if (setup === 'failed') throw error;
+    ensureVaultStructure();
+  }
 }
 
 function decodePayload(data: Buffer): VaultPayload | null {
@@ -119,6 +168,11 @@ export async function createVault(
 ): Promise<VaultStatus> {
   if (vaultExists()) throw new VaultError('vaultExists');
   if (passwordProblem(password) !== null) throw new VaultError('vaultWeakPassword');
+
+  // A criação da estrutura pode tornar visível um cofre que já existia
+  // (pasta sem permissão de listagem); rechega antes de escrever por cima.
+  ensureVaultStructureWithSetup();
+  if (vaultExists()) throw new VaultError('vaultExists');
 
   const masterKey = newMasterKey();
   const salt = newSalt();
