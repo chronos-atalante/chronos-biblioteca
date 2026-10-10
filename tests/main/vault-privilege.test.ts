@@ -30,10 +30,11 @@ beforeEach(() => {
 
 afterEach(() => {
   for (const name of ['CHRONOS_VAULT_DIR', 'CHRONOS_VAR_LIB'] as const) {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     if (env[name] === undefined) delete process.env[name];
     else process.env[name] = env[name];
   }
-  delete (process as { resourcesPath?: string }).resourcesPath;
+  Reflect.deleteProperty(process, 'resourcesPath');
 });
 
 describe('setupVaultDirectory (pkexec)', () => {

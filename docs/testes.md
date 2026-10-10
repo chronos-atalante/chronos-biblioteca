@@ -22,29 +22,29 @@ auditoria OSV. Rode os dois antes de concluir qualquer mudança.
 
 ### Processo main
 
-| Arquivo                                 | O que cobre                                                                                         |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `tests/main/index.test.ts`              | Boot (instância única, protocolos, IPC), handlers, `cover://`, ciclo da janela, F11, diretórios XDG |
-| `tests/main/index.dev.test.ts`          | Modo desenvolvimento (Vite dev server, ausência em produção)                                        |
-| `tests/main/index-startup.test.ts`      | Arranque resiliente: falha de disco em `initDrive` não impede a janela nem o registro de IPC        |
-| `tests/main/index-vault.test.ts`        | Canais `vault:*` (criar/desbloquear/trava), guarda `assertAppFrame` e auto-lock (`vault:locked`)    |
-| `tests/main/jsonfile.test.ts`           | `writeJsonAtomic`: escrita atômica, `mode` aplicado mesmo com `.tmp` pré-existente                  |
-| `tests/main/library.test.ts`            | `library.json` e capas: XDG, `clampProgress`, roundtrip, restauração, mime, erros resistentes       |
-| `tests/main/settings.test.ts`           | `settings.json`: idioma no disco, segredos no cofre, normalização e recusa com cofre fechado        |
-| `tests/main/vault-crypto.test.ts`       | Argon2id, AES-256-GCM, HKDF, faixa do KDF e regra de força da senha mestra                          |
-| `tests/main/vault-container.test.ts`    | Formato do `vault.zkv`: roundtrip, offsets, lixo, truncamento, faixa e fail-closed                  |
-| `tests/main/vault-lockout.test.ts`      | Escala da trava (10 s até 24 h) e estado por tentativa                                              |
-| `tests/main/vault-session.test.ts`      | Singleton da sessão: `adopt`/`wipe`, zeragem de bytes e repasse do auto-lock                        |
-| `tests/main/vault.test.ts`              | Ciclo de vida: criar, senha fraca, desbloquear, senha errada, trava, segredos, adulteração          |
-| `tests/main/vault-secrets.test.ts`      | Cofre é a única fonte: sem/aberto/fechado/adulterado (falha fechada), sem migração do legado        |
-| `tests/main/vault-privilege.test.ts`  | `setupVaultDirectory`: override bloqueia pkexec; exit 0/126/127/throw → ok/cancelled/failed; `isVaultDirUnavailable` e `createVault` sem pkexec no sandbox        |
-| `tests/main/drive-auth.test.ts`         | Estado do Dropbox, `authorize` (loopback/PKCE), desconexão e refresh                                |
-| `tests/main/drive-backup.test.ts`       | `backupNow`/`restoreNow` ponta a ponta (rede simulada, cifra real)                                  |
-| `tests/main/drive-crypto.test.ts`       | Formato `WTENC3`: cifra, nomes opacos, falha com senha errada                                       |
-| `tests/main/drive-info.test.ts`         | `backupInfo`, renovação de sessão e retry após 401                                                  |
-| `tests/main/drive-provider.test.ts`     | Catálogo de provedores (Dropbox operante, Google Drive oculto)                                      |
-| `tests/main/drive-remote-names.test.ts` | Nomes remotos opacos (HMAC-SHA256) e manifesto de cadeia                                            |
-| `tests/main/drive-restore-lock.test.ts` | Trava exponencial da restauração (só `PassphraseError` conta)                                       |
+| Arquivo                                 | O que cobre                                                                                                                                                |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/main/index.test.ts`              | Boot (instância única, protocolos, IPC), handlers, `cover://`, ciclo da janela, F11, diretórios XDG                                                        |
+| `tests/main/index.dev.test.ts`          | Modo desenvolvimento (Vite dev server, ausência em produção)                                                                                               |
+| `tests/main/index-startup.test.ts`      | Arranque resiliente: falha de disco em `initDrive` não impede a janela nem o registro de IPC                                                               |
+| `tests/main/index-vault.test.ts`        | Canais `vault:*` (criar/desbloquear/trava), guarda `assertAppFrame` e auto-lock (`vault:locked`)                                                           |
+| `tests/main/jsonfile.test.ts`           | `writeJsonAtomic`: escrita atômica, `mode` aplicado mesmo com `.tmp` pré-existente                                                                         |
+| `tests/main/library.test.ts`            | `library.json` e capas: XDG, `clampProgress`, roundtrip, restauração, mime, erros resistentes                                                              |
+| `tests/main/settings.test.ts`           | `settings.json`: idioma no disco, segredos no cofre, normalização e recusa com cofre fechado                                                               |
+| `tests/main/vault-crypto.test.ts`       | Argon2id, AES-256-GCM, HKDF, faixa do KDF e regra de força da senha mestra                                                                                 |
+| `tests/main/vault-container.test.ts`    | Formato do `vault.zkv`: roundtrip, offsets, lixo, truncamento, faixa e fail-closed                                                                         |
+| `tests/main/vault-lockout.test.ts`      | Escala da trava (10 s até 24 h) e estado por tentativa                                                                                                     |
+| `tests/main/vault-session.test.ts`      | Singleton da sessão: `adopt`/`wipe`, zeragem de bytes e repasse do auto-lock                                                                               |
+| `tests/main/vault.test.ts`              | Ciclo de vida: criar, senha fraca, desbloquear, senha errada, trava, segredos, adulteração                                                                 |
+| `tests/main/vault-secrets.test.ts`      | Cofre é a única fonte: sem/aberto/fechado/adulterado (falha fechada), sem migração do legado                                                               |
+| `tests/main/vault-privilege.test.ts`    | `setupVaultDirectory`: override bloqueia pkexec; exit 0/126/127/throw → ok/cancelled/failed; `isVaultDirUnavailable` e `createVault` sem pkexec no sandbox |
+| `tests/main/drive-auth.test.ts`         | Estado do Dropbox, `authorize` (loopback/PKCE), desconexão e refresh                                                                                       |
+| `tests/main/drive-backup.test.ts`       | `backupNow`/`restoreNow` ponta a ponta (rede simulada, cifra real)                                                                                         |
+| `tests/main/drive-crypto.test.ts`       | Formato `WTENC3`: cifra, nomes opacos, falha com senha errada                                                                                              |
+| `tests/main/drive-info.test.ts`         | `backupInfo`, renovação de sessão e retry após 401                                                                                                         |
+| `tests/main/drive-provider.test.ts`     | Catálogo de provedores (Dropbox operante, Google Drive oculto)                                                                                             |
+| `tests/main/drive-remote-names.test.ts` | Nomes remotos opacos (HMAC-SHA256) e manifesto de cadeia                                                                                                   |
+| `tests/main/drive-restore-lock.test.ts` | Trava exponencial da restauração (só `PassphraseError` conta)                                                                                              |
 
 ### Preload, tipos e renderer
 
