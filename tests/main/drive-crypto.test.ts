@@ -3,21 +3,22 @@ import { decryptWith, isEncrypted, maybeEncrypt } from '@zero/main/drive/crypto'
 import { saveSettings } from '@zero/main/settings';
 import { resetSandbox } from '../helpers/sandbox.ts';
 import { PASSPHRASE } from '../helpers/drive.ts';
+import { openTestVault } from '../helpers/vault.ts';
 
 const SECRET_DATA = Buffer.from('{"obras":[{"id":"segredo"}]}', 'utf-8');
 
 function withPassphrase(passphrase = PASSPHRASE): void {
   saveSettings({
     driveClientId: '',
-    driveClientSecret: '',
     drivePassphrase: passphrase,
     language: 'pt-BR',
   });
 }
 
 describe('formato WTENC3 (único)', { timeout: 30_000 }, () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetSandbox();
+    await openTestVault();
     withPassphrase();
   });
 

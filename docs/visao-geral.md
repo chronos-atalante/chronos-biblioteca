@@ -63,10 +63,11 @@ desenvolvimento e também não entra no pacote.
    `~/.local/share/chronos-biblioteca/library.json`.
 2. Uso corrente: adicionar/editar obras, mover a barra de progresso, buscar e
    filtrar; tudo local e instantâneo (gravação com debounce).
-3. Backup opcional: defina a senha de criptografia em Configurações, conecte o
-   Dropbox (OAuth + PKCE) e faça backup; restaurar pede a senha. Se você criar
-   o cofre de segredos, os tokens e a senha de backup passam a morar nele e os
-   fluxos pedem a senha mestra quando ele estiver fechado.
+3. Backup opcional: crie o **cofre de segredos** e defina a senha de
+   criptografia em Configurações, conecte o Dropbox (OAuth + PKCE) e faça
+   backup; restaurar pede a senha. Tokens e senha de backup moram no cofre e
+   todo fluxo pede a senha mestra quando ele estiver fechado (sem cofre
+   aberto não há backup).
 4. Distribuição: push na `main` publica o `.deb` e o repositório APT assinado
    na GitHub Release; `sudo apt upgrade` atualiza o app
    (`docs/distribuicao-apt.md`).
@@ -86,14 +87,14 @@ desenvolvimento e também não entra no pacote.
   cifra o backup e é exigida para restaurar (`settings.drivePassphrase`).
 - **App key (PKCE)**: chave que identifica o app no Dropbox; sem `app secret`
   (fluxo público PKCE). A embutida é `EMBEDDED_APP_KEY` e uma alternativa pode
-  ser configurada (`driveClientId`).
+  ser gravada no cofre (`settings.driveClientId`; sem campo na UI).
 - **Tokens do Dropbox**: `access_token` curto + `refresh_token` duradouro
-  devolvidos pela autorização e guardados localmente (segredo `dropbox.tokens`
-  do cofre quando ele existe, senão `dropbox-tokens.json` com modo `0600`).
-- **Cofre de segredos**: arquivo local cifrado sob uma senha mestra
-  (Argon2id + AES-256-GCM) que guarda os segredos do app (tokens do Dropbox,
-  senha de backup, App key alternativa); abre por sessão e sofre auto-lock
-  após 5 minutos (`docs/cofre.md`).
+  devolvidos pela autorização, guardados só como segredo `dropbox.tokens` do
+  cofre (nunca em arquivo em claro).
+- **Cofre de segredos**: arquivo cifrado sob uma senha mestra (Argon2id +
+  AES-256-GCM) em `/var/lib/.chronos-biblioteca/.vault` que guarda os segredos
+  do app (tokens do Dropbox, senha de backup, App key alternativa); abre por
+  sessão e sofre auto-lock após 5 minutos (`docs/cofre.md`).
 - **Provedor de backup**: implementação do contrato `BackupProvider`
   (`authorize` + 4 operações de arquivo); Dropbox operante, Google Drive não
   operante (`docs/backup-providers.md`).

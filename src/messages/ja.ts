@@ -62,6 +62,8 @@ export const ja: Messages = {
     toastSaveError: '作品を保存できませんでした。',
     toastSaved: '作品を保存しました。',
     toastRemoved: '作品を削除しました。',
+    startupFailed: (detail: string): string =>
+      `Chronos Biblioteca を起動できませんでした。\n\n技術的な詳細: ${detail}`,
   },
 
   settings: {
@@ -73,10 +75,6 @@ export const ja: Messages = {
       'フォルダはあなたのアカウント内に見えるので、すべてのファイルは解読不能な名前と ' +
       '暗号化された内容でアップロードされます (AES-256-GCM)。最初のバックアップ前に ' +
       '以下の暗号化パスフレーズを設定してください。',
-    keyringWarning:
-      'システム鍵ストレージが利用できません。バックアップパスフレーズは鍵ストレージによる ' +
-      '追加保護なしで保存されます（ファイル自体はあなた専用のアクセス権のままです）。' +
-      '可能であればシステム鍵ストレージを有効にしてください (GNOME Keyring / KWallet / Keychain / DPAPI)。',
     languageLabel: '言語',
     providersLabel: 'バックアップ先',
     hiddenFolder: '非公開フォルダ',
@@ -328,6 +326,8 @@ export const ja: Messages = {
       vaultWrongPassword: 'マスターパスワードが正しくありません。',
       vaultTampered: '金庫が破損するか改ざんされています。',
       vaultWeakPassword: '推測しやすいパスワードです。より簡単ではないものにしてください。',
+      vaultDirUnavailable: '保管庫フォルダーを作成できません。権限を確認してください。',
+      vaultAuthCancelled: '保管庫フォルダーの作成をキャンセルしました。',
     },
   },
 

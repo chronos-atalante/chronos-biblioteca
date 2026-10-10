@@ -9,7 +9,6 @@ import {
   globalShortcut,
   ipcMain,
   nativeImage,
-  protocol,
   session,
 } from 'electron';
 import {
@@ -20,10 +19,9 @@ import {
   deleteWork,
   importCover,
   loadLibrary,
-  mimeFor,
   upsertWork,
 } from '@zero/main/library';
-import { isKeyringAvailable, loadSettings, saveSettings } from '@zero/main/settings';
+import { loadSettings, saveSettings } from '@zero/main/settings';
 import {
   authorize,
   backupInfo,
@@ -47,53 +45,19 @@ import {
 } from '@zero/main/vault';
 import { currentMessages } from '@zero/main/i18n';
 import { openExternalSafe } from '@zero/main/external';
+import { APP_ORIGIN, registerAppProtocol, registerCoverProtocol } from '@zero/main/protocols';
 import type { AppSettings, DriveStatus, VaultResult, VaultStatus, Work } from '@zero/types';
 
-protocol.registerSchemesAsPrivileged([
-  {
-    scheme: 'cover',
-    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
-  },
-  {
-    // Scheme que serve a página do app em produção (via protocol.handle), no
-    // lugar de file:// (recomendado pela doc de 2026 do Electron).
-    scheme: 'chronos',
-    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
-  },
-]);
-
-const APP_SCHEME = 'chronos';
-const APP_ORIGIN = `${APP_SCHEME}://app`;
-
-// Diretórios da marca anterior (Webtoons Biblioteca), mantidos para migração.
-const legacyDirs = [
-  path.join(app.getPath('appData'), 'Webtoons Biblioteca'),
-  path.join(app.getPath('appData'), 'webtoons-biblioteca'),
-];
 app.setPath('userData', cacheDir());
 
-(function migrateLegacyData(): void {
+/** Diretórios XDG do app no boot (cada escrita também recria os seus). */
+(function ensureAppDirs(): void {
   try {
-    for (const legacy of legacyDirs) {
-      if (!fs.existsSync(legacy)) continue;
-      const mapping: [string, string][] = [
-        ['library.json', path.join(dataDir(), 'library.json')],
-        ['covers', path.join(dataDir(), 'covers')],
-        ['settings.json', path.join(configDir(), 'settings.json')],
-      ];
-      for (const [name, to] of mapping) {
-        const from = path.join(legacy, name);
-        if (fs.existsSync(from) && !fs.existsSync(to)) {
-          fs.mkdirSync(path.dirname(to), { recursive: true });
-          fs.cpSync(from, to, { recursive: true });
-        }
-      }
-    }
     fs.mkdirSync(dataDir(), { recursive: true });
     fs.mkdirSync(configDir(), { recursive: true });
     coversDir();
   } catch {
-    // ignora falhas de migração
+    // melhor esforço: settings e library recriam no primeiro uso
   }
 })();
 
@@ -155,92 +119,6 @@ function createWindow(): void {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-  });
-}
-
-function registerCoverProtocol(): void {
-  protocol.handle('cover', (request) => {
-    try {
-      const url = new URL(request.url);
-      const name = path.basename(decodeURIComponent(url.pathname));
-      if (name === '') return new Response('Não encontrado', { status: 404 });
-      const full = path.join(coversDir(), name);
-      if (!fs.existsSync(full)) return new Response('Não encontrado', { status: 404 });
-      const buffer = fs.readFileSync(full);
-      return new Response(new Uint8Array(buffer), {
-        headers: {
-          'Content-Type': mimeFor(name),
-          'Cache-Control': 'max-age=3600',
-        },
-      });
-    } catch {
-      return new Response('Erro', { status: 500 });
-    }
-  });
-}
-
-/** Extenação → tipo MIME mínimo para servir a SPA local. */
-function rendererMime(file: string): string {
-  switch (path.extname(file).toLowerCase()) {
-    case '.html':
-      return 'text/html; charset=utf-8';
-    case '.js':
-    case '.mjs':
-      return 'text/javascript; charset=utf-8';
-    case '.css':
-      return 'text/css; charset=utf-8';
-    case '.json':
-      return 'application/json; charset=utf-8';
-    case '.map':
-      return 'application/json; charset=utf-8';
-    case '.svg':
-      return 'image/svg+xml';
-    case '.png':
-      return 'image/png';
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg';
-    case '.gif':
-      return 'image/gif';
-    case '.webp':
-      return 'image/webp';
-    case '.avif':
-      return 'image/avif';
-    case '.ico':
-      return 'image/x-icon';
-    case '.woff':
-      return 'font/woff';
-    case '.woff2':
-      return 'font/woff2';
-    default:
-      return 'application/octet-stream';
-  }
-}
-
-/**
- * Serve a SPA empacotada sob o scheme `chronos://` (em vez de `file://`,
- * recomendado pela doc atual do Electron): todo `/assets/...` resolve dentro de
- * `out/renderer`, com path traversal rejeitado por `path.resolve` + prefix.
- */
-function registerAppProtocol(): void {
-  const root = path.join(__dirname, '../renderer');
-  protocol.handle(APP_SCHEME, (request) => {
-    try {
-      const u = new URL(request.url);
-      const rel = decodeURIComponent(u.pathname).replace(/^\/+/, '');
-      const full = path.resolve(root, rel === '' ? 'index.html' : rel);
-      if (!full.startsWith(`${root}${path.sep}`)) {
-        return new Response('Forbidden', { status: 403 });
-      }
-      if (!fs.existsSync(full) || fs.statSync(full).isDirectory()) {
-        return new Response('Não encontrado.', { status: 404 });
-      }
-      return new Response(new Uint8Array(fs.readFileSync(full)), {
-        headers: { 'Content-Type': rendererMime(full) },
-      });
-    } catch {
-      return new Response('Erro', { status: 500 });
-    }
   });
 }
 
@@ -344,14 +222,23 @@ function registerIpc(): void {
     return loadSettings();
   });
 
+  // Grava idioma no disco e segredos no cofre: exige cofre aberto (a UI abre
+  // antes), então a rejeição vira mensagem localizada em vez de erro cru.
   ipcMain.handle('settings:set', (event, settings: AppSettings): AppSettings => {
     assertAppFrame(event);
-    return saveSettings(settings);
-  });
-
-  ipcMain.handle('settings:keyring', (event): boolean => {
-    assertAppFrame(event);
-    return isKeyringAvailable();
+    try {
+      // A janela não tem campo de App key: `''` ali significa "sem campo",
+      // não "limpar". Mantém a chave já gravada no cofre (override gravado
+      // por fora, de desenvolvimento; ver `docs/dropbox.md` §1).
+      const driveClientId =
+        settings.driveClientId === '' ? loadSettings().driveClientId : settings.driveClientId;
+      return saveSettings({ ...settings, driveClientId });
+    } catch (error) {
+      if (isVaultError(error)) {
+        throw new Error(currentMessages().vault.errors[error.code], { cause: error });
+      }
+      throw error;
+    }
   });
 
   ipcMain.handle('drive:status', (event): DriveStatus => {
@@ -419,10 +306,14 @@ function registerIpc(): void {
 
   ipcMain.handle('vault:lock', (event): VaultStatus => {
     assertAppFrame(event);
-    return lockVault();
+    const status = lockVault();
+    // Com o cofre fechado a sessão do Dropbox não sobrevive em memória.
+    reloadDriveState();
+    return status;
   });
 
   vaultSession.onAutoLock(() => {
+    reloadDriveState();
     if (mainWindow !== null && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('vault:locked');
     }
@@ -465,6 +356,42 @@ function registerFullscreenShortcut(): void {
   });
 }
 
+/**
+ * Apaga a chave-mestra do cofre da memória antes do processo morrer
+ * (`before-quit`, antes do `will-quit` do atalho F11; ver `docs/cofre.md`).
+ */
+function registerVaultShutdown(): void {
+  app.on('before-quit', () => {
+    vaultSession.dispose();
+  });
+}
+
+/**
+ * Inicialização em passos isolados: o que toca disco ou a nuvem não pode
+ * deixar o app sem janela (um EIO/EACCES vira `error` no log e o app segue
+ * no modo que conseguir); só a falha na própria janela encerra o processo,
+ * com caixa de erro, em vez de ficar um processo sem interface.
+ */
+function initApp(): void {
+  registerCoverProtocol();
+  registerAppProtocol();
+  registerIpc();
+  try {
+    initDrive();
+  } catch (error) {
+    console.error('Falha ao inicializar o backup em nuvem:', error);
+  }
+  removeApplicationMenu();
+  registerPermissionPolicy();
+  registerFullscreenShortcut();
+  registerVaultShutdown();
+  createWindow();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+}
+
 const gotLock = app.requestSingleInstanceLock();
 
 if (!gotLock) {
@@ -479,22 +406,11 @@ if (!gotLock) {
 
   app
     .whenReady()
-    .then(() => {
-      registerCoverProtocol();
-      registerAppProtocol();
-      registerIpc();
-      initDrive();
-      removeApplicationMenu();
-      registerPermissionPolicy();
-      registerFullscreenShortcut();
-      createWindow();
-
-      app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) createWindow();
-      });
-    })
+    .then(initApp)
     .catch((error: unknown) => {
       console.error('Falha ao iniciar o aplicativo:', error);
+      dialog.showErrorBox('Chronos Biblioteca', currentMessages().app.startupFailed(String(error)));
+      app.quit();
     });
 
   app.on('window-all-closed', () => {

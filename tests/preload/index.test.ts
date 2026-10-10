@@ -39,18 +39,15 @@ describe('preload (contextBridge)', () => {
     const api = exposedApi();
     const settings: AppSettings = {
       driveClientId: 'id',
-      driveClientSecret: 'segredo',
       drivePassphrase: 'frase',
       language: 'pt-BR',
     };
     await api.pickCover();
     await api.settings.get();
     await api.settings.set(settings);
-    await api.settings.isKeyringAvailable();
     expect(ipcRenderer.invoke).toHaveBeenCalledWith('cover:pick');
     expect(ipcRenderer.invoke).toHaveBeenCalledWith('settings:get');
     expect(ipcRenderer.invoke).toHaveBeenCalledWith('settings:set', settings);
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith('settings:keyring');
   });
 
   it('encaminha as operações do Drive', async () => {

@@ -149,7 +149,6 @@ describe('SettingsModal: credenciais', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: /^Salvar$/ }));
     expect(mock.settingsSet).toHaveBeenCalledWith({
       driveClientId: '',
-      driveClientSecret: '',
       drivePassphrase: 'frase',
       language: 'pt-BR',
     });
@@ -175,7 +174,6 @@ describe('SettingsModal: ações do Dropbox', () => {
     const { mock, notify } = setup({
       settings: {
         driveClientId: 'id',
-        driveClientSecret: 'segredo',
         drivePassphrase: 'frase',
         language: 'pt-BR',
       },
@@ -195,7 +193,6 @@ describe('SettingsModal: ações do Dropbox', () => {
     const { mock, notify } = setup({
       settings: {
         driveClientId: 'id',
-        driveClientSecret: 'segredo',
         drivePassphrase: 'frase',
         language: 'pt-BR',
       },
@@ -211,7 +208,6 @@ describe('SettingsModal: ações do Dropbox', () => {
     const { mock } = setup({
       settings: {
         driveClientId: 'id',
-        driveClientSecret: 'segredo',
         drivePassphrase: 'frase',
         language: 'pt-BR',
       },
@@ -306,7 +302,6 @@ describe('SettingsModal: configurações exibidas', () => {
   it('preenche o campo com a configuração salva', async () => {
     const saved: AppSettings = {
       driveClientId: 'id-salvo',
-      driveClientSecret: 'segredo-salvo',
       drivePassphrase: 'frase-salva',
       language: 'pt-BR',
     };
@@ -341,17 +336,28 @@ describe('SettingsModal: idioma', () => {
   });
 });
 
-describe('SettingsModal: aviso de chaveiro', () => {
-  it('avisa quando o cofre do sistema está indisponível', async () => {
-    const { mock } = setup({ keyringAvailable: false });
+describe('SettingsModal: cofre obrigatório para segredos', () => {
+  it('sem cofre, salvar abre a criação do cofre e não grava nada', async () => {
+    const { mock } = setup({
+      vault: { exists: false, unlocked: false, attempts: 0, lockUntil: 0 },
+    });
     await screen.findByText('Desconectado');
-    expect(mock.settingsKeyring).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/Cofre do sistema indisponível/)).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^Salvar$/ }));
+
+    expect(await screen.findByText('Criar o cofre de segredos')).toBeInTheDocument();
+    expect(mock.settingsSet).not.toHaveBeenCalled();
   });
 
-  it('não avisa quando o cofre do sistema está disponível', async () => {
-    setup({ keyringAvailable: true });
+  it('cofre fechado, conectar abre o desbloqueio e não chama o OAuth', async () => {
+    const { mock } = setup({ vault: { exists: true, unlocked: false, attempts: 0, lockUntil: 0 } });
     await screen.findByText('Desconectado');
-    expect(screen.queryByText(/Cofre do sistema indisponível/)).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Conectar/ }));
+
+    expect(await screen.findByText('Desbloquear o cofre')).toBeInTheDocument();
+    expect(mock.driveAuth).not.toHaveBeenCalled();
   });
 });

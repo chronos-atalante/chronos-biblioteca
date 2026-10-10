@@ -8,14 +8,40 @@ de senhas do usuário.
 
 ## Onde mora
 
-| Item      | Caminho                                         | Permissão |
-| --------- | ----------------------------------------------- | --------- |
-| Diretório | `~/.config/chronos-biblioteca/.vault/`          | `0700`    |
-| Container | `~/.config/chronos-biblioteca/.vault/vault.zkv` | `0600`    |
+| Item      | Caminho                                         | Permissão               |
+| --------- | ----------------------------------------------- | ----------------------- |
+| Raiz      | `/var/lib/.chronos-biblioteca/`                 | `0711` `root:root`      |
+| Diretório | `/var/lib/.chronos-biblioteca/.vault/`          | `0700` (dono = usuário) |
+| Container | `/var/lib/.chronos-biblioteca/.vault/vault.zkv` | `0600`                  |
 
-A escrita é atômica (`vault.zkv.tmp` + `rename`) e a leitura é **fail-closed**:
-forma inválida, truncamento, parâmetro fora da faixa ou byte a mais no fim
-devolvem "adulterado", nunca conteúdo em claro.
+O cofre fica em `/var/lib`, **fora de `~`**, para sobreviver à limpeza do home
+do usuário. A raiz é oculta e sem listagem: navegar ou excluir o topo da árvore
+exige sudo. Escrita atômica (`vault.zkv.tmp` + `rename`) e leitura
+**fail-closed**: forma inválida, truncamento, parâmetro fora da faixa ou byte a
+mais no fim devolvem "adulterado", nunca conteúdo em claro.
+
+## Criação e reparo da pasta
+
+A árvore é criada com permissão de escrita no `/var/lib` só onde ela falta:
+
+1. **Instalação** (`build/scripts/after-install.sh`, roda no `postinst`):
+   `install -d -m 0711 root:root /var/lib/.chronos-biblioteca` e
+   `install -d -m 0700 <SUDO_UID|PKEXEC_UID> /var/lib/.chronos-biblioteca/.vault`
+   (se o instalador não for identificado, o dono sai como root e o app conserta
+   no próximo uso).
+2. **No app** (`ensureVaultStructure` em `src/main/vault/vault.ts`): gravações
+   e criação chamam `ensureVaultStructure()` (`mkdir -p` + `chmod 0700`). Com
+   `EACCES`/`EPERM`/`EROFS` o erro vira `vaultDirUnavailable`.
+3. **Reparo** (`ensureVaultStructureWithSetup` + `src/main/vault/privilege.ts`):
+   na criação do cofre, `vaultDirUnavailable` dispara
+   `pkexec <process.resourcesPath>/biblioteca-setup` (helper do `.deb`, só cria
+   diretórios fixos, dono vindo de `PKEXEC_UID`) e tenta de novo. O diálogo é o
+   do PolicyKit (ação `com.chronos.biblioteca.setup-vault`); `pkexec 126`
+   (dispensado) vira `vaultAuthCancelled` e o resto vira `vaultDirUnavailable`
+   de novo. O app nunca vê a senha do sistema.
+
+Com `CHRONOS_VAULT_DIR`/`CHRONOS_VAR_LIB` definidas (testes e `npm run dev`)
+o pkexec **não dispara**: a sobrescrita já vem com permissão de escrita.
 
 ## Formato do container (`vault.zkv`)
 
@@ -89,30 +115,33 @@ chave na sessão, `getSecret`/`setSecret` falham com `vaultLocked`.
 ## Comportamento fail-closed
 
 - Container ilegível/adulterado → `vaultTampered`; nenhum segredo é entregue.
-- Cofre fechado → `vaultLocked`; consumidores legados seguem sem segredo novo.
-- Falha de leitura de arquivo → "não existe" (modo legado), nunca exceção
-  fora do domínio.
+- Cofre fechado → `vaultLocked`; `loadSettings` devolve `''` e `loadState`
+  zera os tokens (falha fechada, nunca exceção fora do domínio).
+- Pasta sem permissão → `vaultDirUnavailable`; caixinha do sistema em seguida
+  (ver acima) e, se recusada, `vaultAuthCancelled`.
 - Os canais IPC devolvem o envelope `VaultResult` com `code` + `retryInMs`
   (tabela em [`api.md`](api.md) §6); o texto exibido é localizado no renderer.
 
-## Migração do legado
+## Sem migração do legado
 
-O app continua **100% funcional sem cofre**: segredos antigos
-(`settings.json` com `enc:`/keyring e `dropbox-tokens.json` com `0600`) são o
-caminho legado. Na criação/desbloqueio do cofre esses valores são copiados
-para dentro e zerados de onde estavam. Regra: **o disco vence o cofre** (é a
-última escrita do usuário); cofre fechado ou adulterado volta ao legado sem
-lançar. Detalhe em [`credenciais.md`](credenciais.md).
+Nada é copiado de instalações antigas. `settings.json` com `enc:`/keyring e
+`dropbox-tokens.json` com `0600` são **ignorados**: `loadSettings` lê só o
+`language` do disco, `loadState` lê só o cofre, e o primeiro salvamento
+regrava o arquivo só com o idioma (sem segredo em claro). O cofre antigo em
+`~/.config/chronos-biblioteca/.vault` também é descartado: ele não é nem
+removido nem lido. Detalhe em [`credenciais.md`](credenciais.md).
 
 ## Variáveis de ambiente (testes e dev)
 
-| Variável            | Efeito                                                      |
-| ------------------- | ----------------------------------------------------------- |
-| `CHRONOS_VAULT_DIR` | sobrepõe o diretório do cofre (testes usam sandbox própria) |
+| Variável            | Efeito                                                                |
+| ------------------- | --------------------------------------------------------------------- |
+| `CHRONOS_VAULT_DIR` | sobrepõe o diretório do cofre (testes usam sandbox própria)           |
+| `CHRONOS_VAR_LIB`   | sobrepõe o `/var/lib` de base (testes e `npm run dev` usam o sandbox) |
 
-Os testes também isolam `HOME`/`XDG_CONFIG_HOME` (`tests/setup-env.ts`) e
-injetam KDF barato (`createVault(senha, params)`), então nenhum teste roda
-Argon2id com custo de produção.
+Ambas desligam o pedido de sudo. Os testes também isolam
+`HOME`/`XDG_CONFIG_HOME` (`tests/setup-env.ts`) e injetam KDF barato
+(`createVault(senha, params)`), então nenhum teste roda Argon2id com custo de
+produção.
 
 ## Arquivos do domínio
 
@@ -123,6 +152,7 @@ Argon2id com custo de produção.
 | `src/main/vault/lockout.ts`   | espera exponencial                             |
 | `src/main/vault/session.ts`   | chave em memória, auto-lock, wipe              |
 | `src/main/vault/vault.ts`     | criar/desbloquear/travar e ler/gravar segredos |
+| `src/main/vault/privilege.ts` | reparo da pasta via `pkexec` (PolicyKit)       |
 | `src/main/vault/secrets.ts`   | mapa de nomes + helpers JSON                   |
 | `src/main/vault/errors.ts`    | `VaultError` com `code`/`retryInMs`            |
 | `src/main/vault/index.ts`     | barrel                                         |

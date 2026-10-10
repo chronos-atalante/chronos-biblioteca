@@ -20,7 +20,6 @@ export interface ApiMockOptions {
   status?: DriveStatus;
   backupInfo?: BackupSummary | null;
   providers?: BackupProviderInfo[];
-  keyringAvailable?: boolean;
   vault?: VaultStatus;
 }
 
@@ -32,7 +31,6 @@ export interface ApiMock {
   pickCover: Mock<() => Promise<string | null>>;
   settingsGet: Mock<() => Promise<AppSettings>>;
   settingsSet: Mock<(settings: AppSettings) => Promise<AppSettings>>;
-  settingsKeyring: Mock<() => Promise<boolean>>;
   driveStatus: Mock<() => Promise<DriveStatus>>;
   driveProviders: Mock<() => Promise<BackupProviderInfo[]>>;
   driveAuth: Mock<() => Promise<{ ok: boolean; error?: string }>>;
@@ -52,7 +50,6 @@ export interface ApiMock {
 
 const DEFAULT_SETTINGS: AppSettings = {
   driveClientId: '',
-  driveClientSecret: '',
   drivePassphrase: '',
   language: 'pt-BR',
 };
@@ -107,10 +104,6 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     Promise.resolve(settings),
   );
 
-  const settingsKeyring = vi.fn((): Promise<boolean> =>
-    Promise.resolve(options.keyringAvailable ?? true),
-  );
-
   const driveStatus = vi.fn((): Promise<DriveStatus> =>
     Promise.resolve({ ...DEFAULT_STATUS, ...(options.status ?? {}) }),
   );
@@ -148,7 +141,8 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
   });
 
   // Padrão sem cofre: o gate do SettingsModal deixa os fluxos passarem.
-  const DEFAULT_VAULT: VaultStatus = { exists: false, unlocked: false, attempts: 0, lockUntil: 0 };
+  // Padrão: cofre criado e aberto (as ações do modal só rodam com cofre aberto).
+  const DEFAULT_VAULT: VaultStatus = { exists: true, unlocked: true, attempts: 0, lockUntil: 0 };
   let vault: VaultStatus = { ...DEFAULT_VAULT, ...(options.vault ?? {}) };
   const vaultListeners = new Set<() => void>();
 
@@ -192,7 +186,6 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     settings: {
       get: settingsGet,
       set: settingsSet,
-      isKeyringAvailable: settingsKeyring,
     },
     drive: {
       status: driveStatus,
@@ -221,7 +214,6 @@ export function createApiMock(options: ApiMockOptions = {}): ApiMock {
     pickCover,
     settingsGet,
     settingsSet,
-    settingsKeyring,
     driveStatus,
     driveProviders,
     driveAuth,

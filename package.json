@@ -17,7 +17,7 @@
   "homepage": "https://github.com/chronos-atalante/chronos-biblioteca",
   "license": "MIT",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "CHRONOS_VAULT_DIR=\"$PWD/.dev-vault\" electron-vite dev",
     "clean": "rm -rf out",
     "build": "npm run clean && electron-vite build",
     "start": "electron-vite preview",
@@ -125,7 +125,14 @@
         "xdg-utils",
         "libatspi2.0-0",
         "libuuid1"
-      ]
-    }
+      ],
+      "afterInstall": "build/scripts/after-install.sh"
+    },
+    "extraResources": [
+      {
+        "from": "build/scripts/biblioteca-setup",
+        "to": "biblioteca-setup"
+      }
+    ]
   }
 }

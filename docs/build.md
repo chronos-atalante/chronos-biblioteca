@@ -46,7 +46,9 @@ Bloco `build` do `package.json`:
 | `asar`                | ligado (o código vive no `app.asar`)                                 |
 | `afterPack`           | `build/after-pack.cjs` (slim: locales e SwiftShader removidos)       |
 | `deb.appArmorProfile` | `build/apparmor-profile` (perfil AppArmor real, não o decorativo)    |
+| `deb.afterInstall`    | `build/scripts/after-install.sh` (dirs do cofre + PolicyKit)         |
 | `deb.afterRemove`     | `build/postrm` (unload do perfil, alternatives e purge)              |
+| `extraResources`      | `build/scripts/biblioteca-setup` → `resources/biblioteca-setup`      |
 | `depends`             | GTK 3, libnotify, NSS, xss, xtst, xdg-utils, atspi e uuid            |
 | `electronFuses`       | 6 fuses apertados (abaixo)                                           |
 
@@ -78,7 +80,8 @@ essa chave, o que o `.deb` embutiria seria o perfil decorativo padrão
 processo instalado:
 
 - **escrita** só nos diretórios do app no home (`.config`/`.local/share`/
-  `.cache`/`.local/state/chronos-biblioteca` e as marcas legadas);
+  `.cache`/`.local/state/chronos-biblioteca`), no cofre de
+  `/var/lib/.chronos-biblioteca` (raiz `r`, vault `rw`) e no helper do pacote;
 - **leitura** do home ampla (o seletor de capa abre arquivo de qualquer pasta)
   com deny-list de credenciais (`.ssh`, `.gnupg`, chaveiros, perfis de
   navegador inclusive Brave, cofre/Cookies do Guardinha, `.aws`, `.docker`,
@@ -90,6 +93,15 @@ processo instalado:
   `SECURITY.md`);
 - base do Electron/GTK (namespaces, capabilities, `/proc`, abstrações X/Wayland,
   dbus e fontes).
+
+**Limitação conhecida:** o perfil não dá `w` nos pais XDG (`~/.config`,
+`~/.local/share`, `~/.cache`), de propósito — liberar o pai deixaria o app
+capaz de criar entradas arbitrárias em `.config`. Numa sessão normal esses
+diretórios já existem (o login os cria); só num home recém-criado o `mkdir`
+inicial é negado e o app abre em modo degradado (a falha de persistência vira
+`error` no log, sem derrubar a janela — ver `initApp` em `docs/arquitetura.md`).
+Se esse cenário virar requisito, acrescente a regra de pai e registre o custo
+de permissão aqui.
 
 O perfil usa as macros `${executable}`/`${sanitizedProductName}`, que o
 electron-builder substitui na hora do build. Validação de sintaxe local:
@@ -114,15 +126,38 @@ seletor de capa roda no `xdg-desktop-portal` do sistema, fora do confinamento
 (a mediação do perfil acontece na leitura que o próprio app faz do arquivo
 escolhido). O registro completo do ciclo está no `Doc/ROADMAP.md`.
 
+### `after-install` (postinst) e o helper do cofre
+
+`build/scripts/after-install.sh` é o `postinst` custom (`deb.afterInstall`),
+com o template padrão do electron-builder **mais** o que o cofre precisa:
+
+- `install -d -m 0711 root:root /var/lib/.chronos-biblioteca` (oculta, sem
+  listagem) e `install -d -m 0700 <SUDO_UID|PKEXEC_UID>` para
+  `/var/lib/.chronos-biblioteca/.vault` — se o instalador não for
+  identificado, o app repara no primeiro uso;
+- a ação do PolicyKit `com.chronos.biblioteca.setup-vault`
+  (`/usr/share/polkit-1/actions/com.chronos.biblioteca.policy`), que autoriza
+  **só** o helper do pacote (`annotate` com o caminho absoluto);
+- normalização do dono/modo de `resources/biblioteca-setup` (o build pode
+  gravar com outro dono; `pkexec` exige root e sem escrita do grupo).
+
+O helper `build/scripts/biblioteca-setup` (copiado por `extraResources` para
+`resources/`) roda como root via `pkexec`, **não** aceita caminho do chamador
+e só cria os dois diretórios fixos com os modos acima, dando o dono do vault a
+`PKEXEC_UID`. É ele que o `src/main/vault/privilege.ts` chama quando o app
+não consegue escrever em `/var/lib`.
+
 ### `postrm` (after-remove)
 
 Substitui o template padrão (via `deb.afterRemove`; roda pelo `writeConfigFile`,
-que resolve os placeholders de nome). No `remove` comum: remove o
-`update-alternatives`, **descarrega o perfil AppArmor do kernel** e apaga o
-arquivo (sem isso a policy ficaria imposta até o reboot). No `apt purge`,
-apaga também os dados do usuário em todos os homes
-(`.config`/`.local/share`/`.cache`/`.state/chronos-biblioteca` e as marcas
-antigas `Chronos Biblioteca`/`Webtoons Biblioteca`).
+que resolve os placeholders de nome). No No `remove` comum: remove o `update-alternatives`, **descarrega o perfil
+AppArmor do kernel** e apaga o arquivo (sem isso a policy ficaria imposta até
+o reboot), e apaga a ação do PolicyKit (fora do banco do dpkg). No `apt
+purge`, apaga também os dados do usuário em todos os homes
+(`.config`/`.local/share`/`.cache`/`.state/chronos-biblioteca`) **e o cofre
+em `/var/lib/.chronos-biblioteca`** (decisão de produto: purge leva junto).
+Pastas de marcas antigas (`Chronos Biblioteca`, `Webtoons Biblioteca`) não
+são mais tocadas nem lidas.
 
 ## Integridade: check e testes antes do pacote
 

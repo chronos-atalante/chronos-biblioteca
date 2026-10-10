@@ -1,9 +1,11 @@
 # Testes
 
-Suíte em Vitest com o renderer em jsdom e o processo main em Node. São **30
-arquivos** e **356 testes**; a duração gira em torno de 2 minutos porque o
-Argon2id do cofre roda de verdade (perfil de 128 MiB) e alguns testes de
-backup usam scrypt com custo real.
+Suíte em Vitest com ambiente `jsdom` único (`vitest.config.mts`): o renderer e
+também o processo main rodam em `jsdom`, com o `electron` trocado pelo stub de
+`tests/mocks/electron.ts`. São **33 arquivos** e **365 testes**; a duração
+gira em torno de 2 minutos porque os testes de backup cifram de verdade com
+scrypt `N=2^17` (~128 MiB por derivação), enquanto o Argon2id do cofre roda
+com o KDF barato dos testes (16 MiB).
 
 ## Como rodar
 
@@ -20,26 +22,29 @@ auditoria OSV. Rode os dois antes de concluir qualquer mudança.
 
 ### Processo main
 
-| Arquivo                                 | O que cobre                                                                                          |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `tests/main/index.test.ts`              | Boot (instância única, protocolos, IPC), handlers, `cover://`, ciclo da janela, F11, migração legada |
-| `tests/main/index.dev.test.ts`          | Modo desenvolvimento (Vite dev server, ausência em produção)                                         |
-| `tests/main/index-vault.test.ts`        | Canais `vault:*` (criar/desbloquear/trava), guarda `assertAppFrame` e auto-lock (`vault:locked`)     |
-| `tests/main/library.test.ts`            | `library.json` e capas: XDG, `clampProgress`, roundtrip, restauração, mime, erros resistentes        |
-| `tests/main/settings.test.ts`           | `settings.json`: normalização, idioma, App key, senha de backup, caminho do cofre                    |
-| `tests/main/vault-crypto.test.ts`       | Argon2id, AES-256-GCM, HKDF, faixa do KDF e regra de força da senha mestra                           |
-| `tests/main/vault-container.test.ts`    | Formato do `vault.zkv`: roundtrip, offsets, lixo, truncamento, faixa e fail-closed                   |
-| `tests/main/vault-lockout.test.ts`      | Escala da trava (10 s até 24 h) e estado por tentativa                                               |
-| `tests/main/vault-session.test.ts`      | Singleton da sessão: `adopt`/`wipe`, zeragem de bytes e repasse do auto-lock                         |
-| `tests/main/vault.test.ts`              | Ciclo de vida: criar, senha fraca, desbloquear, senha errada, trava, segredos, adulteração           |
-| `tests/main/vault-migration.test.ts`    | Legado → cofre: modo legado intacto, migração de ida, fechado e adulterado (falha fechada)           |
-| `tests/main/drive-auth.test.ts`         | Estado do Dropbox, `authorize` (loopback/PKCE), desconexão e refresh                                 |
-| `tests/main/drive-backup.test.ts`       | `backupNow`/`restoreNow` ponta a ponta (rede simulada, cifra real)                                   |
-| `tests/main/drive-crypto.test.ts`       | Formato `WTENC3`: cifra, nomes opacos, falha com senha errada                                        |
-| `tests/main/drive-info.test.ts`         | `backupInfo`, renovação de sessão e retry após 401                                                   |
-| `tests/main/drive-provider.test.ts`     | Catálogo de provedores (Dropbox operante, Google Drive oculto)                                       |
-| `tests/main/drive-remote-names.test.ts` | Nomes remotos opacos (HMAC-SHA256) e manifesto de cadeia                                             |
-| `tests/main/drive-restore-lock.test.ts` | Trava exponencial da restauração (só `PassphraseError` conta)                                        |
+| Arquivo                                 | O que cobre                                                                                         |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `tests/main/index.test.ts`              | Boot (instância única, protocolos, IPC), handlers, `cover://`, ciclo da janela, F11, diretórios XDG |
+| `tests/main/index.dev.test.ts`          | Modo desenvolvimento (Vite dev server, ausência em produção)                                        |
+| `tests/main/index-startup.test.ts`      | Arranque resiliente: falha de disco em `initDrive` não impede a janela nem o registro de IPC        |
+| `tests/main/index-vault.test.ts`        | Canais `vault:*` (criar/desbloquear/trava), guarda `assertAppFrame` e auto-lock (`vault:locked`)    |
+| `tests/main/jsonfile.test.ts`           | `writeJsonAtomic`: escrita atômica, `mode` aplicado mesmo com `.tmp` pré-existente                  |
+| `tests/main/library.test.ts`            | `library.json` e capas: XDG, `clampProgress`, roundtrip, restauração, mime, erros resistentes       |
+| `tests/main/settings.test.ts`           | `settings.json`: idioma no disco, segredos no cofre, normalização e recusa com cofre fechado        |
+| `tests/main/vault-crypto.test.ts`       | Argon2id, AES-256-GCM, HKDF, faixa do KDF e regra de força da senha mestra                          |
+| `tests/main/vault-container.test.ts`    | Formato do `vault.zkv`: roundtrip, offsets, lixo, truncamento, faixa e fail-closed                  |
+| `tests/main/vault-lockout.test.ts`      | Escala da trava (10 s até 24 h) e estado por tentativa                                              |
+| `tests/main/vault-session.test.ts`      | Singleton da sessão: `adopt`/`wipe`, zeragem de bytes e repasse do auto-lock                        |
+| `tests/main/vault.test.ts`              | Ciclo de vida: criar, senha fraca, desbloquear, senha errada, trava, segredos, adulteração          |
+| `tests/main/vault-secrets.test.ts`      | Cofre é a única fonte: sem/aberto/fechado/adulterado (falha fechada), sem migração do legado        |
+| `tests/main/vault-privilege.test.ts`  | `setupVaultDirectory`: override bloqueia pkexec; exit 0/126/127/throw → ok/cancelled/failed; `isVaultDirUnavailable` e `createVault` sem pkexec no sandbox        |
+| `tests/main/drive-auth.test.ts`         | Estado do Dropbox, `authorize` (loopback/PKCE), desconexão e refresh                                |
+| `tests/main/drive-backup.test.ts`       | `backupNow`/`restoreNow` ponta a ponta (rede simulada, cifra real)                                  |
+| `tests/main/drive-crypto.test.ts`       | Formato `WTENC3`: cifra, nomes opacos, falha com senha errada                                       |
+| `tests/main/drive-info.test.ts`         | `backupInfo`, renovação de sessão e retry após 401                                                  |
+| `tests/main/drive-provider.test.ts`     | Catálogo de provedores (Dropbox operante, Google Drive oculto)                                      |
+| `tests/main/drive-remote-names.test.ts` | Nomes remotos opacos (HMAC-SHA256) e manifesto de cadeia                                            |
+| `tests/main/drive-restore-lock.test.ts` | Trava exponencial da restauração (só `PassphraseError` conta)                                       |
 
 ### Preload, tipos e renderer
 
@@ -65,9 +70,10 @@ auditoria OSV. Rode os dois antes de concluir qualquer mudança.
 | `tests/mocks/electron.ts`   | Stub do `electron` aplicado por alias no `vitest.config.mts` (janela, ipcMain, app, shell)     |
 | `tests/setup-env.ts`        | Sandbox `HOME`/`XDG_*` temporária por processo (antes de qualquer import)                      |
 | `tests/setup.ts`            | `jest-dom`, `cleanup`, `restoreAllMocks`, `unstubAllGlobals` e `useRealTimers` após cada teste |
-| `tests/helpers/sandbox.ts`  | `resetSandbox()`/`sandboxPath()`: limpa os diretórios XDG do processo                          |
+| `tests/helpers/sandbox.ts`  | `resetSandbox()`/`sandboxPath()`: limpa os diretórios XDG e a árvore do cofre do processo      |
 | `tests/helpers/api.ts`      | `createApiMock()`: fachada `ElectronApi` tipada para os testes de renderer                     |
 | `tests/helpers/drive.ts`    | Rede simulada (servidor local) e sessão do Drive pronta para os testes de backup               |
+| `tests/helpers/vault.ts`    | `openTestVault()`: cofre de teste recriado e aberto (KDF barato)                               |
 | `tests/helpers/fixtures.ts` | Fábricas de `Work`/`AppSettings` com defaults válidos                                          |
 
 ## Convenções
@@ -84,11 +90,16 @@ auditoria OSV. Rode os dois antes de concluir qualquer mudança.
   registro de IPC e do protocolo acontece no import do `src/main/index.ts` e
   seria apagado antes dos asserts.
 - **Sandbox sempre**: escritas caem em diretório temporário (`setup-env.ts`);
-  testes que precisam de um disco limpo chamam `resetSandbox()` no `beforeEach`.
-  O cofre respeita `CHRONOS_VAULT_DIR` e a maioria dos testes usa KDF barato
-  injetável, mas os testes de `vault/crypto` rodam o Argon2id de produção
-  (128 MiB) de propósito: não baixe o custo nem aumente o timeout além dos 15 s
-  globais (os de backup/restauração declaram 60 s no `describe`).
+  testes que precisam de um disco limpo chamam `resetSandbox()` no
+  `beforeEach` — ele também apaga a árvore do cofre (`CHRONOS_VAR_LIB` aponta
+  para o sandbox, e `CHRONOS_VAULT_DIR` nunca está definido fora do
+  `npm run dev`). Cofre de teste se cria com `openTestVault()`
+  (`tests/helpers/vault.ts`), que recria o arquivo e deixa a sessão aberta.
+  **Todos** os testes de cofre derivam com o KDF barato (`FAST_KDF`, 16 MiB /
+  1 iteração): nenhum roda o Argon2id de produção (128 MiB / 3 iterações) — a
+  faixa aceita é coberta por `kdfParamsInRange`, sem derivar. Quem cifra de verdade é o backup: os
+  testes de `drive/*` usam scrypt de custo real (`N=2^17`), por isso os
+  `describe` de backup/restauração declaram 60 s (o timeout global é 15 s).
 - **`electron` é mock**: nunca importe o Electron real; o alias já aponta para
   `tests/mocks/electron.ts`. No renderer, use `createApiMock()` para a
   fachada.
@@ -99,14 +110,14 @@ auditoria OSV. Rode os dois antes de concluir qualquer mudança.
 
 `vitest.config.mts` mede `src/**/*.{ts,tsx}` com o provedor v8 (relatórios em
 texto e HTML em `coverage/`) e exige **50%** de linhas, instruções, funções e
-ramos. Estado atual (após a Fase 7):
+ramos. Estado atual (após a Fase 13):
 
 | Métrica    | Global | `src/main/vault/*` |
 | ---------- | ------ | ------------------ |
-| Statements | 88,2%  | 93,5%              |
-| Branches   | 80,7%  | 85,6%              |
-| Functions  | 84,3%  | 98,1%              |
-| Lines      | 90,7%  | 98,2%              |
+| Statements | 87,4%  | 93,2%              |
+| Branches   | 80,6%  | 85,0%              |
+| Functions  | 84,0%  | 98,7%              |
+| Lines      | 89,9%  | 98,7%              |
 
 Os `*.ts` de tipo puro e o `index.html` ficam de fora (`global.d.ts`,
 `src/renderer/index.html`); os bundles de idioma não traduzidos contam pouco

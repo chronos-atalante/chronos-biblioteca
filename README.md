@@ -90,8 +90,9 @@ O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
   `/usr/bin/chronos-biblioteca`)
 - Ícone instalado em `/usr/share/icons/hicolor/512x512/apps/chronos-biblioteca.png`
 - Dados: obras e capas em `~/.local/share/chronos-biblioteca/` (`library.json`, `covers/`);
-  configurações em `~/.config/chronos-biblioteca/` (`settings.json`) junto com o cofre de
-  segredos (`.vault/`); sem cofre criado, os tokens seguem em `dropbox-tokens.json`
+  configurações em `~/.config/chronos-biblioteca/` (`settings.json`, só o idioma) e
+  cofre de segredos em `/var/lib/.chronos-biblioteca/.vault/` (raiz `0711 root`, vault
+  `0700` do usuário; criado no `postinst` e reparado pelo PolicyKit)
 
 ---
 
@@ -238,7 +239,8 @@ flowchart TD
     end
 
     subgraph MAIN["Main: Electron (src/main)"]
-        IDX["index.ts: janela, IPC, protocolo cover:, F11"]
+        IDX["index.ts: janela, IPC, ciclo de vida, F11"]
+        PRT["protocols.ts: cover:// (capas) e chronos:// (SPA)"]
         LIB["library.ts: library.json + capas"]
         SET["settings.ts: App key, senha do backup e idioma"]
         DRV["drive/: provedor Dropbox, OAuth PKCE, backup (AES-256-GCM)"]
@@ -250,13 +252,15 @@ flowchart TD
 
     subgraph STORAGE["Persistência"]
         LOKAL[("~/.local/share/chronos-biblioteca/<br/>library.json · covers/")]
-        CFG[("~/.config/chronos-biblioteca/<br/>settings.json · .vault/ · dropbox-tokens.json (legado)")]
+        CFG[("~/.config/chronos-biblioteca/<br/>settings.json (só idioma)")]
+        VAULT[("/var/lib/.chronos-biblioteca/<br/>.vault/ · vault.zkv")]
         DRIVE[("Dropbox · pasta do app /Apps/Chronos Biblioteca")]
     end
 
     BRIDGE -->|"ipcRenderer.invoke"| IDX
     IDX --> LIB --> LOKAL
     IDX --> SET --> CFG
+    IDX --> SET --> VAULT
     IDX --> DRV
     DRV <-->|"HTTPS (fetch) · App folder + PKCE, sem secret"| DRIVE
     IDX -.->|"cover://imagens-da-capa"| UI1
@@ -313,13 +317,16 @@ sequenceDiagram
 ## Estrutura do projeto
 
 ```
-Webtoons/
+chronos-biblioteca/
 ├── build/
 │   ├── after-pack.cjs        # slim do pacote (locales/SwiftShader; nunca libffmpeg)
 │   ├── apparmor-profile      # perfil AppArmor real instalado no .deb
 │   ├── icon.png              # ícone 512×512 usado no .deb
 │   ├── make-icon.py          # gerador do ícone (PIL)
-│   └── postrm                # after-remove: unload do perfil, alternatives e purge
+│   ├── scripts/
+│   │   ├── after-install.sh   # postinst: dirs do cofre em /var/lib + ação do PolicyKit
+│   │   └── biblioteca-setup   # helper root (pkexec) que só cria os dirs do cofre
+│   └── postrm                # after-remove: unload do perfil, alternatives, policy e purge
 ├── docs/
 │   ├── visao-geral.md          # visão geral: o que é/não é, dependências, glossário
 │   ├── arquitetura.md          # camadas, aliases @zero/*, IPC e ciclo de vida
@@ -333,16 +340,21 @@ Webtoons/
 │   ├── seguranca.md            # mapa de segurança (medida → arquivo)
 │   ├── messages.md             # i18n: bundles pt-BR/en/ko/zh-CN/ja e o que não se traduz
 │   ├── testes.md               # testes: como rodar, inventário, convenções, cobertura
-│   ├── atribuicoes.md        # página de Atribuições (créditos em loop)
-│   ├── doacoes.md            # página de Doações (Mercado Pago)
-│   └── api.md                # referência da API interna
+│   ├── atribuicoes.md          # página de Atribuições (créditos em loop)
+│   ├── doacoes.md              # página de Doações (Mercado Pago)
+│   ├── api.md                  # referência da API interna
+│   └── openapi.yaml            # a mesma API em OpenAPI 3.1
 ├── src/
 │   ├── main/                 # processo main (Electron)
-│   │   ├── index.ts          # janela, IPC, protocolo cover://, F11 em tela cheia
+│   │   ├── index.ts          # janela, IPC, ciclo de vida e F11 em tela cheia
+│   │   ├── protocols.ts      # schemes cover:// (capas) e chronos:// (SPA)
 │   │   ├── library.ts        # library.json + cópia/limpeza de capas
 │   │   ├── settings.ts       # App key, idioma e leitura/gravação no cofre
+│   │   ├── jsonfile.ts       # writeJsonAtomic (escrita atômica com mode)
+│   │   ├── paths.ts          # diretórios XDG do app (sem dependências de domínio)
+│   │   ├── external.ts       # openExternalSafe (só https:)
 │   │   ├── i18n.ts           # currentMessages() (idioma corrente no main)
-│   │   ├── vault/            # cofre de segredos (Argon2id, container, sessão)
+│   │   ├── vault/            # cofre de segredos (Argon2id, container, sessão, privilege)
 │   │   └── drive/            # provedores de nuvem, OAuth PKCE, backup/restauração
 │   │       ├── index.ts      # barrel da API pública (authorize, backupNow…)
 │   │       ├── provider.ts   # contrato BackupProvider + catálogo de provedores
@@ -375,9 +387,15 @@ Webtoons/
 │   ├── node.loader.ts        # hooks module.registerHooks() dos aliases @zero/*
 │   └── package.json          # "type": "module" (Node executa src/ direto)
 ├── tests/
-│   ├── main/                 # drive-auth, drive-backup, drive-info (<500 linhas cada)
-│   ├── helpers/              # fixtures, sandbox, drive (FakeDropbox + stubFetch)
-│   └── mocks/                # mock do electron para o Vitest
+│   ├── main/                 # boot, biblioteca, configurações, cofre e drive (<500 linhas cada)
+│   ├── renderer/             # App e componentes (jsdom)
+│   ├── preload/              # fachada window.api
+│   ├── shared/               # uniões fechadas e guards dos contratos
+│   ├── helpers/              # fixtures, sandbox, vault (openTestVault), drive (FakeDropbox)
+│   ├── mocks/                # mock do electron para o Vitest
+│   ├── setup-env.ts          # sandbox HOME/XDG temporária por processo de teste
+│   ├── setup.ts              # jest-dom, cleanup e restauração de mocks/timers
+│   └── tsconfig.json         # typecheck dos testes
 ├── .github/
 │   ├── workflows/            # CodeQL, agradecimento, publicação do .deb
 │   ├── ISSUE_TEMPLATE/       # formulários de bug e de funcionalidade
@@ -429,13 +447,14 @@ Detalhes da configuração (campo `build` do `package.json`):
 
 Fluxo resumido (passo a passo completo em [`docs/dropbox.md`](docs/dropbox.md)):
 
-1. ⚙ → defina a **senha de criptografia do backup** (obrigatória). A App key do Dropbox já
-   vem embutida no app (com PKCE não existe segredo: só a chave identifica o app, e o
-   acesso real fica no `refresh_token` guardado na sua máquina).
-2. **Conectar ao Dropbox** → janela do navegador → consentimento → tokens guardados
-   na sua máquina (no cofre de segredos, quando criado; senão em `dropbox-tokens.json`;
-   PKCE + callback fixo em `localhost:17431`, a URI
-   que o Dropbox exige pré-cadastrada).
+1. ⚙ → crie o **cofre de segredos** (senha mestra) e defina a **senha de criptografia do
+   backup** (obrigatória). A App key do Dropbox já vem embutida no app (com PKCE não
+   existe segredo: só a chave identifica o app, e o acesso real fica no `refresh_token`
+   guardado na sua máquina).
+2. **Conectar ao Dropbox** → janela do navegador → consentimento → tokens gravados no
+   cofre (`dropbox.tokens`; PKCE + callback fixo em `localhost:17431`, a URI
+   que o Dropbox exige pré-cadastrada). Sem cofre aberto o app pede para criar ou
+   desbloquear antes de continuar.
 3. **Fazer backup agora** → `library.json` + capas sobem **sempre criptografados**
    (AES-256-GCM, nomes de arquivo opacos via HMAC) para a **pasta do app**
    (`/Apps/Chronos Biblioteca`). A pasta aparece na sua conta, mas só este app a acessa
@@ -457,7 +476,7 @@ sequenceDiagram
     G-->>App: redirect http://localhost:17431/callback?code=...
     App->>G: POST /oauth2/token (code + code_verifier, sem secret)
     G-->>App: access_token (curto) + refresh_token (duradouro)
-    App->>App: grava dropbox.tokens (cofre) ou dropbox-tokens.json (legado)
+    App->>App: grava dropbox.tokens no cofre (senha mestra)
 
     U->>App: Fazer backup agora
     App->>App: criptografa library.json + capas (nomes opacos + AES-256-GCM)
@@ -497,7 +516,7 @@ Guias e referências (tudo em pt-BR):
 | [`docs/telas.md`](docs/telas.md)                       | Telas e componentes do renderer, com os fluxos de navegação            |
 | [`docs/dropbox.md`](docs/dropbox.md)                   | Guia do backup: OAuth PKCE, App folder, troubleshooting                |
 | [`docs/cofre.md`](docs/cofre.md)                       | Cofre de segredos: formato do container, KDF, trava e sessão           |
-| [`docs/credenciais.md`](docs/credenciais.md)           | Segredos do app: o que é guardado, ciclo de vida e migração            |
+| [`docs/credenciais.md`](docs/credenciais.md)           | Segredos do app: o que é guardado e o ciclo de vida (sem migração)     |
 | [`docs/backup-providers.md`](docs/backup-providers.md) | Provedores de backup: contrato, catálogo e Google Drive oculto         |
 | [`docs/distribuicao-apt.md`](docs/distribuicao-apt.md) | Distribuição: Release, repo APT flat assinado e fluxo de release       |
 | [`docs/build.md`](docs/build.md)                       | Build e pacote: comandos, `.deb`, fuses e gate de qualidade no CI      |

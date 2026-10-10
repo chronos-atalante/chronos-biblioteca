@@ -16,6 +16,7 @@ import { openExternalSafe } from '@zero/main/external';
 import { currentMessages } from '@zero/main/i18n';
 import { appKey, emit, persistState, setError, state, toMessage } from '@zero/main/drive/state';
 import type { Tokens } from '@zero/main/drive/state';
+import { vaultUnlocked } from '@zero/main/vault/secrets';
 
 interface AuthOutcome {
   code: string | null;
@@ -206,6 +207,12 @@ export async function authorize(): Promise<{ ok: boolean; error?: string }> {
     setError(error);
     return { ok: false, error };
   }
+  // A sessão só vale gravando no cofre: sem cofre aberto nem começa.
+  if (!vaultUnlocked()) {
+    const error = currentMessages().vault.errors.vaultLocked;
+    setError(error);
+    return { ok: false, error };
+  }
   try {
     const codeVerifier = crypto.randomBytes(32).toString('base64url');
     const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
@@ -226,9 +233,17 @@ export async function authorize(): Promise<{ ok: boolean; error?: string }> {
       return { ok: false, error };
     }
     tokens.accountEmail = await fetchAccountEmail(tokens.accessToken);
+    const previous = state.tokens;
     state.tokens = tokens;
+    try {
+      persistState();
+    } catch (error) {
+      // cofre trancou no meio do fluxo: a sessão não fica "conectada" sem
+      // ter sido gravada (voltaria como desconectada na próxima abertura).
+      state.tokens = previous;
+      throw error;
+    }
     setError(null);
-    persistState();
     emit();
     return { ok: true };
   } catch (err) {

@@ -56,14 +56,14 @@ flowchart TD
     BACKUP["backup.ts (genérico)"] -->|"currentProvider()"| CAT
 ```
 
-| Arquivo                                    | Papel                                                                                                             |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `src/main/drive/provider.ts`               | Contrato `BackupProvider`, registro e `currentProvider()`                                                         |
-| `src/main/drive/providers/dropbox.ts`      | Adapter do OAuth/REST do Dropbox para o contrato                                                                  |
-| `src/main/drive/providers/google-drive.ts` | Stub **não operante**: motivo + destino oculto documentados                                                       |
-| `src/main/drive/backup.ts`                 | Orquestração genérica (não cita provedor algum)                                                                   |
-| `src/main/drive/crypto.ts`                 | Criptografia genérica (AES-256-GCM + nomes opacos)                                                                |
-| `src/main/drive/state.ts`                  | Sessão em memória + tokens no cofre (`dropbox.tokens`; legado `dropbox-tokens.json`) (ainda única: só um conecta) |
+| Arquivo                                    | Papel                                                                               |
+| ------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `src/main/drive/provider.ts`               | Contrato `BackupProvider`, registro e `currentProvider()`                           |
+| `src/main/drive/providers/dropbox.ts`      | Adapter do OAuth/REST do Dropbox para o contrato                                    |
+| `src/main/drive/providers/google-drive.ts` | Stub **não operante**: motivo + destino oculto documentados                         |
+| `src/main/drive/backup.ts`                 | Orquestração genérica (não cita provedor algum)                                     |
+| `src/main/drive/crypto.ts`                 | Criptografia genérica (AES-256-GCM + nomes opacos)                                  |
+| `src/main/drive/state.ts`                  | Sessão em memória + tokens no cofre (`dropbox.tokens`) (ainda única: só um conecta) |
 
 O contrato é pequeno de propósito: `authorize()` + as 4 operações de arquivo
 (`listAppFiles`, `uploadFile`, `downloadFile`, `deleteFile`). Criptografia,

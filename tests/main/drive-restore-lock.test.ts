@@ -73,8 +73,8 @@ describe('restoreNow com a trava', { timeout: 60_000 }, () => {
   const LOCKED_ERROR =
     'Muitas tentativas de restauração com senha errada. Tente novamente em 10 segundos.';
 
-  beforeEach(() => {
-    resetDrive();
+  beforeEach(async () => {
+    await resetDrive();
     resetRestoreLock();
   });
 

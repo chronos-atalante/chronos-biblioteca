@@ -29,7 +29,7 @@ flowchart TD
     D -- não --> E["Erro exibido no app"]
     D -- sim --> F["Dropbox redireciona para<br/>http://localhost:17431/callback?code=..."]
     F --> G["App troca o code por<br/>access_token + refresh_token (PKCE, sem secret)"]
-    G --> H["Grava os tokens no cofre se ele estiver criado<br/>(senão dropbox-tokens.json, modo 0600)"]
+    G --> H["Grava dropbox.tokens no cofre de segredos<br/>(sem cofre aberto o fluxo nem chega aqui)"]
     H --> I["Status: conectado"]
     I --> J["Fazer backup agora"]
     J --> K["Criptografa library.json + capas<br/>(AES-256-GCM + scrypt)"]
@@ -52,9 +52,12 @@ flowchart TD
 > segredo algum; o `refresh_token` continua só na sua máquina.
 >
 > Esta seção é para quem quiser rodar com um **app Dropbox próprio**
-> (desenvolvimento): no lugar de campo na UI, o override é manual em
-> `~/.config/chronos-biblioteca/settings.json`, preenchendo `driveClientId`
-> com a sua chave (ele tem prioridade sobre a embutida).
+> (desenvolvimento): não há campo na UI nem arquivo de configuração. O
+> override é o segredo `settings.driveClientId` **no cofre**, com prioridade
+> sobre a embutida; para gravá-lo, com o cofre aberto, rode no devtools
+> `await window.api.settings.set({ ...(await window.api.settings.get()), driveClientId: 'sua-chave' })`.
+> O **Salvar** da janela não apaga o valor: ele manda `''` (a janela não tem
+> campo) e o main mantém a chave já gravada.
 
 Para criar o seu:
 
@@ -71,9 +74,8 @@ Para criar o seu:
    `http://localhost:17431/callback`
    O Dropbox só aceita URI http em `localhost` e exige o cadastro prévio; por
    isso o app usa sempre essa porta fixa em vez de sortear uma a cada conexão.
-5. Copie a **App key** e, para usá-la, grave-a em
-   `~/.config/chronos-biblioteca/settings.json` como `driveClientId`
-   (ex.: `{"driveClientId": "sua-app-key"}`).
+5. Copie a **App key** e, para usá-la, grave-a como `settings.driveClientId`
+   no cofre (comando do devtools citado acima; ex.: `driveClientId: 'sua-app-key'`).
 
 ### Development × Production (limites reais do Dropbox)
 
@@ -95,11 +97,11 @@ contas, é só pedir a produção, bem mais simples que a verificação do Googl
    - O navegador padrão abre a página de consentimento do Dropbox.
    - Após aprovar, o Dropbox redireciona para `http://localhost:17431/callback?code=...`.
    - O app captura o código, troca pelos tokens (PKCE) e mostra o status **Conectado**.
-4. Os tokens são gravados no **cofre de segredos** quando ele existe
-   (`dropbox.tokens`; ver [`cofre.md`](cofre.md)), senão em
-   `~/.config/chronos-biblioteca/dropbox-tokens.json` (modo `0600`, caminho
-   legado). O `refresh_token` do Dropbox é **duradouro** (só morre se você
-   revogar): nada de reconectar a cada 7 dias.
+4. Os tokens são gravados no **cofre de segredos** (`dropbox.tokens`; ver
+   [`cofre.md`](cofre.md)): sem cofre aberto a conexão nem começa (as
+   Configurações pedem para criar/desbloquear primeiro). O `refresh_token` do
+   Dropbox é **duradouro** (só morre se você revogar): nada de reconectar a
+   cada 7 dias.
 
 > Se os escopos pedidos pelo app mudarem um dia, a sessão salva é invalidada e
 > o app exibe “Permissões do Dropbox atualizadas. Reconecte a conta Dropbox.”:
@@ -133,11 +135,11 @@ sequenceDiagram
 
 ## 3. Backup e restauração
 
-| Botão                  | O que faz                                                                                                   |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Fazer backup agora** | Criptografa `library.json` e todas as capas e envia para a pasta do app (substitui tudo).                   |
-| **Restaurar**          | Abre o modal da **senha de criptografia**, baixa o backup, decifra e **substitui** a biblioteca local.      |
-| **Desconectar**        | Apaga os tokens locais (segredo do cofre, ou `dropbox-tokens.json` no legado). O backup na nuvem permanece. |
+| Botão                  | O que faz                                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Fazer backup agora** | Criptografa `library.json` e todas as capas e envia para a pasta do app (substitui tudo).              |
+| **Restaurar**          | Abre o modal da **senha de criptografia**, baixa o backup, decifra e **substitui** a biblioteca local. |
+| **Desconectar**        | Apaga `dropbox.tokens` do cofre. O backup na nuvem permanece.                                          |
 
 - **Criptografia é obrigatória**: sem senha de criptografia definida nas Configurações, o
   backup é recusado com a mensagem “Defina uma senha de criptografia do backup nas
@@ -165,8 +167,8 @@ sequenceDiagram
 
 | Sintoma                                                            | Causa provável / solução                                                                                                                                                                                              |
 | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| “Configure a chave do aplicativo Dropbox…”                         | Este build saiu sem chave embutida e o `settings.json` não tem `driveClientId`. Rebuild com a chave ou preencha o campo no arquivo (§1).                                                                              |
-| `redirect_uri_mismatch` ao conectar                                | A URI `http://localhost:17431/callback` não está em **Redirect URIs** no App Console, ou o `driveClientId` do `settings.json` é de outro app. Confira.                                                                |
+| “Configure a chave do aplicativo Dropbox…”                         | Este build saiu sem chave embutida e o cofre não tem `settings.driveClientId`. Rebuild com a chave ou grave a chave no cofre (§1).                                                                                    |
+| `redirect_uri_mismatch` ao conectar                                | A URI `http://localhost:17431/callback` não está em **Redirect URIs** no App Console, ou a `settings.driveClientId` do cofre é de outro app. Confira.                                                                 |
 | Porta `17431` ocupada ao conectar                                  | Outro programa usa a porta do callback. Feche-o e tente de novo (o app é de instância única, então normalmente é outra coisa).                                                                                        |
 | “Permissões do Dropbox atualizadas. Reconecte a conta Dropbox.”    | Os escopos pedidos pelo app mudaram. Clique em **Conectar ao Dropbox** de novo (uma vez).                                                                                                                             |
 | “Faltam permissões no app Dropbox…” ao conectar ou no backup       | Nem todas as caixas da aba **Permissions** estão marcadas, ou a sessão foi concedida antes de marcar. Marque os 5 escopos (§1), **Desconecte** e **Conecte de novo**; concessão antiga não ganha escopo novo sozinha. |
@@ -177,13 +179,16 @@ sequenceDiagram
 | Erro de rede / `Erro do Dropbox (HTTP …)`                          | Sem conexão, proxy/VPN bloqueando, ou cota do Dropbox estourada. Tente novamente.                                                                                                                                     |
 | Janela abre mas nada acontece após consentir                       | O navegador não conseguiu voltar para `localhost:17431` (porta bloqueada). Feche e tente de novo.                                                                                                                     |
 | “Fazer backup” falha / nada local                                  | A base local ainda não existe (instalação nova). Adicione ao menos uma obra antes de fazer o backup.                                                                                                                  |
-| App reinstalado localmente                                         | Os tokens vão embora com `~/.config/chronos-biblioteca/`; reconecte: o backup na nuvem é reaproveitado.                                                                                                               |
+| App reinstalado localmente                                         | O cofre (`/var/lib/.chronos-biblioteca/.vault`) vai embora com o `apt purge` e o `settings.json` fica onde sempre esteve. Reconecte: o backup na nuvem é reaproveitado.                                               |
 
 ---
 
 ## Segurança
 
-- Os tokens ficam **somente na sua máquina**: no cofre de segredos (`dropbox.tokens`, sob a senha mestra; ver [`cofre.md`](cofre.md)) quando ele existe, ou em `configDir/dropbox-tokens.json` com modo `0600` no caminho legado. Nunca em repositório.
+- Os tokens ficam **somente na sua máquina**: no cofre de segredos
+  (`dropbox.tokens`, sob a senha mestra; ver [`cofre.md`](cofre.md)), em
+  `/var/lib/.chronos-biblioteca/.vault`. Nunca em repositório, nunca em
+  arquivo em claro.
 - **Sem segredo embutido**: com PKCE o `app secret` nem entra no fluxo. A App key é pública por definição e a proteção vem do PKCE + loopback. O segredo de verdade é o `refresh_token`, que nunca sai da sua máquina. Para revogar tudo, desconecte no app **e** remova o app em <https://www.dropbox.com/account/security>.
 - Escopo mínimo: só a **pasta do app** (App folder; o app nem fica sabendo que o resto do seu Dropbox existe) + leitura do e-mail da conta (só para exibir qual conta está conectada).
 - **Criptografia obrigatória** no cliente: AES-256-GCM com chave derivada por scrypt (`N=2¹⁷`, mínimo do OWASP; salt e IV aleatórios por arquivo, autenticação GCM), e o Dropbox guarda apenas blobs cifrados de nome opaco.

@@ -68,6 +68,8 @@ export const ptBR = {
     toastSaveError: 'Não foi possível salvar a obra.',
     toastSaved: 'Obra salva.',
     toastRemoved: 'Obra removida.',
+    startupFailed: (detail: string): string =>
+      `Não foi possível iniciar o Chronos Biblioteca.\n\nDetalhes técnicos: ${detail}`,
   },
 
   settings: {
@@ -79,10 +81,6 @@ export const ptBR = {
       'para ele. Como a pasta é visível para você, todo arquivo sobe com nome ilegível e ' +
       'conteúdo criptografado (AES-256-GCM), então defina a senha de criptografia abaixo ' +
       'antes do primeiro backup.',
-    keyringWarning:
-      'Cofre do sistema indisponível: a senha do backup será guardada sem a proteção ' +
-      'extra do chaveiro (o arquivo continua com acesso só seu). Se puder, ative o ' +
-      'chaveiro do sistema (GNOME Keyring, KWallet, Keychain ou DPAPI).',
     languageLabel: 'Idioma',
     providersLabel: 'Provedores de backup',
     hiddenFolder: 'Pasta oculta',
@@ -334,6 +332,8 @@ export const ptBR = {
       vaultWrongPassword: 'Senha mestra incorreta.',
       vaultTampered: 'O cofre está danificado ou foi alterado.',
       vaultWeakPassword: 'Senha previsível. Escolha algo menos óbvio.',
+      vaultDirUnavailable: 'Não foi possível criar a pasta do cofre. Verifique as permissões.',
+      vaultAuthCancelled: 'A criação da pasta do cofre foi cancelada.',
     },
   },
 

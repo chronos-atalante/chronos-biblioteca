@@ -24,26 +24,27 @@ Cada método chama `ipcRenderer.invoke(canal, ...args)`, atendido por um
 `ipcMain.handle(canal, ...)` no processo main. A tabela abaixo cruza os três
 níveis (método → canal → origem dos dados):
 
-| `window.api`           | Canal IPC           | Origem dos dados                              |
-| ---------------------- | ------------------- | --------------------------------------------- |
-| `library.get()`        | `library:get`       | `library.json` local                          |
-| `library.save(obra)`   | `library:save`      | cria/atualiza obra + `library.json`           |
-| `library.remove(id)`   | `library:delete`    | remove obra + limpa capa órfã                 |
-| `pickCover()`          | `cover:pick`        | diálogo do SO → copia para `covers/`          |
-| `settings.get()`       | `settings:get`      | `settings.json` local                         |
-| `settings.set(cfg)`    | `settings:set`      | normaliza e grava `settings.json` (modo 0600) |
-| `drive.status()`       | `drive:status`      | estado em memória (+ tokens no cofre/legado)  |
-| `drive.auth()`         | `drive:auth`        | OAuth PKCE + loopback `localhost:17431`       |
-| `drive.backup()`       | `drive:backup`      | criptografa e envia à pasta do app            |
-| `drive.restore(senha)` | `drive:restore`     | baixa, decifra e substitui a biblioteca       |
-| `drive.backupInfo()`   | `drive:backup-info` | metadados do `library.json` remoto            |
-| `drive.disconnect()`   | `drive:disconnect`  | apaga a sessão e o segredo dos tokens         |
-| `drive.onStatus(cb)`   | evento (sem invoke) | assina `drive:status-changed`                 |
-| `vault.status()`       | `vault:status`      | container do cofre + sessão em memória        |
-| `vault.create(senha)`  | `vault:create`      | cria o cofre (Argon2id) e o deixa aberto      |
-| `vault.unlock(senha)`  | `vault:unlock`      | trava exponencial + Argon2id                  |
-| `vault.lock()`         | `vault:lock`        | zera a chave da sessão (auto-lock em 5 min)   |
-| `vault.onLocked(cb)`   | evento (sem invoke) | assina `vault:locked` (auto-lock)             |
+| `window.api`           | Canal IPC           | Origem dos dados                            |
+| ---------------------- | ------------------- | ------------------------------------------- |
+| `library.get()`        | `library:get`       | `library.json` local                        |
+| `library.save(obra)`   | `library:save`      | cria/atualiza obra + `library.json`         |
+| `library.remove(id)`   | `library:delete`    | remove obra + limpa capa órfã               |
+| `pickCover()`          | `cover:pick`        | diálogo do SO → copia para `covers/`        |
+| `settings.get()`       | `settings:get`      | idioma do disco + segredos do cofre         |
+| `settings.set(cfg)`    | `settings:set`      | segredos no cofre e `settings.json` (0600)  |
+| `drive.status()`       | `drive:status`      | estado em memória (+ tokens no cofre)       |
+| `drive.providers()`    | `drive:providers`   | catálogo `BackupProvider` (Dropbox, Google) |
+| `drive.auth()`         | `drive:auth`        | OAuth PKCE + loopback `localhost:17431`     |
+| `drive.backup()`       | `drive:backup`      | criptografa e envia à pasta do app          |
+| `drive.restore(senha)` | `drive:restore`     | baixa, decifra e substitui a biblioteca     |
+| `drive.backupInfo()`   | `drive:backup-info` | metadados do `library.json` remoto          |
+| `drive.disconnect()`   | `drive:disconnect`  | apaga a sessão e o segredo dos tokens       |
+| `drive.onStatus(cb)`   | evento (sem invoke) | assina `drive:status-changed`               |
+| `vault.status()`       | `vault:status`      | container do cofre + sessão em memória      |
+| `vault.create(senha)`  | `vault:create`      | cria o cofre (Argon2id) e o deixa aberto    |
+| `vault.unlock(senha)`  | `vault:unlock`      | trava exponencial + Argon2id                |
+| `vault.lock()`         | `vault:lock`        | zera a chave da sessão (auto-lock em 5 min) |
+| `vault.onLocked(cb)`   | evento (sem invoke) | assina `vault:locked` (auto-lock)           |
 
 ---
 
@@ -114,34 +115,27 @@ type Language = 'pt-BR' | 'en' | 'ko' | 'zh-CN' | 'ja';
 
 interface AppSettings {
   driveClientId: string; // App key alternativa ('' = usa a embutida; sem campo na UI)
-  driveClientSecret: string; // legado do provedor anterior, ignorado
   drivePassphrase: string; // senha de criptografia do backup (obrigatória p/ backup)
   language: Language; // idioma da interface e das mensagens
 }
 ```
 
-Campos ausentes ou com tipo errado no disco caem para `''` (padrão seguro);
-`language` fora de `'pt-BR' | 'en' | 'ko' | 'zh-CN' | 'ja'` cai para `'pt-BR'` (padrão também quando o
-arquivo não existe: o app não detecta o idioma do SO, a escolha é explícita
-em Configurações).
+`language` fora de `'pt-BR' | 'en' | 'ko' | 'zh-CN' | 'ja'` cai para `'pt-BR'`
+(também quando o arquivo não existe: o app não detecta o idioma do SO, a
+escolha é explícita em Configurações).
 
-A senha (`drivePassphrase`) é guardada no keyring do SO via `safeStorage`
-quando disponível (`enc:<base64>` em `settings.json`); sem keyring, em claro
-com permissão `0600` (fallback), e instalações antigas migram sozinhas no
-próximo salvamento. `settings.set` sempre devolve a forma utilizável (o
-formulário nunca exibe o blob `enc:`).
+Os dois segredos (`drivePassphrase`, `driveClientId`) moram **no cofre**
+([`cofre.md`](cofre.md)); o disco guarda só `language`. Com o cofre fechado
+`settings.get` devolve `''` para os segredos (falha fechada) e `settings.set`
+lança `vaultLocked` **antes** de gravar — a tela abre o cria/desbloqueio do
+cofre e reenvia.
 
 ### `settings.set(cfg: AppSettings) → Promise<AppSettings>`
 
-Normaliza (`trim` em ID/secret; senha preservada como digitada; `language`
-recaído para o valor válido mais próximo), grava `settings.json` com permissão
-`0600` e devolve o valor salvo.
-
-### `settings.isKeyringAvailable() → Promise<boolean>`
-
-Informa se o cofre do SO (`safeStorage`) está disponível para proteger a senha
-do backup. Quando devolve `false`, a senha cai no fallback em claro e a tela de
-Configurações exibe o aviso `settings.keyringWarning`.
+Normaliza (`trim` no ID, `language` recaído para o valor válido mais próximo),
+grava os segredos no cofre e o `language` em `settings.json` (`0600`, escrita
+atômica), e devolve o valor salvo. Um `''` em `driveClientId` não apaga uma
+chave já gravada (a janela não tem campo: ver [`dropbox.md`](dropbox.md) §1).
 
 ---
 
@@ -187,11 +181,11 @@ Abre o navegador (PKCE, sem `app secret`, com `token_access_type=offline`) e esc
 callback num servidor loopback de **porta fixa** (`localhost:17431`; o Dropbox exige a
 URI de redirect pré-cadastrada no App Console, então a porta não pode ser sorteada;
 se estiver ocupada, cai para uma livre e o Dropbox recusa com `redirect_uri_mismatch`).
-Troca o código por tokens e grava `dropbox.tokens` no cofre quando ele está
-aberto (sem cofre, `dropbox-tokens.json` modo `0600`). Falhas típicas:
+Troca o código por tokens e grava `dropbox.tokens` no cofre (exige cofre
+aberto: sem ele a tela abre a criação/desbloqueio antes). Falhas típicas:
 `access_denied` (usuário recusou), `Tempo esgotado aguardando autorização.`,
 `Falha ao obter tokens (HTTP).`. Sem App key (a embutida estando vazia e sem
-`driveClientId` no `settings.json`), recusa antes de abrir o navegador.
+`settings.driveClientId` no cofre), recusa antes de abrir o navegador.
 
 ### `drive.backup() → Promise<{ ok: boolean; error?: string; summary?: BackupSummary }>`
 
@@ -254,8 +248,8 @@ não for uma lista.
 
 ### `drive.disconnect() → Promise<DriveStatus>`
 
-Apaga os tokens locais (segredo `dropbox.tokens` do cofre, ou
-`dropbox-tokens.json` no caminho legado) e devolve o status desconectado. O backup na
+Apaga o segredo `dropbox.tokens` do cofre (falha fechada: com o cofre fechado
+nada é apagado às cegas) e devolve o status desconectado. O backup na
 nuvem **permanece** (apague a pasta `/Apps/Chronos Biblioteca` pelo Dropbox Web, se quiser;
 para cortar o acesso do app, remova-o em `dropbox.com/account/security`).
 
@@ -288,12 +282,13 @@ ao desmontar o componente.
 ## 6. Cofre de segredos
 
 Cofre local com senha mestra que guarda os segredos do app (`dropbox.tokens`,
-`settings.drivePassphrase`, `settings.driveClientId` — ver `docs/credenciais.md`
-e `docs/cofre.md`, da Fase 7 do roadmap). Domínio em
+`settings.drivePassphrase`, `settings.driveClientId` — ver
+[`credenciais.md`](credenciais.md) e [`cofre.md`](cofre.md)). Domínio em
 `src/main/vault/*`; canais registrados em `src/main/index.ts`. Todo fluxo que
 consome segredo (Conectar, Backup, Restaurar, Salvar configurações,
-Desconectar) chama `vault.status()` antes e abre o desbloqueio quando o cofre
-existe fechado; **sem cofre**, o app segue no modo legado de sempre.
+Desconectar) chama `vault.status()` antes e abre o cria/desbloqueio do cofre;
+**sem cofre aberto não há segredo nenhum** (falha fechada) e o app nunca grava
+fora dele.
 
 ### `vault.status() → Promise<VaultStatus>`
 
@@ -306,9 +301,11 @@ existe fechado; **sem cofre**, o app segue no modo legado de sempre.
 
 ### `vault.create(password: string) → Promise<VaultResult>`
 
-Cria o cofre já aberto (Argon2id + AES-256-GCM) e re-lê o estado do drive
-(os segredos legados migram para dentro). Recusa senha previsível
-(`vaultWeakPassword`) e cofre já existente (`vaultExists`).
+Cria o cofre já aberto (Argon2id + AES-256-GCM) e re-lê o estado do drive.
+Se a pasta em `/var/lib` não puder ser escrita, chama o helper do pacote via
+PolicyKit e tenta de novo (`vaultDirUnavailable`; diálogo dispensado =
+`vaultAuthCancelled`). Recusa senha previsível (`vaultWeakPassword`) e cofre
+já existente (`vaultExists`).
 
 ### `vault.unlock(password: string) → Promise<VaultResult>`
 
@@ -330,15 +327,17 @@ desbloqueio de novo.
 
 ### Códigos de erro (`VaultResult.ok === false`)
 
-| Código               | `retryInMs`     | Quando                                      |
-| -------------------- | --------------- | ------------------------------------------- |
-| `vaultWeakPassword`  | 0               | senha curta ou previsível na criação        |
-| `vaultExists`        | 0               | tentativa de criar um segundo cofre         |
-| `vaultMissing`       | 0               | desbloqueio sem cofre                       |
-| `vaultLocked`        | 0               | operação com a sessão fechada               |
-| `vaultWrongPassword` | espera da volta | senha errada (soma tentativa)               |
-| `vaultLockedOut`     | espera restante | tentativa durante a trava exponencial       |
-| `vaultTampered`      | 0               | container ilegível/alterado (falha fechada) |
+| Código                | `retryInMs`     | Quando                                       |
+| --------------------- | --------------- | -------------------------------------------- |
+| `vaultWeakPassword`   | 0               | senha curta ou previsível na criação         |
+| `vaultExists`         | 0               | tentativa de criar um segundo cofre          |
+| `vaultMissing`        | 0               | desbloqueio sem cofre                        |
+| `vaultLocked`         | 0               | operação com a sessão fechada                |
+| `vaultWrongPassword`  | espera da volta | senha errada (soma tentativa)                |
+| `vaultLockedOut`      | espera restante | tentativa durante a trava exponencial        |
+| `vaultTampered`       | 0               | container ilegível/alterado (falha fechada)  |
+| `vaultDirUnavailable` | 0               | pasta do cofre sem permissão de escrita      |
+| `vaultAuthCancelled`  | 0               | usuário dispensou o pedido de senha (pkexec) |
 
 ---
 
@@ -351,8 +350,9 @@ nome vazio), `500` (URL inválida). Nomes são higienizados com `basename`
 (anti path-traversal).
 
 Em produção, a SPA vem pelo scheme `chronos://` (desde a 1.5.0), implementado
-por `registerAppProtocol`: mapeia o pathname da URL para `out/renderer`, com
-`..` rejeitado (`path.resolve` + verificação de prefixo) — não usa `file://`.
+em `src/main/protocols.ts` por `registerAppProtocol`: mapeia o pathname da URL
+para `out/renderer`, com `..` rejeitado (`path.resolve` + verificação de
+prefixo) — não usa `file://`.
 
 ---
 

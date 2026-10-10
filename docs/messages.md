@@ -30,7 +30,7 @@ Regras das strings:
 | Camada     | Como obtém o idioma                                                                                                                                                                                                                 |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Renderer   | Contexto React em `src/renderer/src/i18n.tsx`: `MessagesProvider` (montado pelo `App`), hooks `useMessages()` / `useLanguage()` e `richText()`. **Fora do provider o padrão é `pt-BR`**, então testes isolados seguem em português. |
-| Main       | `currentMessages()` (`src/main/i18n.tsx`) lê `loadSettings().language` a cada chamada e devolve o bundle; os erros saem já no idioma vigente (o contrato IPC não mudou).                                                            |
+| Main       | `currentMessages()` (`src/main/i18n.ts`) lê `loadSettings().language` a cada chamada e devolve o bundle; os erros saem já no idioma vigente (o contrato IPC não mudou).                                                             |
 | Provedores | `BackupProvider.describe(messages)` monta o `BackupProviderInfo` localizado; `listProviders()` usa `currentMessages()` uma vez.                                                                                                     |
 
 `App` lê `settings.get()` na carga e troca o provider ao salvar em Configurações

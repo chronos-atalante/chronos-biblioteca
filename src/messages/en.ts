@@ -63,6 +63,8 @@ export const en: Messages = {
     toastSaveError: 'Could not save the work.',
     toastSaved: 'Work saved.',
     toastRemoved: 'Work removed.',
+    startupFailed: (detail: string): string =>
+      `Could not start Chronos Biblioteca.\n\nTechnical details: ${detail}`,
   },
 
   settings: {
@@ -74,10 +76,6 @@ export const en: Messages = {
       'of your Dropbox is not even visible to it. Since the folder is visible to you, every ' +
       'file is uploaded with an unreadable name and encrypted content (AES-256-GCM), so set ' +
       'the encryption password below before the first backup.',
-    keyringWarning:
-      'System keyring unavailable: the backup password will be stored without the extra ' +
-      'keyring protection (the file stays readable only by you). If you can, enable the ' +
-      'system keyring (GNOME Keyring, KWallet, Keychain or DPAPI).',
     languageLabel: 'Language',
     providersLabel: 'Backup providers',
     hiddenFolder: 'Hidden folder',
@@ -328,6 +326,8 @@ export const en: Messages = {
       vaultWrongPassword: 'Incorrect master password.',
       vaultTampered: 'The vault is damaged or was altered.',
       vaultWeakPassword: 'Predictable password. Choose something less obvious.',
+      vaultDirUnavailable: 'Could not create the vault folder. Check the permissions.',
+      vaultAuthCancelled: 'Creating the vault folder was cancelled.',
     },
   },
 

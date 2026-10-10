@@ -6,8 +6,11 @@ import type { DriveStatus } from '@zero/types';
 import { authorize, disconnect, getStatus, initDrive, onStatus } from '@zero/main/drive';
 import { SCOPE_VERSION } from '@zero/main/drive/constants';
 import { saveSettings } from '@zero/main/settings';
+import { lockVault, setSecret, unlockVault } from '@zero/main/vault';
+import { VAULT_SECRET } from '@zero/main/vault/secrets';
 import { shell } from '../mocks/electron.ts';
 import { APP_KEY, connect, json, resetDrive, stubFetch, tokensPath } from '../helpers/drive.ts';
+import { PASSWORD } from '../helpers/vault.ts';
 
 // Este arquivo também cobre o caminho "sem chave nenhuma" (build sem chave
 // embutida e sem override no settings.json), então a chave embutida é anulada
@@ -18,8 +21,8 @@ vi.mock('@zero/main/drive/constants', async (importOriginal) => {
 });
 
 describe('estado do Dropbox', { timeout: 60_000 }, () => {
-  beforeEach(() => {
-    resetDrive();
+  beforeEach(async () => {
+    await resetDrive();
   });
 
   it('inicia desconectado e sem erros', () => {
@@ -43,18 +46,36 @@ describe('estado do Dropbox', { timeout: 60_000 }, () => {
     expect(listener.mock.calls.at(-1)?.[0].connected).toBe(false);
   });
 
-  it('initDrive recarrega os tokens persistidos', async () => {
+  it('initDrive recarrega os tokens gravados no cofre', async () => {
     await connect();
-    expect(fs.existsSync(tokensPath())).toBe(true);
-    expect(fs.statSync(tokensPath()).mode & 0o777).toBe(0o600);
-    disconnect();
+    expect(getStatus().connected).toBe(true);
+    // O cofre é a única fonte: nenhum arquivo de token fora dele.
     expect(fs.existsSync(tokensPath())).toBe(false);
 
+    lockVault();
+    initDrive();
+    expect(getStatus().connected).toBe(false);
+
+    await unlockVault(PASSWORD);
+    initDrive();
+    const status = getStatus();
+    expect(status.connected).toBe(true);
+    expect(status.accountEmail).toBe('leitor@example.com');
+    expect(status.lastError).toBeNull();
+  });
+
+  it('initDrive falha fechada com token ilegível no cofre', () => {
+    setSecret(VAULT_SECRET.dropboxTokens, '{ corrompido');
+    initDrive();
+    expect(getStatus().connected).toBe(false);
+  });
+
+  it('initDrive ignora arquivo de token legado deixado no disco', () => {
+    fs.mkdirSync(path.dirname(tokensPath()), { recursive: true });
     fs.writeFileSync(
       tokensPath(),
       JSON.stringify({
-        accessToken: 'renovado',
-        refreshToken: 'refresh-1',
+        accessToken: 'token-antigo',
         expiresAt: Date.now() + 3_600_000,
         accountEmail: 'outra@x.com',
         lastSync: '2026-01-05T00:00:00.000Z',
@@ -63,49 +84,18 @@ describe('estado do Dropbox', { timeout: 60_000 }, () => {
       'utf-8',
     );
     initDrive();
-    const status = getStatus();
-    expect(status.connected).toBe(true);
-    expect(status.accountEmail).toBe('outra@x.com');
-    expect(status.lastSync).toBe('2026-01-05T00:00:00.000Z');
-    expect(status.lastError).toBeNull();
-  });
-
-  it('initDrive ignora arquivo de tokens corrompido', () => {
-    fs.mkdirSync(path.dirname(tokensPath()), { recursive: true });
-    fs.writeFileSync(tokensPath(), '{ corrompido', 'utf-8');
-    initDrive();
     expect(getStatus().connected).toBe(false);
-  });
-
-  it('initDrive descarta a sessão do provedor anterior', () => {
-    fs.mkdirSync(path.dirname(tokensPath()), { recursive: true });
-    const legacy = path.join(path.dirname(tokensPath()), 'drive-tokens.json');
-    fs.writeFileSync(
-      legacy,
-      JSON.stringify({
-        accessToken: 'token-google',
-        expiresAt: Date.now() + 3_600_000,
-        accountEmail: 'leitor@example.com',
-        lastSync: null,
-        scopeVersion: 2,
-      }),
-      'utf-8',
-    );
-    initDrive();
-    expect(getStatus().connected).toBe(false);
-    expect(fs.existsSync(legacy)).toBe(false);
   });
 });
 
 describe('authorize', { timeout: 60_000 }, () => {
-  beforeEach(() => {
-    resetDrive();
+  beforeEach(async () => {
+    await resetDrive();
   });
 
   it('recusa sem abrir o navegador quando não há chave do aplicativo', async () => {
     saveSettings({
       driveClientId: '',
-      driveClientSecret: '',
       drivePassphrase: 'frase',
       language: 'pt-BR',
     });
@@ -119,7 +109,6 @@ describe('authorize', { timeout: 60_000 }, () => {
   it('abre o OAuth com PKCE, offline e redirect fixo', async () => {
     saveSettings({
       driveClientId: APP_KEY,
-      driveClientSecret: '',
       drivePassphrase: 'frase',
       language: 'pt-BR',
     });
@@ -161,7 +150,6 @@ describe('authorize', { timeout: 60_000 }, () => {
   it('propaga o erro quando o usuário recusa a autorização', async () => {
     saveSettings({
       driveClientId: APP_KEY,
-      driveClientSecret: '',
       drivePassphrase: '',
       language: 'pt-BR',
     });
@@ -182,7 +170,6 @@ describe('authorize', { timeout: 60_000 }, () => {
   it('recusa a concessão sem todos os escopos', async () => {
     saveSettings({
       driveClientId: APP_KEY,
-      driveClientSecret: '',
       drivePassphrase: '',
       language: 'pt-BR',
     });
@@ -215,7 +202,6 @@ describe('authorize', { timeout: 60_000 }, () => {
   it('reporta falha na troca do código por tokens', async () => {
     saveSettings({
       driveClientId: APP_KEY,
-      driveClientSecret: '',
       drivePassphrase: '',
       language: 'pt-BR',
     });
