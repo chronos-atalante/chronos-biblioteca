@@ -1,4 +1,4 @@
-# Perfil AppArmor do Chronos Biblioteca.
+# Perfil AppArmor do Cronologia.
 #
 # Substitui o perfil decorativo que o electron-builder gera por padrão
 # (`flags=(unconfined)`, que dá nome ao processo mas não restringe nada);
@@ -58,7 +58,7 @@ profile ${executable} "/opt/${sanitizedProductName}/${executable}" {
   @{run}/systemd/resolve/** r,
 
   # ---------- executáveis do pacote ----------
-  # Caminhos entre aspas: o pacote instala em `/opt/Chronos Biblioteca`
+  # Caminhos entre aspas: o pacote instala em `/opt/Cronologia`
   # (productFilename com espaço; sem aspas o parser do AppArmor quebra).
   "/opt/${sanitizedProductName}/**"                    mr,
   "/opt/${sanitizedProductName}/${executable}"         mrix,
@@ -67,7 +67,7 @@ profile ${executable} "/opt/${sanitizedProductName}/${executable}" {
 
   # O app dispara dois programas do sistema: o abridor de URLs do navegador
   # (shell.openExternal → openExternalSafe, src/main/external.ts) e o pkexec,
-  # que só roda o helper do pacote `biblioteca-setup` para criar a pasta do
+  # que só roda o helper do pacote `cronologia-setup` para criar a pasta do
   # cofre em /var/lib (src/main/vault/privilege.ts). ux entrega a cadeia
   # inteira sem confinamento; são as portas de saída do perfil, registradas
   # como risco aceito no SECURITY.md.
@@ -77,17 +77,17 @@ profile ${executable} "/opt/${sanitizedProductName}/${executable}" {
   # ---------- estado do app ----------
   # userData do Electron redirecionado para o cache
   # (`app.setPath('userData', cacheDir())` em src/main/index.ts).
-  owner @{HOME}/.cache/chronos-biblioteca/       rw,
-  owner @{HOME}/.cache/chronos-biblioteca/**     rwkl,
+  owner @{HOME}/.cache/cronologia/       rw,
+  owner @{HOME}/.cache/cronologia/**     rwkl,
   # settings.json (src/main/paths.ts + src/main/settings.ts).
-  owner @{HOME}/.config/chronos-biblioteca/      rw,
-  owner @{HOME}/.config/chronos-biblioteca/**    rwkl,
+  owner @{HOME}/.config/cronologia/      rw,
+  owner @{HOME}/.config/cronologia/**    rwkl,
   # library.enc e covers/*.enc, ambos cifrados (src/main/library.ts).
   # A regra é a mesma de antes: escrita e criação de link dentro das pastas.
-  owner @{HOME}/.local/share/chronos-biblioteca/  rw,
-  owner @{HOME}/.local/share/chronos-biblioteca/** rwkl,
-  owner @{HOME}/.local/state/chronos-biblioteca/  rw,
-  owner @{HOME}/.local/state/chronos-biblioteca/** rwkl,
+  owner @{HOME}/.local/share/cronologia/  rw,
+  owner @{HOME}/.local/share/cronologia/** rwkl,
+  owner @{HOME}/.local/state/cronologia/  rw,
+  owner @{HOME}/.local/state/cronologia/** rwkl,
 
   # Cofre de segredos em /var/lib (fora do home, sobrevive à limpeza do home).
   # A raiz é 0711 root (travessia sim, listagem não) e a pasta do usuário,
@@ -95,9 +95,9 @@ profile ${executable} "/opt/${sanitizedProductName}/${executable}" {
   # a arquivos do próprio usuário. /var/lib/dbus acima é leitura; a escrita
   # negada por padrão continua valendo para o resto de /var/lib.
   /var/lib/                      r,
-  /var/lib/.chronos-biblioteca/  r,
-  owner /var/lib/.chronos-biblioteca/.vault/   rw,
-  owner /var/lib/.chronos-biblioteca/.vault/** rwkl,
+  /var/lib/.cronologia/  r,
+  owner /var/lib/.cronologia/.vault/   rw,
+  owner /var/lib/.cronologia/.vault/** rwkl,
 
   # ---------- leitura do home (seletor de capa) ----------
   # cover:pick (src/main/index.ts) abre o diálogo do SO e lê o arquivo de
@@ -111,7 +111,7 @@ profile ${executable} "/opt/${sanitizedProductName}/${executable}" {
 
   # Deny-list de credenciais: nega vence sobre qualquer allow, então as
   # regras são sempre em subpastas EXCLUSIVAS (nunca @{HOME}/.config/**,
-  # que englobaria o próprio .config/chronos-biblioteca). O padrão `/**`
+  # que englobaria o próprio .config/cronologia). O padrão `/**`
   # não cobre o próprio diretório (opendir), por isso os diretórios
   # críticos têm também a regra de dir — listagem de nomes também é deny.
   deny owner @{HOME}/.ssh/                    r,
@@ -187,7 +187,7 @@ profile ${executable} "/opt/${sanitizedProductName}/${executable}" {
   signal (receive),
 
   # ---------- rede ----------
-  # Diferente do Guardinha (offline total, `deny network inet`): o Chronos
+  # Diferente do Guardinha (offline total, `deny network inet`): o Cronologia
   # precisa de HTTPS para o Dropbox (api/content.dropboxapi.com). AppArmor
   # clássico não filtra host/destino, então o ganho aqui é modesto: stream
   # e dgram (DNS do getaddrinfo/Chromium — sem dgram o create do socket UDP

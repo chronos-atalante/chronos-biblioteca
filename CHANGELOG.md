@@ -38,7 +38,7 @@ em português do Brasil.
   container pela metade e o usuário lia "adulterado" em vez de "destruído".
 - `src/main/cleanup.ts`: o boot apaga o legado em claro que a 1.8 só ignorava
   (`settings.json` com `enc:`, `dropbox-tokens.json`, `drive-tokens.json` e o
-  cofre antigo em `~/.config/chronos-biblioteca/.vault`) e os `.tmp` órfãos.
+  cofre antigo em `~/.config/cronologia/.vault`) e os `.tmp` órfãos.
   A verificação é por existência: o conteúdo do segredo nunca é lido, e o
   acervo e o `settings.json` vivo não são tocados.
 - o auto-lock passou a medir **ociosidade real** (uso da interface, canal
@@ -68,9 +68,9 @@ mestra para abrir o app.
 ### Features
 
 - cofre de segredos: o cofre passa a morar em
-  `/var/lib/.chronos-biblioteca/.vault`, fora de `~` (raiz `0711 root:root`
+  `/var/lib/.cronologia/.vault`, fora de `~` (raiz `0711 root:root`
   sem listagem + vault `0700` do usuário), criado no `postinst` e reparado
-  pelo app só via PolicyKit (helper `resources/biblioteca-setup` chamado por
+  pelo app só via PolicyKit (helper `resources/cronologia-setup` chamado por
   `pkexec`, senha do sistema nunca vista pelo app). Códigos novos
   `vaultDirUnavailable` e `vaultAuthCancelled` com mensagens nos 5 idiomas.
 - remoção do modo legado de credenciais: acabaram `safeStorage`/`enc:`, o
@@ -82,22 +82,22 @@ mestra para abrir o app.
 - configurações e backup exigem cofre aberto: `SettingsModal` abre a
   criação/desbloqueio antes de Salvar, Conectar, Backup, Restaurar e
   Desconectar; `drive.disconnect()` não apaga nada às cegas com o cofre
-  fechado. `npm run dev` já passa `CHRONOS_VAULT_DIR=.dev-vault` (sandbox,
+  fechado. `npm run dev` já passa `CRONOLOGIA_VAULT_DIR=.dev-vault` (sandbox,
   sem `pkexec`).
 
 **Migração**: não existe. Um cofre antigo em
-`~/.config/chronos-biblioteca/.vault`, um `settings.json` com `enc:`/keyring
+`~/.config/cronologia/.vault`, um `settings.json` com `enc:`/keyring
 ou um `dropbox-tokens.json` são ignorados (não lidos, não copiados, não
 apagados); quem usava backup reconecta a conta uma vez e recria o cofre.
 
 ### Segurança
 
-- `build/scripts/biblioteca-setup` (root via `pkexec`) aceita **nenhum**
+- `build/scripts/cronologia-setup` (root via `pkexec`) aceita **nenhum**
   caminho do chamador e só cria os dois diretórios fixos do cofre com modos
   fixos; a ação do PolicyKit anota o caminho absoluto do helper, e o perfil
-  AppArmor ganha as regras de escrita em `/var/lib/.chronos-biblioteca`.
+  AppArmor ganha as regras de escrita em `/var/lib/.cronologia`.
 - `build/postrm` apaga a ação do PolicyKit no `remove` e o cofre em
-  `/var/lib/.chronos-biblioteca` no `purge`.
+  `/var/lib/.cronologia` no `purge`.
 
 ### Documentação
 
@@ -107,7 +107,7 @@ apagados); quem usava backup reconecta a conta uma vez e recria o cofre.
   `AGENTS.md` passam a descrever o cofre em `/var/lib`, o reparo via
   PolicyKit e a inexistência de caminho legado.
 
-## [1.7.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.6.1...v1.7.0) (2026-10-09)
+## [1.7.0](https://github.com/chronos-atalante/cronologia/compare/v1.6.1...v1.7.0) (2026-10-09)
 
 ### Features
 
@@ -140,7 +140,7 @@ apagados); quem usava backup reconecta a conta uma vez e recria o cofre.
   ameaça do cofre e os riscos do confinamento; índices atualizados em
   `README.md` e `AGENTS.md`.
 
-## [1.6.1](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.5.0...v1.6.1) (2026-10-08)
+## [1.6.1](https://github.com/chronos-atalante/cronologia/compare/v1.5.0...v1.6.1) (2026-10-08)
 
 ### Features
 
@@ -168,7 +168,7 @@ apagados); quem usava backup reconecta a conta uma vez e recria o cofre.
   `doc/paginas.md`, `doc/README.md` e `doc/arquitetura.md` (o idioma já
   estava no app e no site desde a 1.5.0).
 
-## [1.5.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.4.0...v1.5.0) (2026-10-07)
+## [1.5.0](https://github.com/chronos-atalante/cronologia/compare/v1.4.0...v1.5.0) (2026-10-07)
 
 ### Features
 
@@ -198,9 +198,9 @@ apagados); quem usava backup reconecta a conta uma vez e recria o cofre.
 - produção: DevTools desligado no app empacotado (`devTools:
 !app.isPackaged`).
 - IPC pelo frame oficial: todo handler chegou com `assertAppFrame(event)`, que
-  confere `event.senderFrame` contra a página do scheme `chronos://` (ou o Vite
+  confere `event.senderFrame` contra a página do scheme `cronologia://` (ou o Vite
   dev server), bloqueando qualquer frame de fora antes do domínio.
-- renderer entregue via scheme `chronos://` em produção (`registerAppProtocol`
+- renderer entregue via scheme `cronologia://` em produção (`registerAppProtocol`
   serve `out/renderer`), em vez de `file://`; CSP com `object-src 'none';
 base-uri 'self'; frame-ancestors 'none'; form-action 'self'` nos dois
   lugares.
@@ -217,7 +217,7 @@ base-uri 'self'; frame-ancestors 'none'; form-action 'self'` nos dois
   de trava na tabela de erros e o travamento em `drive.restore`, e
   `docs/dropbox.md` com o sintoma na tabela de problemas.
 
-## [1.4.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.3.0...v1.4.0) (2026-10-07)
+## [1.4.0](https://github.com/chronos-atalante/cronologia/compare/v1.3.0...v1.4.0) (2026-10-07)
 
 ### Features
 
@@ -244,7 +244,7 @@ base-uri 'self'; frame-ancestors 'none'; form-action 'self'` nos dois
   o e-mail oficiais; exemplo de instalação local usa glob de versão;
   workflow do CI no Node 24 e scripts de limpeza sem `rimraf`.
 
-## [1.3.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.2.1...v1.3.0) (2026-10-06)
+## [1.3.0](https://github.com/chronos-atalante/cronologia/compare/v1.2.1...v1.3.0) (2026-10-06)
 
 ### Features
 
@@ -255,7 +255,7 @@ base-uri 'self'; frame-ancestors 'none'; form-action 'self'` nos dois
   Configurações e persistido em `settings.json` (textos em `src/messages/ko.ts`;
   ver `docs/messages.md`).
 
-## [1.2.1](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.2...v1.2.1) (2026-10-06)
+## [1.2.1](https://github.com/chronos-atalante/cronologia/compare/v1.1.2...v1.2.1) (2026-10-06)
 
 ### Features
 
@@ -291,7 +291,7 @@ base-uri 'self'; frame-ancestors 'none'; form-action 'self'` nos dois
   `api.md`/`dropbox.md`/`README.md` refletem a chave embutida e as URLs do
   repo APT flat da Release.
 
-## [1.1.2](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.1...v1.1.2) (2026-10-06)
+## [1.1.2](https://github.com/chronos-atalante/cronologia/compare/v1.1.1...v1.1.2) (2026-10-06)
 
 ### Bug Fixes
 
@@ -299,21 +299,21 @@ base-uri 'self'; frame-ancestors 'none'; form-action 'self'` nos dois
   Electron o declara como `DT_NEEDED` e o 1.1.1 abria apenas o ícone,
   morrendo com "error while loading shared libraries: libffmpeg.so".
 
-## [1.1.1](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.1.0...v1.1.1) (2026-10-05)
+## [1.1.1](https://github.com/chronos-atalante/cronologia/compare/v1.1.0...v1.1.1) (2026-10-05)
 
 ### Bug Fixes
 
-- detecta escopos faltantes no Dropbox e orienta a correção ([29f009f](https://github.com/chronos-atalante/chronos-biblioteca/commit/29f009fc89b67f1024534afc2b69b038c252773d))
+- detecta escopos faltantes no Dropbox e orienta a correção ([29f009f](https://github.com/chronos-atalante/cronologia/commit/29f009fc89b67f1024534afc2b69b038c252773d))
 
-## [1.1.0](https://github.com/chronos-atalante/chronos-biblioteca/compare/v1.0.2...v1.1.0) (2026-10-05)
+## [1.1.0](https://github.com/chronos-atalante/cronologia/compare/v1.0.2...v1.1.0) (2026-10-05)
 
 ### Features
 
-- migra backup em nuvem do Google Drive para o Dropbox ([c55190e](https://github.com/chronos-atalante/chronos-biblioteca/commit/c55190e62250866841bfcbf93c1d2bae2f8b020e))
+- migra backup em nuvem do Google Drive para o Dropbox ([c55190e](https://github.com/chronos-atalante/cronologia/commit/c55190e62250866841bfcbf93c1d2bae2f8b020e))
 
 ### Bug Fixes
 
-- corrige tipos do upload no Dropbox (autorename/mute booleanos) ([59454b5](https://github.com/chronos-atalante/chronos-biblioteca/commit/59454b5b630231436e6f680df9ac69e2921dbfc1))
+- corrige tipos do upload no Dropbox (autorename/mute booleanos) ([59454b5](https://github.com/chronos-atalante/cronologia/commit/59454b5b630231436e6f680df9ac69e2921dbfc1))
 
 ## [1.0.2] - 2026-10-05
 
@@ -343,7 +343,7 @@ base-uri 'self'; frame-ancestors 'none'; form-action 'self'` nos dois
 
 ## [1.0.0] - 2026-10-04
 
-Primeira versão pública do **Chronos Biblioteca** (pacote `.deb` para Linux Mint).
+Primeira versão pública do **Cronologia** (pacote `.deb` para Linux Mint).
 
 ### Adicionado
 

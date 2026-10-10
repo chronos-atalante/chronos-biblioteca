@@ -1,6 +1,6 @@
 # Como contribuir
 
-Obrigado por querer ajudar o **Chronos Biblioteca**! Este guia resume o fluxo.
+Obrigado por querer ajudar o **Cronologia**! Este guia resume o fluxo.
 As regras detalhadas para agentes e contribuidores estão em [`AGENTS.md`](AGENTS.md).
 
 ## 1. Preparar o ambiente
@@ -108,7 +108,7 @@ Para publicar uma versão (a partir da `main`):
    `package.json` com as Releases existentes e, sendo uma versão nova,
    cria a tag `vX.Y.Z`, compila (`npm run dist`), anexa o `.deb`
    **e o repo APT flat assinado** (`Packages`, `Release`, `InRelease`,
-   `public.key` + alias `chronos-biblioteca_amd64.deb`) à Release, e dispara
+   `public.key` + alias `cronologia_amd64.deb`) à Release, e dispara
    o redeploy da landing (via Deploy Hook). Requer os secrets
    `GPG_PRIVATE_KEY` (+ `GPG_PASSPHRASE`, se houver) em
    Settings → Secrets → Actions. Push repetido sem bump de versão vira

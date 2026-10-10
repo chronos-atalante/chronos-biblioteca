@@ -7,16 +7,16 @@ import path from 'path';
  * temporário exclusivo deste processo de teste. Precisa rodar antes do import dos
  * módulos sob teste, por isso fica em `setupFiles`.
  */
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chronos-biblioteca-tests-'));
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cronologia-tests-'));
 
 process.env.XDG_DATA_HOME = path.join(root, 'data');
 process.env.XDG_CONFIG_HOME = path.join(root, 'config');
 process.env.XDG_CACHE_HOME = path.join(root, 'cache');
 process.env.HOME = root;
 // Cofre fora de /var/lib (e fora de qualquer override exportado pela shell):
-// o layout continua sendo `<base>/.chronos-biblioteca/.vault`, só a base muda.
-delete process.env.CHRONOS_VAULT_DIR;
-process.env.CHRONOS_VAR_LIB = path.join(root, 'varlib');
+// o layout continua sendo `<base>/.cronologia/.vault`, só a base muda.
+delete process.env.CRONOLOGIA_VAULT_DIR;
+process.env.CRONOLOGIA_VAR_LIB = path.join(root, 'varlib');
 delete process.env.ELECTRON_RENDERER_URL;
 
 function cleanup(): void {

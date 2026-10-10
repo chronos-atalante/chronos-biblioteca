@@ -15,7 +15,7 @@ export function sandboxPath(name: SandboxVar): string {
   return value;
 }
 
-/** Raiz do cofre na sandbox (`CHRONOS_VAR_LIB/.chronos-biblioteca`). */
+/** Raiz do cofre na sandbox (`CRONOLOGIA_VAR_LIB/.cronologia`). */
 export function vaultRoot(): string {
   return path.dirname(vaultDir());
 }

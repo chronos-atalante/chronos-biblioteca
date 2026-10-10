@@ -37,7 +37,7 @@ entrypoints que o Electron exige) e arquivo no teto de ~500 linhas é quebrado.
 | Arquivo                 | Papel                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------ |
 | `index.ts`              | Entrypoint: janela, política da sessão, canais IPC, push de status e ciclo de vida               |
-| `protocols.ts`          | Schemes `cover://` (capas) e `chronos://` (SPA em produção), registrados na importação           |
+| `protocols.ts`          | Schemes `cover://` (capas) e `cronologia://` (SPA em produção), registrados na importação        |
 | `library.ts`            | acervo cifrado (`library.enc`, `covers/*.enc`) e reset destrutivo                                |
 | `store-crypto.ts`       | formato `CLIB1` (AES-256-GCM) e derivação da chave do acervo por HKDF                            |
 | `shred.ts`              | sobrescrita segura antes de apagar                                                               |
@@ -79,7 +79,7 @@ arquivos, que precisam mudar juntos:
 2. O preload traduz para `ipcRenderer.invoke('<grupo>:<método>', payload)`.
 3. O main valida a origem com `assertAppFrame(event)` **antes** de qualquer
    regra de domínio: `event.senderFrame` precisa apontar para a página oficial
-   (scheme `chronos://` em produção, dev server do Vite em desenvolvimento).
+   (scheme `cronologia://` em produção, dev server do Vite em desenvolvimento).
 4. A função de domínio roda e devolve o valor; erro vira `Error` rejeitado com
    a mensagem **já localizada** no idioma corrente.
 
@@ -91,7 +91,7 @@ existe com tipo em `src/types/` e linha em `api.md`.
 | Ponto                          | Comportamento                                                                                |
 | ------------------------------ | -------------------------------------------------------------------------------------------- |
 | `cover://`                     | Serve as capas de `covers/`, com MIME por extensão e cache de 1 h                            |
-| `chronos://`                   | Serve a SPA empacotada de `out/renderer` (substitui `file://`), com recusa de path traversal |
+| `cronologia://`                | Serve a SPA empacotada de `out/renderer` (substitui `file://`), com recusa de path traversal |
 | Navegação (`will-navigate`)    | Só a própria página do app; qualquer URL externa é recusada                                  |
 | `setWindowOpenHandler`         | Toda `window.open` vira `shell.openExternal` (só `https:`) e é negada                        |
 | Permissões web da sessão       | Todas negadas; só `clipboard-read`/`clipboard-sanitized-write` (modal de doação)             |
@@ -128,7 +128,7 @@ desregistra os atalhos globais.
 O cofre não tem etapa de boot: ele só é tocado quando um fluxo precisa de
 segredo, e aí a UI abre a criação/desbloqueio (sem cofre aberto o app roda
 sem segredo nenhum; ver [`cofre.md`](cofre.md)). A pasta em
-`/var/lib/.chronos-biblioteca/.vault` é criada no `postinst` e reparada pelo
+`/var/lib/.cronologia/.vault` é criada no `postinst` e reparada pelo
 app via PolicyKit quando faltar permissão.
 
 ## Árvore do repositório

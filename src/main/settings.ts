@@ -9,7 +9,7 @@ import { getSecret, setSecret } from '@zero/main/vault/vault';
 /**
  * Configurações persistidas. O disco guarda **só** o `language`: os segredos
  * (`drivePassphrase`, `driveClientId`) moram no cofre de segredos em
- * `/var/lib/.chronos-biblioteca/.vault` e são lidos dele quando o cofre está
+ * `/var/lib/.cronologia/.vault` e são lidos dele quando o cofre está
  * desbloqueado (sem cofre aberto voltam `''`, falha fechada). Um `settings.json`
  * antigo com `enc:`/keyring é simplesmente ignorado no primeiro salvamento.
  * Ver `docs/credenciais.md`.

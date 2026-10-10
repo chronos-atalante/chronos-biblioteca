@@ -1,6 +1,6 @@
 # Visão geral
 
-O Chronos Biblioteca é um aplicativo desktop para anotar o **progresso das suas
+O Cronologia é um aplicativo desktop para anotar o **progresso das suas
 leituras** (webtoons, manhwas, manhuas, mangás, livros e outros): capa, título,
 descrição, barra de progresso em capítulos e marcação de conclusão, com
 **backup manual criptografado no Dropbox**. Roda em Electron, é escrito em
@@ -34,7 +34,7 @@ app no Dropbox.
   pelo protocolo interno `cover://`.
 - Faz backup do `library.json` e das capas **sempre criptografados**
   (AES-256-GCM com nomes de arquivo opacos) na pasta do app do Dropbox
-  (`/Apps/Chronos Biblioteca`), com OAuth + PKCE direto no app, sem segredo
+  (`/Apps/Cronologia`), com OAuth + PKCE direto no app, sem segredo
   embutido.
 - Restaura um backup pedindo a senha de criptografia, e desconecta o Dropbox
   quando você quiser.
@@ -61,7 +61,7 @@ desenvolvimento e também não entra no pacote.
 ## Ciclo de vida resumido
 
 1. Primeira execução: a biblioteca nasce vazia em
-   `~/.local/share/chronos-biblioteca/library.enc` e `covers/*.enc`, ambos
+   `~/.local/share/cronologia/library.enc` e `covers/*.enc`, ambos
    cifrados com a chave do cofre.
 2. Uso corrente: adicionar/editar obras, mover a barra de progresso, buscar e
    filtrar; tudo local e instantâneo (gravação com debounce).
@@ -94,13 +94,13 @@ desenvolvimento e também não entra no pacote.
   devolvidos pela autorização, guardados só como segredo `dropbox.tokens` do
   cofre (nunca em arquivo em claro).
 - **Cofre de segredos**: arquivo cifrado sob uma senha mestra (Argon2id +
-  AES-256-GCM) em `/var/lib/.chronos-biblioteca/.vault` que guarda os segredos
+  AES-256-GCM) em `/var/lib/.cronologia/.vault` que guarda os segredos
   do app (tokens do Dropbox, senha de backup, App key alternativa); abre por
   sessão e sofre auto-lock após 5 minutos (`docs/cofre.md`).
 - **Provedor de backup**: implementação do contrato `BackupProvider`
   (`authorize` + 4 operações de arquivo); Dropbox operante, Google Drive não
   operante (`docs/backup-providers.md`).
-- **Protocolos internos**: `cover://` (capas) e `chronos://` (SPA em produção);
+- **Protocolos internos**: `cover://` (capas) e `cronologia://` (SPA em produção);
   nada fora disso é navegável dentro do app.
 - **Aliases `@zero/*`**: atalhos de import usados dentro de `src/`
   (`docs/arquitetura.md`).

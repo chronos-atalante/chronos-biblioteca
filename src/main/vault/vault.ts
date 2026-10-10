@@ -24,7 +24,7 @@ import { shredFile } from '@zero/main/shred';
  * O container mora em `<cofre>/vault.zkv`; a chave-mestra só existe na
  * sessão (`VaultSessionManager`), nunca em variável de módulo nem em disco.
  *
- * A pasta fica em `/var/lib/.chronos-biblioteca/.vault` (fora de `~`, para
+ * A pasta fica em `/var/lib/.cronologia/.vault` (fora de `~`, para
  * sobreviver à limpeza do home do usuário) e é criada no `postinst`; quando
  * o app não tem permissão para criar, `createVault` pede sudo via PolicyKit.
  */
@@ -41,13 +41,13 @@ interface VaultPayload {
  */
 let vaultDestroyed = false;
 
-/** Diretório do cofre (`/var/lib/.chronos-biblioteca/.vault` por padrão). */
+/** Diretório do cofre (`/var/lib/.cronologia/.vault` por padrão). */
 export function vaultDir(): string {
-  const override = process.env.CHRONOS_VAULT_DIR;
+  const override = process.env.CRONOLOGIA_VAULT_DIR;
   if (override !== undefined && override !== '') return override;
-  const varLib = process.env.CHRONOS_VAR_LIB;
+  const varLib = process.env.CRONOLOGIA_VAR_LIB;
   const base = varLib !== undefined && varLib !== '' ? varLib : '/var/lib';
-  return path.join(base, '.chronos-biblioteca', '.vault');
+  return path.join(base, '.cronologia', '.vault');
 }
 
 export function vaultPath(): string {

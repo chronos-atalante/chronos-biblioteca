@@ -14,15 +14,15 @@ function xdgDir(envVar: string, fallback: string): string {
 }
 
 export function dataDir(): string {
-  return path.join(xdgDir('XDG_DATA_HOME', path.join('.local', 'share')), 'chronos-biblioteca');
+  return path.join(xdgDir('XDG_DATA_HOME', path.join('.local', 'share')), 'cronologia');
 }
 
 export function configDir(): string {
-  return path.join(xdgDir('XDG_CONFIG_HOME', '.config'), 'chronos-biblioteca');
+  return path.join(xdgDir('XDG_CONFIG_HOME', '.config'), 'cronologia');
 }
 
 export function cacheDir(): string {
-  return path.join(xdgDir('XDG_CACHE_HOME', '.cache'), 'chronos-biblioteca');
+  return path.join(xdgDir('XDG_CACHE_HOME', '.cache'), 'cronologia');
 }
 
 export function userDataDir(): string {

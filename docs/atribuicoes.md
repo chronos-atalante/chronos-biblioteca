@@ -1,6 +1,6 @@
 # Atribuições
 
-A página **Atribuições** lista as dependências de código aberto usadas no Chronos
+A página **Atribuições** lista as dependências de código aberto usadas no Cronologia
 Biblioteca, no formato de **créditos de cinema**: os itens sobem devagar em loop
 contínuo.
 

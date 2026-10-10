@@ -6,7 +6,7 @@ export const PASSWORD = 'uva-preta-42-estrela';
 
 /**
  * Cofre novo e aberto, idempotente: zera a sessão anterior e recria o arquivo
- * na sandbox (`CHRONOS_VAR_LIB`). Toda suíte que grava segredo passa por aqui
+ * na sandbox (`CRONOLOGIA_VAR_LIB`). Toda suíte que grava segredo passa por aqui
  * antes — sem cofre aberto, `saveSettings`/`persistState` lançam `vaultLocked`.
  */
 export async function openTestVault(): Promise<void> {

@@ -18,7 +18,7 @@ export default defineConfig({
     alias: aliases,
   },
   test: {
-    name: 'chronos-biblioteca',
+    name: 'cronologia',
     root: import.meta.dirname,
     environment: 'jsdom',
     pool: 'forks',

@@ -187,7 +187,7 @@ jobs:
       - name: Anexar .deb à Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          files: release/chronos-biblioteca_*_amd64.deb
+          files: release/cronologia_*_amd64.deb
           # Se a Release ainda não existe (tag manual), ela é criada aqui.
           generate_release_notes: true
           tag_name: ${{ needs.resolver-versao.outputs.tag }}
@@ -199,14 +199,14 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$GPG_PRIVATE_KEY" ]; then
-            echo "::error::Secret GPG_PRIVATE_KEY ausente em Settings → Secrets → Actions (repo chronos-biblioteca)."
+            echo "::error::Secret GPG_PRIVATE_KEY ausente em Settings → Secrets → Actions (repo cronologia)."
             exit 1
           fi
           sudo apt-get install -y --no-install-recommends dpkg-dev apt-utils gnupg
           mkdir -p apt
           # Alias estável SEM versão: o APT resolve Filename relativo à base
           # .../releases/latest/download/, que só redireciona nomes exatos.
-          cp release/chronos-biblioteca_*_amd64.deb apt/chronos-biblioteca_amd64.deb
+          cp release/cronologia_*_amd64.deb apt/cronologia_amd64.deb
           # Falhas aqui viram ::error:: explícito (annotations são legíveis
           # na UI do Actions sem precisar abrir o log cru).
           printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import || true
@@ -231,19 +231,19 @@ jobs:
           dpkg-scanpackages . /dev/null > Packages.raw
           # Filename precisa ser o nome puro do asset (sem ./ nem pool/).
           sed 's#^\(\s*Filename:\s*\)\./#\1#' Packages.raw > Packages
-          grep -qx 'Filename: chronos-biblioteca_amd64.deb' Packages
+          grep -qx 'Filename: cronologia_amd64.deb' Packages
           gzip -9nc Packages > Packages.gz
           rm Packages.raw
           # Release é gerado FORA da árvore e só então movido para dentro,
           # senão ele hash a si mesmo (arquivo meio escrito) e ao .raw.
           apt-ftparchive release \
-            -o APT::FTPArchive::Release::Origin=Chronos \
-            -o APT::FTPArchive::Release::Label=Chronos \
+            -o APT::FTPArchive::Release::Origin=Cronologia \
+            -o APT::FTPArchive::Release::Label=Cronologia \
             -o APT::FTPArchive::Release::Suite=stable \
             -o APT::FTPArchive::Release::Codename=stable \
             -o APT::FTPArchive::Release::Architectures=amd64 \
             -o APT::FTPArchive::Release::Components=main \
-            -o APT::FTPArchive::Release::Description="Chronos Biblioteca" \
+            -o APT::FTPArchive::Release::Description="Cronologia" \
             . > ../Release.tmp
           mv ../Release.tmp Release
           gpg "${GPG_OPTS[@]}" --clearsign -o InRelease Release
@@ -255,7 +255,7 @@ jobs:
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: |
-            apt/chronos-biblioteca_amd64.deb
+            apt/cronologia_amd64.deb
             apt/Packages
             apt/Packages.gz
             apt/Release

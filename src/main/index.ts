@@ -99,7 +99,7 @@ function createWindow(): void {
     // metade de 1600x900 = 800x430; de 1366x768 = 683x364.
     minWidth: 520,
     minHeight: 360,
-    title: 'Chronos Biblioteca',
+    title: 'Cronologia',
     backgroundColor: '#000000',
     icon: nativeImage.createFromPath(path.join(__dirname, '../../build/icon.png')),
     show: false,
@@ -148,7 +148,7 @@ function registerPermissionPolicy(): void {
 
 /**
  * Só aceita URL da página oficial do app: dev server do Vite em dev, ou o
- * scheme `chronos://` em produção. Qualquer frame fora desse host (ex.: um
+ * scheme `cronologia://` em produção. Qualquer frame fora desse host (ex.: um
  * `<webview>` injetado) é bloqueado antes do handler de domínio rodar.
  */
 function isAppFrameUrl(url: string | undefined): boolean {
@@ -169,7 +169,7 @@ function isAppFrameUrl(url: string | undefined): boolean {
 }
 
 /**
- * Recusa IPC cujo emissor não é a página oficial do app (scheme `chronos://`
+ * Recusa IPC cujo emissor não é a página oficial do app (scheme `cronologia://`
  * em produção ou dev server do Vite em dev). Requer `event.senderFrame`.
  */
 function assertAppFrame(event: unknown): void {
@@ -465,7 +465,7 @@ if (!gotLock) {
     .then(initApp)
     .catch((error: unknown) => {
       console.error('Falha ao iniciar o aplicativo:', error);
-      dialog.showErrorBox('Chronos Biblioteca', currentMessages().app.startupFailed(String(error)));
+      dialog.showErrorBox('Cronologia', currentMessages().app.startupFailed(String(error)));
       app.quit();
     });
 

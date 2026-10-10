@@ -1,6 +1,6 @@
 # Distribuição: download direto e instalação via APT
 
-Este guia registra o caminho completo até a distribuição atual do Chronos
+Este guia registra o caminho completo até a distribuição atual do Cronologia
 Biblioteca. O resultado final é simples para quem usa o app: o usuário final
 configura o repositório APT **uma vez** com `curl` e `gpg` e, a partir daí,
 instala ou atualiza com `sudo apt update` e `sudo apt upgrade`. Aqui ficam o
@@ -12,20 +12,20 @@ que apareceram no caminho e as regras que não podem ser quebradas.
 Configuração única, feita uma só vez:
 
 ```bash
-curl -fsSL https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download/public.key | sudo gpg --dearmor --yes -o /usr/share/keyrings/chronos.gpg
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/chronos.gpg] https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download/ ./" | sudo tee /etc/apt/sources.list.d/chronos.list
+curl -fsSL https://github.com/chronos-atalante/cronologia/releases/latest/download/public.key | sudo gpg --dearmor --yes -o /usr/share/keyrings/cronologia.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/cronologia.gpg] https://github.com/chronos-atalante/cronologia/releases/latest/download/ ./" | sudo tee /etc/apt/sources.list.d/cronologia.list
 ```
 
 Instalação da primeira vez e atualizações seguintes:
 
 ```bash
-sudo apt update && sudo apt install chronos-biblioteca   # primeira vez
+sudo apt update && sudo apt install cronologia   # primeira vez
 sudo apt update && sudo apt upgrade                      # cada nova versão
 ```
 
 Tudo aponta para um endereço só, o da última Release:
 
-`https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download/`
+`https://github.com/chronos-atalante/cronologia/releases/latest/download/`
 
 ## Motivo da escolha: um repo só, sem estourar os limites
 
@@ -33,7 +33,7 @@ A decisão precisava satisfazer duas exigências ao mesmo tempo: **não deixar o
 projeto fragmentado em vários repositórios** e **não estourar os limites de
 tamanho do GitHub**. As contas são estas:
 
-- O git **bloqueia arquivos acima de 100 MiB** por blob. O `.deb` do Chronos
+- O git **bloqueia arquivos acima de 100 MiB** por blob. O `.deb` do Cronologia
   está com cerca de 99 MB e cresce a cada release, então versioná-lo no git
   é uma falha garantida no horizonte.
 - O plano gratuito da **Vercel limita arquivos a 100 MB**, então a landing
@@ -72,7 +72,7 @@ flowchart TD
     Q -- "falhou" --> X["fim: nada publicado"]
     B0 -->|"Release ainda não existe"| B["publish.yml: gera e anexa os assets"]
     B0 -->|"Release já existe"| P["fim: execução verde e rápida"]
-    B --> C["Release: .deb com versão + alias chronos-biblioteca_amd64.deb"]
+    B --> C["Release: .deb com versão + alias cronologia_amd64.deb"]
     B --> D["Índices assinados: Packages, Packages.gz, Release, Release.gpg, InRelease, public.key"]
     C --> E["releases/latest/download/ (suite ./)"]
     D --> E
@@ -109,7 +109,7 @@ Onde vive cada parte:
 ### 2. Landing passa a ler a Release
 
 - `fetch-release.mjs` consulta
-  `GET /repos/chronos-atalante/chronos-biblioteca/releases/latest` em cada
+  `GET /repos/chronos-atalante/cronologia/releases/latest` em cada
   `npm run build` do Vercel e grava `src/app/release-info.json`.
 - A página ganhou o botão **Baixar .deb** (mostra a versão viva) e a seção
   **Instalação (APT)** com os comandos desta página, incluindo aviso para
@@ -124,7 +124,7 @@ Depois de anexar o `.deb` versionado, o workflow executa o passo **Gerar repo
 APT flat assinado (assets estáveis)**:
 
 1. Copia o `.deb` para a árvore `apt/` com o **nome estável**
-   `chronos-biblioteca_amd64.deb` (sem versão, obrigatório para
+   `cronologia_amd64.deb` (sem versão, obrigatório para
    `releases/latest/download/`, que só redireciona nomes exatos).
 2. Gera `Packages` com `dpkg-scanpackages` e corrige o campo `Filename:` para
    ser o nome puro do arquivo (caminho absoluto ou `./` dá 404 no download).
@@ -158,7 +158,7 @@ errada ou secret ausente.
 Para testar o APT sem tocar no sistema, o teste usa diretórios próprios:
 
 ```bash
-BASE=https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download
+BASE=https://github.com/chronos-atalante/cronologia/releases/latest/download
 D=/tmp/apt-test
 mkdir -p "$D/empty.d" "$D/lists/partial" "$D/cache/archives/partial"
 curl -fsSL "$BASE/public.key" | gpg --dearmor -o "$D/repo.gpg"
@@ -167,7 +167,7 @@ apt-get update \
   -o Dir::Etc::sourcelist="$D/sources.list" -o Dir::Etc::sourceparts="$D/empty.d" \
   -o Dir::Etc::trusted=/dev/null -o Dir::Etc::trustedparts=/dev/null \
   -o Dir::State::lists="$D/lists/" -o Dir::Cache="$D/cache"
-apt-cache -o Dir::State::lists="$D/lists/" policy chronos-biblioteca
+apt-cache -o Dir::State::lists="$D/lists/" policy cronologia
 ```
 
 O `apt-cache policy` precisa mostrar a versão da Release como candidata com
@@ -254,7 +254,7 @@ Casos de exceção (o mesmo workflow, sem checar a versão):
 
 1. **Nunca renomear os assets estáveis** da Release
    (`Packages`, `Packages.gz`, `Release`, `Release.gpg`, `InRelease`,
-   `public.key` e `chronos-biblioteca_amd64.deb`): o APT resolve o
+   `public.key` e `cronologia_amd64.deb`): o APT resolve o
    `Filename` contra `releases/latest/download/` por nome exato.
 2. **`Filename` no `Packages` é relativo** (só o nome do arquivo). Caminho
    absoluto ou `./` quebra o download.
@@ -269,7 +269,7 @@ Casos de exceção (o mesmo workflow, sem checar a versão):
 ## Verificação rápida de sanidade
 
 ```bash
-BASE=https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download
+BASE=https://github.com/chronos-atalante/cronologia/releases/latest/download
 curl -fsSL -o Packages "$BASE/Packages"         # índices acessíveis
 curl -fsSL -o InRelease "$BASE/InRelease"       # baixa assinatura
 curl -fsSL -o public.key "$BASE/public.key"     # baixa chave

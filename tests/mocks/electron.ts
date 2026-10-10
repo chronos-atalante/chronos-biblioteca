@@ -51,14 +51,14 @@ export class BrowserWindow {
 }
 
 export const app = {
-  getPath: vi.fn<(name: string) => string>(() => '/tmp/chronos-tests-appdata'),
+  getPath: vi.fn<(name: string) => string>(() => '/tmp/cronologia-tests-appdata'),
   setPath: vi.fn<(name: string, value: string) => void>(),
   requestSingleInstanceLock: vi.fn<() => boolean>(() => true),
   quit: vi.fn<() => void>(),
   on: vi.fn<(event: string, listener: WindowEventHandler) => void>(),
   whenReady: vi.fn<() => Promise<void>>(() => Promise.resolve()),
-  getName: vi.fn<() => string>(() => 'chronos-biblioteca'),
-  name: 'Chronos Biblioteca',
+  getName: vi.fn<() => string>(() => 'cronologia'),
+  name: 'Cronologia',
   // Propriedade booleana, como no Electron real (não função).
   isPackaged: false,
 };

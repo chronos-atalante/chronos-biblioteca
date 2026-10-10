@@ -1,7 +1,7 @@
 # Referência da API interna (`window.api`)
 
 Documentação completa da ponte entre a interface (renderer/React) e o processo
-principal (main/Electron) do **Chronos Biblioteca**, no padrão de referências
+principal (main/Electron) do **Cronologia**, no padrão de referências
 OpenAPI/Swagger (ver também [`openapi.yaml`](openapi.yaml), legível por
 Swagger UI, Redoc e afins).
 
@@ -71,7 +71,7 @@ pt-BR por padrão; ver §4 e [`messages.md`](messages.md)).
 
 Guarda de origem: todo handler IPC chama `assertAppFrame(event)` antes da
 lógica de domínio, exigindo `event.senderFrame` apontando para a página
-oficial do app (scheme `chronos://` em produção ou dev server do Vite em dev);
+oficial do app (scheme `cronologia://` em produção ou dev server do Vite em dev);
 uma mensagem de emissor desconhecido é bloqueada com erro.
 
 ---
@@ -217,7 +217,7 @@ aberto: sem ele a tela abre a criação/desbloqueio antes). Falhas típicas:
 Pré-condições, nesta ordem: conta conectada, biblioteca local não vazia,
 senha de criptografia definida, nenhuma sincronização em andamento. Envia
 `library.json` + capas **sempre criptografados** à pasta do app
-(`/Apps/Chronos Biblioteca`, o `path` raiz da API com permissão App folder) e apaga
+(`/Apps/Cronologia`, o `path` raiz da API com permissão App folder) e apaga
 arquivos remotos órfãos. Cada upload usa `mode: overwrite` direto no
 `content.dropboxapi.com`, sem multipart nem id prévio.
 
@@ -405,7 +405,7 @@ desbloqueio de novo.
 
 ---
 
-## 7. Protocolos `cover://` e `chronos://`
+## 7. Protocolos `cover://` e `cronologia://`
 
 Capas servidas como `cover://<arquivo>` (scheme privilegiado: `standard`,
 `secure`, `supportFetchAPI`, `stream`), com `Content-Type` por extensão e
@@ -413,7 +413,7 @@ Capas servidas como `cover://<arquivo>` (scheme privilegiado: `standard`,
 nome vazio), `500` (URL inválida). Nomes são higienizados com `basename`
 (anti path-traversal).
 
-Em produção, a SPA vem pelo scheme `chronos://` (desde a 1.5.0), implementado
+Em produção, a SPA vem pelo scheme `cronologia://` (desde a 1.5.0), implementado
 em `src/main/protocols.ts` por `registerAppProtocol`: mapeia o pathname da URL
 para `out/renderer`, com `..` rejeitado (`path.resolve` + verificação de
 prefixo) e não usa `file://`.

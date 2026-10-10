@@ -14,7 +14,7 @@ import { SHRED_PASSES, shredDirectory, shredFile } from '@zero/main/shred';
 let root = '';
 
 beforeEach(() => {
-  root = fs.mkdtempSync(path.join(os.tmpdir(), 'chronos-shred-'));
+  root = fs.mkdtempSync(path.join(os.tmpdir(), 'cronologia-shred-'));
 });
 
 afterEach(() => {

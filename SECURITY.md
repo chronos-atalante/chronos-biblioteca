@@ -53,7 +53,7 @@ contrário).
   leria "adulterado" em vez de "destruído".
 - **Legado em claro varrido no boot** (`src/main/cleanup.ts`): `settings.json`
   com `enc:`, `dropbox-tokens.json`, `drive-tokens.json` e o cofre antigo em
-  `~/.config/chronos-biblioteca/.vault` são sobrescritos e apagados. A
+  `~/.config/cronologia/.vault` são sobrescritos e apagados. A
   verificação é **por existência** (o conteúdo do segredo nunca é lido) e a
   lista é fechada: o acervo e o `settings.json` vivo nunca são tocados.
 - **Apagar o backup na nuvem** (`drive:purge`, exposto na zona de risco):
@@ -68,7 +68,7 @@ contrário).
   canal `vault:touch`, throttle de 30 s), não acesso a segredo.
 - **Cofre de segredos**: tokens do Dropbox, senha de backup e App key
   alternativa sob uma senha mestra (Argon2id de 128 MiB + AES-256-GCM),
-  guardados em `/var/lib/.chronos-biblioteca/.vault/vault.zkv` (`0600`,
+  guardados em `/var/lib/.cronologia/.vault/vault.zkv` (`0600`,
   escrita atômica), fora de `~` para sobreviver à limpeza do home. A árvore é
   criada no `postinst` (raiz `0711 root:root` sem listagem, vault `0700` do
   usuário) e reparada pelo app só via PolicyKit (`pkexec` + helper do pacote,
@@ -133,9 +133,9 @@ contrário).
   credencial; o container do cofre segue a mesma regra (`vault.zkv.tmp` +
   `rename`, `0600`) (`src/main/jsonfile.ts`, `src/main/vault/vault.ts`).
 - **IPC fechado por origem**: todo handler confere `event.senderFrame` contra a
-  página oficial do app (scheme `chronos://` em produção ou dev server do
+  página oficial do app (scheme `cronologia://` em produção ou dev server do
   Vite), bloqueando a mensagem antes do domínio tocar.
-- **Sem `file://` em produção**: o renderer é servido por `chronos://`
+- **Sem `file://` em produção**: o renderer é servido por `cronologia://`
   (`registerAppProtocol` com path-traversal rejeitado), e o
   `grantFileProtocolExtraPrivileges` está desligado via fuse.
 - **Fuses do Electron**: `runAsNode: false`, `NODE_OPTIONS` e inspetor de
@@ -143,7 +143,7 @@ contrário).
   `onlyLoadAppFromAsar: true`
   no `electron-builder`.
 - **Confinamento AppArmor**: o `.deb` instala um perfil restritivo em
-  `/etc/apparmor.d/chronos-biblioteca` (o `postinst` do electron-builder pula
+  `/etc/apparmor.d/cronologia` (o `postinst` do electron-builder pula
   onde AppArmor não suporta `abi/4.0`). O processo instalado só escreve nos
   próprios diretórios no home, só executa o binário do pacote e o `xdg-open`,
   e usa rede apenas em `stream` e `dgram` (HTTPS e DNS do Dropbox). A leitura
@@ -163,7 +163,7 @@ O cofre protege os segredos do app contra leitura direta do disco: alguém com
 cópia do `vault.zkv` (backup, HD apagado, outro usuário do mesmo PC) vê só
 bytes e precisa da senha mestra, sujeita à trava exponencial; na prática,
 chegar ao arquivo exige sudo (raiz `0711 root:root` em
-`/var/lib/.chronos-biblioteca`, vault `0700` do usuário). Ele **não** protege
+`/var/lib/.cronologia`, vault `0700` do usuário). Ele **não** protege
 contra:
 
 - **Atacante com o usuário logado e o app desbloqueado**: a chave está em

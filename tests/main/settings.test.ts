@@ -8,7 +8,7 @@ import { resetSandbox, sandboxPath } from '../helpers/sandbox.ts';
 import { FAST_KDF, PASSWORD } from '../helpers/vault.ts';
 
 function settingsFile(): string {
-  return path.join(sandboxPath('XDG_CONFIG_HOME'), 'chronos-biblioteca', 'settings.json');
+  return path.join(sandboxPath('XDG_CONFIG_HOME'), 'cronologia', 'settings.json');
 }
 
 function writeSettingsJson(data: object): void {

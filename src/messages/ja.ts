@@ -63,7 +63,7 @@ export const ja: Messages = {
     toastSaved: '作品を保存しました。',
     toastRemoved: '作品を削除しました。',
     startupFailed: (detail: string): string =>
-      `Chronos Biblioteca を起動できませんでした。\n\n技術的な詳細: ${detail}`,
+      `Cronologia を起動できませんでした。\n\n技術的な詳細: ${detail}`,
   },
 
   settings: {
@@ -175,7 +175,7 @@ export const ja: Messages = {
     title: 'ライセンス帰属',
     bannerTitle: 'プロジェクトのクレジット。',
     bannerBody:
-      'Chronos Biblioteca で使用しているオープンソース依存の一覧です。すべて OSI 承認の ' +
+      'Cronologia で使用しているオープンソース依存の一覧です。すべて OSI 承認の ' +
       '許可リストライセンスです。具体的なバージョンは `package.json` / `package-lock.json` ' +
       'を参照してください。',
     pause: '一時停止',
@@ -236,7 +236,7 @@ export const ja: Messages = {
   },
 
   providers: {
-    dropboxStorageTarget: '/Apps/Chronos Biblioteca (アカウント内で見えるフォルダ)',
+    dropboxStorageTarget: '/Apps/Cronologia (アカウント内で見えるフォルダ)',
     googleStorageTarget: 'appDataFolder (非公開フォルダ。Google ドライブの UI には表示されません)',
     googleUnavailable:
       'Google ドライブはまだ利用できません。Google の要件 (アプリ検証、同意画面、' +

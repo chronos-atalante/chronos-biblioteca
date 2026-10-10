@@ -1,8 +1,8 @@
-Chronos Biblioteca: Avisos de Terceiros (Third-Party Notices)
+Cronologia: Avisos de Terceiros (Third-Party Notices)
 ==============================================================
 
 Este arquivo lista os componentes de terceiros distribuídos junto com o
-Chronos Biblioteca (pacote .deb), conforme exigido pelas licenças
+Cronologia (pacote .deb), conforme exigido pelas licenças
 aplicáveis. As versões exatas são as do `package-lock.json` da release
 correspondente. Os textos legais abaixo estão na íntegra, no idioma
 original de publicação.

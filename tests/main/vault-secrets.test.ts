@@ -29,7 +29,7 @@ const TOKENS = {
 };
 
 function configFile(name: string): string {
-  return path.join(sandboxPath('XDG_CONFIG_HOME'), 'chronos-biblioteca', name);
+  return path.join(sandboxPath('XDG_CONFIG_HOME'), 'cronologia', name);
 }
 
 function writeJson(name: string, data: object): void {

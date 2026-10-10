@@ -13,7 +13,7 @@ function handler(channel: string): IpcHandler {
   return call[1];
 }
 
-const APP_EVENT = { senderFrame: { url: 'chronos://app/index.html' } };
+const APP_EVENT = { senderFrame: { url: 'cronologia://app/index.html' } };
 const PASSWORD = 'uva-preta-42-estrela';
 
 function invoke(channel: string, ...args: unknown[]): unknown {
@@ -26,7 +26,7 @@ function invokeAsync<T>(channel: string, ...args: unknown[]): Promise<T> {
 
 beforeAll(async () => {
   resetSandbox();
-  app.getPath.mockReturnValue(path.join(os.tmpdir(), 'chronos-tests-vault'));
+  app.getPath.mockReturnValue(path.join(os.tmpdir(), 'cronologia-tests-vault'));
   await import('@zero/main/index');
   await vi.waitFor(() => expect(ipcMain.handle).toHaveBeenCalled());
 });

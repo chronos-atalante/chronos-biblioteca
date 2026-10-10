@@ -1,4 +1,4 @@
-# AGENTS.md: Chronos Biblioteca
+# AGENTS.md: Cronologia
 
 Diretrizes para agentes e contribuidores deste repositório. Este arquivo manda
 no código daqui; a visão do monorepo (duas partes, versão e distribuição) está
@@ -15,7 +15,7 @@ Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
 `docs/arquitetura.md`):
 
 - `src/main/`: janela, IPC e ciclo de vida (`index.ts`), protocolos `cover://`
-  e `chronos://` (`protocols.ts`), persistência (`library.ts`, `settings.ts`)
+  e `cronologia://` (`protocols.ts`), persistência (`library.ts`, `settings.ts`)
   e backup na nuvem (`drive/`).
 - `src/messages/`: textos do app em pt-BR (canônico), en, ko, zh-CN e ja (`@zero/messages`);
   guia em `docs/messages.md`.
@@ -27,9 +27,9 @@ Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
 
 - Cada arquivo do `main` responde por um domínio; o renderer só conhece o
   contrato de `window.api` (`docs/api.md`).
-- Persistência local: obras e capas em `~/.local/share/chronos-biblioteca/`
-  (`library.json`, `covers/`), idioma em `~/.config/chronos-biblioteca/settings.json`
-  e **todos os segredos** no cofre `/var/lib/.chronos-biblioteca/.vault`
+- Persistência local: obras e capas em `~/.local/share/cronologia/`
+  (`library.json`, `covers/`), idioma em `~/.config/cronologia/settings.json`
+  e **todos os segredos** no cofre `/var/lib/.cronologia/.vault`
   (Argon2id + AES-256-GCM; sem cofre aberto não há segredo nem backup, ver
   `docs/cofre.md`/`docs/credenciais.md`). Não existe caminho legado
   (`enc:`/keyring, `dropbox-tokens.json`, migração de marca). A nuvem
@@ -85,7 +85,7 @@ Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
 - `npm test` (ou `test:coverage`): Vitest em `tests/**`; cobertura mínima de
   50% por métrica. Comportamento novo vem com teste.
 - `npm run dev` / `build` / `dist`: desenvolvimento, build, `.deb`. O `dev`
-  já exporta `CHRONOS_VAULT_DIR` para a pasta `.dev-vault` (cofre no sandbox,
+  já exporta `CRONOLOGIA_VAULT_DIR` para a pasta `.dev-vault` (cofre no sandbox,
   sem tocar em `/var/lib` nem disparar `pkexec`).
 - `node --import ./src/node.loader.ts <arquivo.ts>`: roda `.ts` direto com
   os aliases `@zero/*`.
@@ -113,17 +113,17 @@ Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
 - Nada de credencial no repositório: tokens Dropbox saem do device do
   usuário (OAuth PKCE, sem secret) e os secrets do CI (`GPG_PRIVATE_KEY`,
   `GPG_PASSPHRASE`) vivem só no GitHub.
-- Renderer com CSP (schemes `cover:` e `chronos:`) e preload sandboxed (por
+- Renderer com CSP (schemes `cover:` e `cronologia:`) e preload sandboxed (por
   isso ele é CommonJS); não enfraquecer `contextIsolation` nem inserir HTML
-  dinâmico. Na produção a SPA é servida por `chronos://` via
+  dinâmico. Na produção a SPA é servida por `cronologia://` via
   `registerAppProtocol` (substitui `file://`); todo handler IPC valida
   `event.senderFrame` com `assertAppFrame`. Fuses de segurança no electron-
   builder via chave `electronFuses`.
 - Confinamento AppArmor no `.deb` (`build/apparmor-profile`, via
   `deb.appArmorProfile`): escrita só nos diretórios do app e no vault em
-  `/var/lib/.chronos-biblioteca`, deny-list de credenciais no home, exec só do
+  `/var/lib/.cronologia`, deny-list de credenciais no home, exec só do
   pacote + `xdg-open`, rede só `stream` e `dgram` (DNS). O reparo da pasta do
-  cofre é só via PolicyKit (`build/scripts/biblioteca-setup` chamado por
+  cofre é só via PolicyKit (`build/scripts/cronologia-setup` chamado por
   `src/main/vault/privilege.ts`): nenhum caminho vem do chamador. Negar regra da deny-list ou voltar ao perfil decorativo é
   regressão de segurança; ciclo complain/enforce e validação em
   `docs/build.md`.
@@ -153,7 +153,7 @@ Camadas (diagrama no `README.md`, seção Arquitetura; detalhe em
   funcionando como gatilhos de reserva.)
 - Nunca renomear os assets estáveis da Release (`Packages`, `Packages.gz`,
   `Release`, `Release.gpg`, `InRelease`, `public.key` e o alias
-  `chronos-biblioteca_amd64.deb`).
+  `cronologia_amd64.deb`).
 - Passo a passo completo: `docs/distribuicao-apt.md`; build, `.deb` e gate de
   qualidade do CI: `docs/build.md`. Regras do monorepo:
   `AGENTS.md` da raiz.

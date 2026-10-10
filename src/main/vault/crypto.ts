@@ -33,13 +33,14 @@ export interface Sealed {
 }
 
 /** Contexto de derivação da chave de dados (separação de domínio da mestra). */
-const DATA_KEY_INFO = 'chronos-biblioteca/vault/data';
+const DATA_KEY_INFO = 'cronologia/vault/data';
 
 /** Fragmentos que tornam a senha mestra previsível (comparados em minúsculas). */
 const COMMON_FRAGMENTS = [
   'password',
   'senha',
   'chronos',
+  'cronologia',
   'biblioteca',
   'dropbox',
   '123456',

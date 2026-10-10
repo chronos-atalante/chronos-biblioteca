@@ -1,10 +1,10 @@
 {
-  "name": "chronos-biblioteca",
-  "productName": "Chronos Biblioteca",
+  "name": "cronologia",
+  "productName": "Cronologia",
   "version": "1.9.1",
   "description": "Biblioteca de anotação de progresso em leituras de webtoons, manhwas, manhuas, mangás e livros",
   "main": "out/main/index.js",
-  "desktopName": "chronos-biblioteca.desktop",
+  "desktopName": "cronologia.desktop",
   "type": "module",
   "keywords": [
     "webtoon",
@@ -14,10 +14,10 @@
     "biblioteca"
   ],
   "author": "Otaku Delirante",
-  "homepage": "https://github.com/chronos-atalante/chronos-biblioteca",
+  "homepage": "https://github.com/chronos-atalante/cronologia",
   "license": "MIT",
   "scripts": {
-    "dev": "CHRONOS_VAULT_DIR=\"$PWD/.dev-vault\" electron-vite dev",
+    "dev": "CRONOLOGIA_VAULT_DIR=\"$PWD/.dev-vault\" electron-vite dev",
     "clean": "rm -rf out",
     "build": "npm run clean && electron-vite build",
     "start": "electron-vite preview",
@@ -79,9 +79,9 @@
     }
   },
   "build": {
-    "appId": "com.chronos.biblioteca",
-    "productName": "Chronos Biblioteca",
-    "artifactName": "chronos-biblioteca_${version}_${arch}.${ext}",
+    "appId": "com.cronologia",
+    "productName": "Cronologia",
+    "artifactName": "cronologia_${version}_${arch}.${ext}",
     "afterPack": "./build/after-pack.cjs",
     "directories": {
       "output": "release",
@@ -107,9 +107,9 @@
       ],
       "category": "Office",
       "icon": "build/icon.png",
-      "maintainer": "Chronos <chronos.biblioteca@proton.me>",
+      "maintainer": "Cronologia <chronos.biblioteca@proton.me>",
       "synopsis": "Acompanhe o progresso das suas leituras: webtoons, manhwas, manhuas, mangás e livros",
-      "executableName": "chronos-biblioteca",
+      "executableName": "cronologia",
       "syncDesktopName": true
     },
     "deb": {
@@ -130,8 +130,8 @@
     },
     "extraResources": [
       {
-        "from": "build/scripts/biblioteca-setup",
-        "to": "biblioteca-setup"
+        "from": "build/scripts/cronologia-setup",
+        "to": "cronologia-setup"
       }
     ]
   }

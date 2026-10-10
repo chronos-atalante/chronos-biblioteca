@@ -66,13 +66,13 @@ if apparmor_status --enabled > /dev/null 2>&1; then
 fi
 
 # ---------- Cofre de dados em /var/lib (fora de ~/) ----------
-# Pastas ocultas por padrão: /var/lib/.chronos-biblioteca/.vault. A raiz é
+# Pastas ocultas por padrão: /var/lib/.cronologia/.vault. A raiz é
 # root:root 0711 sem listagem (navegar/apagar o topo exige sudo) e o vault
 # fica com o usuário instalador (0700) para o app funcionar. Se o instalador
 # não for identificado, o próprio app pede sudo no primeiro uso (pkexec +
-# resources/biblioteca-setup).
-VAULT_DIR='/var/lib/.chronos-biblioteca/.vault'
-install -d -m 0711 -o root -g root '/var/lib/.chronos-biblioteca'
+# resources/cronologia-setup).
+VAULT_DIR='/var/lib/.cronologia/.vault'
+install -d -m 0711 -o root -g root '/var/lib/.cronologia'
 VAULT_OWNER_UID="${SUDO_UID:-${PKEXEC_UID:-}}"
 VAULT_OWNER_USER=''
 if [ -n "$VAULT_OWNER_UID" ]; then
@@ -86,20 +86,20 @@ else
 fi
 
 # ---------- Ação do PolicyKit (diálogo padrão do Mint quando o app pede sudo) ----------
-cat > /usr/share/polkit-1/actions/com.chronos.biblioteca.policy <<'POLICY_EOF'
+cat > /usr/share/polkit-1/actions/com.cronologia.policy <<'POLICY_EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN" "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
-  <vendor>Chronos Biblioteca</vendor>
-  <action id="com.chronos.biblioteca.setup-vault">
-    <description>Configurar a pasta do cofre do Chronos Biblioteca</description>
-    <message>É necessário o administrador para criar a pasta do cofre em /var/lib/.chronos-biblioteca.</message>
+  <vendor>Cronologia</vendor>
+  <action id="com.cronologia.setup-vault">
+    <description>Configurar a pasta do cofre do Cronologia</description>
+    <message>É necessário o administrador para criar a pasta do cofre em /var/lib/.cronologia.</message>
     <defaults>
       <allow_any>auth_admin</allow_any>
       <allow_inactive>auth_admin</allow_inactive>
       <allow_active>auth_admin</allow_active>
     </defaults>
-    <annotate key="org.freedesktop.policykit.exec.path">/opt/${sanitizedProductName}/resources/biblioteca-setup</annotate>
+    <annotate key="org.freedesktop.policykit.exec.path">/opt/${sanitizedProductName}/resources/cronologia-setup</annotate>
   </action>
 </policyconfig>
 POLICY_EOF
@@ -107,5 +107,5 @@ POLICY_EOF
 # pkexec exige o dono root e sem escrita para o grupo/outros; o build pode
 # ter gravado as pastas com 0775; normaliza antes de validar o helper.
 install -d -m 0755 -o root -g root '/opt/${sanitizedProductName}' '/opt/${sanitizedProductName}/resources' || true
-chown root:root '/opt/${sanitizedProductName}/resources/biblioteca-setup' || true
-chmod 0755 '/opt/${sanitizedProductName}/resources/biblioteca-setup' || true
+chown root:root '/opt/${sanitizedProductName}/resources/cronologia-setup' || true
+chmod 0755 '/opt/${sanitizedProductName}/resources/cronologia-setup' || true

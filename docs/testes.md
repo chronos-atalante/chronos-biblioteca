@@ -95,8 +95,8 @@ auditoria OSV. Rode os dois antes de concluir qualquer mudança.
   seria apagado antes dos asserts.
 - **Sandbox sempre**: escritas caem em diretório temporário (`setup-env.ts`);
   testes que precisam de um disco limpo chamam `resetSandbox()` no
-  `beforeEach`, que também apaga a árvore do cofre (`CHRONOS_VAR_LIB` aponta
-  para o sandbox, e `CHRONOS_VAULT_DIR` nunca está definido fora do
+  `beforeEach`, que também apaga a árvore do cofre (`CRONOLOGIA_VAR_LIB` aponta
+  para o sandbox, e `CRONOLOGIA_VAULT_DIR` nunca está definido fora do
   `npm run dev`). Cofre de teste se cria com `openTestVault()`
   (`tests/helpers/vault.ts`), que recria o arquivo e deixa a sessão aberta.
   **Todos** os testes de cofre derivam com o KDF barato (`FAST_KDF`, 16 MiB /
@@ -139,4 +139,4 @@ porque a paridade é garantida por teste estrutural, não por execução.
 
 - [`arquitetura.md`](arquitetura.md) (camadas e aliases)
 - [`api.md`](api.md) (contrato testado da fachada)
-- [`cofre.md`](cofre.md) (KDF barato e `CHRONOS_VAULT_DIR` nos testes)
+- [`cofre.md`](cofre.md) (KDF barato e `CRONOLOGIA_VAULT_DIR` nos testes)

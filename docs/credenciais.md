@@ -2,7 +2,7 @@
 
 Que segredos o app carrega, onde eles moram e o que acontece com eles ao longo
 do tempo. O destino de todos é o **cofre** ([`cofre.md`](cofre.md)) em
-`/var/lib/.chronos-biblioteca/.vault`: sem cofre aberto não há segredo nenhum
+`/var/lib/.cronologia/.vault`: sem cofre aberto não há segredo nenhum
 (falha fechada). O app pergunta se você deseja criar um antes de continuar.
 
 ## O que é segredo
@@ -41,7 +41,7 @@ conteúdo cifrado do backup na nuvem e as preferências comuns, inclusive o
    segredo no cofre (com ele aberto). Desconectar apaga `dropbox.tokens` do
    cofre; sem desbloqueio o fluxo é interrompido antes (falha fechada: nada é
    apagado às cegas).
-5. **Reparo da pasta**: se `/var/lib/.chronos-biblioteca/.vault` não puder ser
+5. **Reparo da pasta**: se `/var/lib/.cronologia/.vault` não puder ser
    escrita, a criação do cofre pede sudo pelo PolicyKit e tenta de novo
    (ver [`cofre.md`](cofre.md) § Criação e reparo da pasta).
 6. **Sem keyring**: o cofre **não** depende do `safeStorage` do SO; a senha
@@ -55,7 +55,7 @@ aplicada na criação **antes** de qualquer Argon2id:
 
 - mínimo de **12 caracteres**;
 - sem fragmentos previsíveis (comparados em minúsculas): `password`, `senha`,
-  `chronos`, `biblioteca`, `dropbox`, `123456`, `qwerty`, `letmein`, `admin`;
+  `chronos`, `cronologia`, `biblioteca`, `dropbox`, `123456`, `qwerty`, `letmein`, `admin`;
 - sem padrão óbvio: caractere repetido (`aaa…`), sequência ±1 (`abcdef…`,
   `123456…`) nem bloco repetido (`abcabc…`).
 
@@ -77,7 +77,7 @@ back-end é quem recusa (`vaultWeakPassword`). A trava exponencial (10 s até
 ## Legado descartado
 
 Instalações antigas que ainda tenham `settings.json` com `enc:`/keyring,
-`dropbox-tokens.json` com `0600` ou `~/.config/chronos-biblioteca/.vault`
+`dropbox-tokens.json` com `0600` ou `~/.config/cronologia/.vault`
 continuam **intocadas e ignoradas**: o app não lê, não copia e não apaga nada
 de lá. O primeiro salvamento regrava o `settings.json` só com o idioma
 (sem segredo em claro). Não existe migração e não é preciso limpar manualmente.

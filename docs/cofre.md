@@ -34,11 +34,11 @@ Formato de cada `.enc` (cabeçalho de 38 bytes, big-endian):
 
 ## Onde mora
 
-| Item      | Caminho                                         | Permissão               |
-| --------- | ----------------------------------------------- | ----------------------- |
-| Raiz      | `/var/lib/.chronos-biblioteca/`                 | `0711` `root:root`      |
-| Diretório | `/var/lib/.chronos-biblioteca/.vault/`          | `0700` (dono = usuário) |
-| Container | `/var/lib/.chronos-biblioteca/.vault/vault.zkv` | `0600`                  |
+| Item      | Caminho                                 | Permissão               |
+| --------- | --------------------------------------- | ----------------------- |
+| Raiz      | `/var/lib/.cronologia/`                 | `0711` `root:root`      |
+| Diretório | `/var/lib/.cronologia/.vault/`          | `0700` (dono = usuário) |
+| Container | `/var/lib/.cronologia/.vault/vault.zkv` | `0600`                  |
 
 O cofre fica em `/var/lib`, **fora de `~`**, para sobreviver à limpeza do home
 do usuário. A raiz é oculta e sem listagem: navegar ou excluir o topo da árvore
@@ -51,8 +51,8 @@ mais no fim devolvem "adulterado", nunca conteúdo em claro.
 A árvore é criada com permissão de escrita no `/var/lib` só onde ela falta:
 
 1. **Instalação** (`build/scripts/after-install.sh`, roda no `postinst`):
-   `install -d -m 0711 root:root /var/lib/.chronos-biblioteca` e
-   `install -d -m 0700 <SUDO_UID|PKEXEC_UID> /var/lib/.chronos-biblioteca/.vault`
+   `install -d -m 0711 root:root /var/lib/.cronologia` e
+   `install -d -m 0700 <SUDO_UID|PKEXEC_UID> /var/lib/.cronologia/.vault`
    (se o instalador não for identificado, o dono sai como root e o app conserta
    no próximo uso).
 2. **No app** (`ensureVaultStructure` em `src/main/vault/vault.ts`): gravações
@@ -60,13 +60,13 @@ A árvore é criada com permissão de escrita no `/var/lib` só onde ela falta:
    `EACCES`/`EPERM`/`EROFS` o erro vira `vaultDirUnavailable`.
 3. **Reparo** (`ensureVaultStructureWithSetup` + `src/main/vault/privilege.ts`):
    na criação do cofre, `vaultDirUnavailable` dispara
-   `pkexec <process.resourcesPath>/biblioteca-setup` (helper do `.deb`, só cria
+   `pkexec <process.resourcesPath>/cronologia-setup` (helper do `.deb`, só cria
    diretórios fixos, dono vindo de `PKEXEC_UID`) e tenta de novo. O diálogo é o
-   do PolicyKit (ação `com.chronos.biblioteca.setup-vault`); `pkexec 126`
+   do PolicyKit (ação `com.cronologia.setup-vault`); `pkexec 126`
    (dispensado) vira `vaultAuthCancelled` e o resto vira `vaultDirUnavailable`
    de novo. O app nunca vê a senha do sistema.
 
-Com `CHRONOS_VAULT_DIR`/`CHRONOS_VAR_LIB` definidas (testes e `npm run dev`)
+Com `CRONOLOGIA_VAULT_DIR`/`CRONOLOGIA_VAR_LIB` definidas (testes e `npm run dev`)
 o pkexec **não dispara**: a sobrescrita já vem com permissão de escrita.
 
 ## Formato do container (`vault.zkv`)
@@ -94,7 +94,7 @@ Depois do cabeçalho vêm dois blocos selados (`salt/IV/tag/comprimento/dados`):
 | `payload` | IV (16 B) + tag (16 B) + JSON `{"version":1,"secrets":{...}}`       |
 
 O `payload` é cifrado com a **chave de dados**, derivada da chave-mestra por
-HKDF-SHA512 (contexto `chronos-biblioteca/vault/data`), que separa o domínio
+HKDF-SHA512 (contexto `cronologia/vault/data`), que separa o domínio
 da mestra usado no `wrap`.
 
 ## Cifras e custo
@@ -188,15 +188,15 @@ Nada é copiado de instalações antigas. `settings.json` com `enc:`/keyring e
 `dropbox-tokens.json` com `0600` são **ignorados**: `loadSettings` lê só o
 `language` do disco, `loadState` lê só o cofre, e o primeiro salvamento
 regrava o arquivo só com o idioma (sem segredo em claro). O cofre antigo em
-`~/.config/chronos-biblioteca/.vault` também é descartado: ele não é nem
+`~/.config/cronologia/.vault` também é descartado: ele não é nem
 removido nem lido. Detalhe em [`credenciais.md`](credenciais.md).
 
 ## Variáveis de ambiente (testes e dev)
 
-| Variável            | Efeito                                                                |
-| ------------------- | --------------------------------------------------------------------- |
-| `CHRONOS_VAULT_DIR` | sobrepõe o diretório do cofre (testes usam sandbox própria)           |
-| `CHRONOS_VAR_LIB`   | sobrepõe o `/var/lib` de base (testes e `npm run dev` usam o sandbox) |
+| Variável               | Efeito                                                                |
+| ---------------------- | --------------------------------------------------------------------- |
+| `CRONOLOGIA_VAULT_DIR` | sobrepõe o diretório do cofre (testes usam sandbox própria)           |
+| `CRONOLOGIA_VAR_LIB`   | sobrepõe o `/var/lib` de base (testes e `npm run dev` usam o sandbox) |
 
 Ambas desligam o pedido de sudo. Os testes também isolam
 `HOME`/`XDG_CONFIG_HOME` (`tests/setup-env.ts`) e injetam KDF barato

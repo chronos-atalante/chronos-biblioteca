@@ -251,7 +251,7 @@ export default function App(): JSX.Element {
               <i className="fa-solid fa-book-open" />
             </div>
             <div>
-              <h1>Chronos Biblioteca</h1>
+              <h1>Cronologia</h1>
               <small>{m.app.headerStats(visibleStats.total, visibleStats.average)}</small>
             </div>
           </div>

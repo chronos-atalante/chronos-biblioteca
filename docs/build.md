@@ -39,29 +39,29 @@ tempo de execução.
 
 Bloco `build` do `package.json`:
 
-| Chave                 | Valor                                                                |
-| --------------------- | -------------------------------------------------------------------- |
-| `appId`               | `com.chronos.biblioteca`                                             |
-| `target`              | `deb` para Linux (categoria Office, executável `chronos-biblioteca`) |
-| `asar`                | ligado (o código vive no `app.asar`)                                 |
-| `afterPack`           | `build/after-pack.cjs` (slim: locales e SwiftShader removidos)       |
-| `deb.appArmorProfile` | `build/apparmor-profile` (perfil AppArmor real, não o decorativo)    |
-| `deb.afterInstall`    | `build/scripts/after-install.sh` (dirs do cofre + PolicyKit)         |
-| `deb.afterRemove`     | `build/postrm` (unload do perfil, alternatives e purge)              |
-| `extraResources`      | `build/scripts/biblioteca-setup` → `resources/biblioteca-setup`      |
-| `depends`             | GTK 3, libnotify, NSS, xss, xtst, xdg-utils, atspi e uuid            |
-| `electronFuses`       | 6 fuses apertados (abaixo)                                           |
+| Chave                 | Valor                                                             |
+| --------------------- | ----------------------------------------------------------------- |
+| `appId`               | `com.cronologia`                                                  |
+| `target`              | `deb` para Linux (categoria Office, executável `cronologia`)      |
+| `asar`                | ligado (o código vive no `app.asar`)                              |
+| `afterPack`           | `build/after-pack.cjs` (slim: locales e SwiftShader removidos)    |
+| `deb.appArmorProfile` | `build/apparmor-profile` (perfil AppArmor real, não o decorativo) |
+| `deb.afterInstall`    | `build/scripts/after-install.sh` (dirs do cofre + PolicyKit)      |
+| `deb.afterRemove`     | `build/postrm` (unload do perfil, alternatives e purge)           |
+| `extraResources`      | `build/scripts/cronologia-setup` → `resources/cronologia-setup`   |
+| `depends`             | GTK 3, libnotify, NSS, xss, xtst, xdg-utils, atspi e uuid         |
+| `electronFuses`       | 6 fuses apertados (abaixo)                                        |
 
 ### Fuses (`electronFuses`)
 
-| Fuse                                   | Valor   | Por quê                                                   |
-| -------------------------------------- | ------- | --------------------------------------------------------- |
-| `runAsNode`                            | `false` | não deixar `ELECTRON_RUN_AS_NODE` executar Node           |
-| `enableNodeOptionsEnvironmentVariable` | `false` | bloqueia `NODE_OPTIONS` injetado por fora                 |
-| `enableNodeCliInspectArguments`        | `false` | inspetor (`--inspect`) desligado                          |
-| `enableCookieEncryption`               | `true`  | cookies cifrados no perfil                                |
-| `onlyLoadAppFromAsar`                  | `true`  | código só do `app.asar`                                   |
-| `grantFileProtocolExtraPrivileges`     | `false` | sem privilégios extra do `file://` (a SPA é `chronos://`) |
+| Fuse                                   | Valor   | Por quê                                                      |
+| -------------------------------------- | ------- | ------------------------------------------------------------ |
+| `runAsNode`                            | `false` | não deixar `ELECTRON_RUN_AS_NODE` executar Node              |
+| `enableNodeOptionsEnvironmentVariable` | `false` | bloqueia `NODE_OPTIONS` injetado por fora                    |
+| `enableNodeCliInspectArguments`        | `false` | inspetor (`--inspect`) desligado                             |
+| `enableCookieEncryption`               | `true`  | cookies cifrados no perfil                                   |
+| `onlyLoadAppFromAsar`                  | `true`  | código só do `app.asar`                                      |
+| `grantFileProtocolExtraPrivileges`     | `false` | sem privilégios extra do `file://` (a SPA é `cronologia://`) |
 
 ### `after-pack.cjs` (slim)
 
@@ -73,15 +73,15 @@ Remove do pacote o que o app não usa: `locales/` além de `pt-BR`, `pt-PT` e
 ### Perfil AppArmor (`build/apparmor-profile`)
 
 O `postinst` padrão do electron-builder copia o perfil para
-`/etc/apparmor.d/chronos-biblioteca` e o carrega, **pulando** (sem falhar) onde
+`/etc/apparmor.d/cronologia` e o carrega, **pulando** (sem falhar) onde
 AppArmor é antigo (base < `abi/4.0`, ex.: Mint 22 sobre 22.04) ou ausente. Sem
 essa chave, o que o `.deb` embutiria seria o perfil decorativo padrão
 (`flags=(unconfined)`, que só dá nome ao processo). O perfil real confina o
 processo instalado:
 
 - **escrita** só nos diretórios do app no home (`.config`/`.local/share`/
-  `.cache`/`.local/state/chronos-biblioteca`), no cofre de
-  `/var/lib/.chronos-biblioteca` (raiz `r`, vault `rw`) e no helper do pacote;
+  `.cache`/`.local/state/cronologia`), no cofre de
+  `/var/lib/.cronologia` (raiz `r`, vault `rw`) e no helper do pacote;
 - **leitura** do home ampla (o seletor de capa abre arquivo de qualquer pasta)
   com deny-list de credenciais (`.ssh`, `.gnupg`, chaveiros, perfis de
   navegador inclusive Brave, cofre/Cookies do Guardinha, `.aws`, `.docker`,
@@ -112,10 +112,10 @@ apparmor_parser --skip-kernel-load --debug build/apparmor-profile
 
 **Ciclo de teste em uma máquina real (obrigatório após cada regra nova):**
 carregar em modo complain (`sudo apparmor_parser -C -r
-/etc/apparmor.d/chronos-biblioteca`), usar o app de ponta a ponta, ler as
+/etc/apparmor.d/cronologia`), usar o app de ponta a ponta, ler as
 negações (`journalctl -k | grep DENIED` ou `/var/log/kern.log`) e repetir até
 zerar negações legítimas; só então voltar ao modo enforce
-(`sudo apparmor_parser -r /etc/apparmor.d/chronos-biblioteca`). Negação
+(`sudo apparmor_parser -r /etc/apparmor.d/cronologia`). Negação
 legítima é sinal de regra faltando, **nunca** de regra a remover. A remoção do
 pacote (`postrm` abaixo) descarrega e apaga o perfil.
 
@@ -132,17 +132,17 @@ raiz do monorepo).
 `build/scripts/after-install.sh` é o `postinst` custom (`deb.afterInstall`),
 com o template padrão do electron-builder **mais** o que o cofre precisa:
 
-- `install -d -m 0711 root:root /var/lib/.chronos-biblioteca` (oculta, sem
+- `install -d -m 0711 root:root /var/lib/.cronologia` (oculta, sem
   listagem) e `install -d -m 0700 <SUDO_UID|PKEXEC_UID>` para
-  `/var/lib/.chronos-biblioteca/.vault`. Se o instalador não for
+  `/var/lib/.cronologia/.vault`. Se o instalador não for
   identificado, o app repara a pasta no primeiro uso;
-- a ação do PolicyKit `com.chronos.biblioteca.setup-vault`
-  (`/usr/share/polkit-1/actions/com.chronos.biblioteca.policy`), que autoriza
+- a ação do PolicyKit `com.cronologia.setup-vault`
+  (`/usr/share/polkit-1/actions/com.cronologia.policy`), que autoriza
   **só** o helper do pacote (`annotate` com o caminho absoluto);
-- normalização do dono/modo de `resources/biblioteca-setup` (o build pode
+- normalização do dono/modo de `resources/cronologia-setup` (o build pode
   gravar com outro dono; `pkexec` exige root e sem escrita do grupo).
 
-O helper `build/scripts/biblioteca-setup` (copiado por `extraResources` para
+O helper `build/scripts/cronologia-setup` (copiado por `extraResources` para
 `resources/`) roda como root via `pkexec`, **não** aceita caminho do chamador
 e só cria os dois diretórios fixos com os modos acima, dando o dono do vault a
 `PKEXEC_UID`. É ele que o `src/main/vault/privilege.ts` chama quando o app
@@ -155,9 +155,9 @@ que resolve os placeholders de nome). No No `remove` comum: remove o `update-alt
 AppArmor do kernel** e apaga o arquivo (sem isso a policy ficaria imposta até
 o reboot), e apaga a ação do PolicyKit (fora do banco do dpkg). No `apt
 purge`, apaga também os dados do usuário em todos os homes
-(`.config`/`.local/share`/`.cache`/`.state/chronos-biblioteca`) **e o cofre
-em `/var/lib/.chronos-biblioteca`** (decisão de produto: purge leva junto).
-Pastas de marcas antigas (`Chronos Biblioteca`, `Webtoons Biblioteca`) não
+(`.config`/`.local/share`/`.cache`/`.state/cronologia`) **e o cofre
+em `/var/lib/.cronologia`** (decisão de produto: purge leva junto).
+Pastas de marcas antigas (`Cronologia`, `Webtoons Biblioteca`) não
 são mais tocadas nem lidas.
 
 ## Integridade: check e testes antes do pacote

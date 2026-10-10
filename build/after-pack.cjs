@@ -1,6 +1,6 @@
 'use strict';
 // Hook afterPack do electron-builder: reduz o .deb removendo arquivos do
-// Electron que o Chronos Biblioteca não usa.
+// Electron que o Cronologia não usa.
 //
 // - locales/: mantém só pt-BR, pt-PT e en-US (fallback obrigatório do Chromium).
 // - SwiftShader/Vulkan (libvk_swiftshader.so, libvulkan.so.1,

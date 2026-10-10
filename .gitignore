@@ -1,7 +1,7 @@
 node_modules
 out
 release
-# cofre de desenvolvimento criado pelo `npm run dev` (CHRONOS_VAULT_DIR)
+# cofre de desenvolvimento criado pelo `npm run dev` (CRONOLOGIA_VAULT_DIR)
 .dev-vault
 # workspace temporário do repo APT flat gerado no CI (publish.yml)
 apt

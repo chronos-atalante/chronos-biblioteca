@@ -1,5 +1,5 @@
 name: Relato de bug
-description: Algo não funcionou como esperado no Chronos Biblioteca.
+description: Algo não funcionou como esperado no Cronologia.
 title: '[Bug]: '
 body:
   - type: markdown

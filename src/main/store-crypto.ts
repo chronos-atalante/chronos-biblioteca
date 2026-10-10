@@ -41,8 +41,8 @@ const HEADER_BYTES = MAGIC_BYTES + IV_BYTES + TAG_BYTES;
 export const STORE_EXTENSION = '.enc';
 
 /** Domínios de derivação: separados para que um compromise de um não valha o outro. */
-const LIBRARY_INFO = 'chronos-biblioteca/store/library';
-const COVER_INFO = 'chronos-biblioteca/store/cover';
+const LIBRARY_INFO = 'cronologia/store/library';
+const COVER_INFO = 'cronologia/store/cover';
 
 type StoreDomain = 'library' | 'cover';
 

@@ -41,7 +41,7 @@ Regras das strings:
 
 - **Dados por dependência**: `ATTRIBUTIONS[].description` e nomes/licenças de
   pacotes (`src/renderer/src/attributions.ts`), `CATEGORIES`, `DONATION_LABEL`.
-- **Nomes de marca**: `Dropbox`, `Google Drive`, `Chronos Biblioteca`,
+- **Nomes de marca**: `Dropbox`, `Google Drive`, `Cronologia`,
   `Webtoon`, `Manhwa`... (`label` do provedor, `workTypes.webtoon`, título da
   janela).
 - **Logs** (`console.error`/`warn`) e o corpo do 404 interno do protocolo

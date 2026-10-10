@@ -5,7 +5,7 @@ import { writeJsonAtomic } from '@zero/main/jsonfile';
 import { resetSandbox, sandboxPath } from '../helpers/sandbox.ts';
 
 function target(): string {
-  return path.join(sandboxPath('XDG_CONFIG_HOME'), 'chronos-biblioteca', 'secrets.json');
+  return path.join(sandboxPath('XDG_CONFIG_HOME'), 'cronologia', 'secrets.json');
 }
 
 function mode(file: string): number {

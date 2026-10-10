@@ -26,10 +26,10 @@ import { shredFile } from '@zero/main/shred';
  *   cofre atual nunca são tocados.
  */
 
-/** Arquivos legados em `~/.config/chronos-biblioteca`, com o nome exato. */
+/** Arquivos legados em `~/.config/cronologia`, com o nome exato. */
 const LEGACY_FILES = ['dropbox-tokens.json', 'drive-tokens.json'] as const;
 
-/** Pasta do cofre antigo, dentro de `~/.config/chronos-biblioteca`. */
+/** Pasta do cofre antigo, dentro de `~/.config/cronologia`. */
 const LEGACY_VAULT_DIR = '.vault';
 
 /**

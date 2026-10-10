@@ -1,6 +1,6 @@
 # Provedores de backup
 
-Como o Chronos Biblioteca fala com a nuvem: um contrato único
+Como o Cronologia fala com a nuvem: um contrato único
 (`BackupProvider`), um catálogo de provedores e o status de cada um. O guia do
 Dropbox (OAuth, App folder, troubleshooting) continua em
 [`dropbox.md`](dropbox.md).
@@ -9,7 +9,7 @@ Dropbox (OAuth, App folder, troubleshooting) continua em
 
 | Provedor         | Situação                    | Destino do backup                                                            |
 | ---------------- | --------------------------- | ---------------------------------------------------------------------------- |
-| **Dropbox**      | **Operante** (único em uso) | `/Apps/Chronos Biblioteca` (pasta visível na sua conta)                      |
+| **Dropbox**      | **Operante** (único em uso) | `/Apps/Cronologia` (pasta visível na sua conta)                              |
 | **Google Drive** | **Não operante**            | `appDataFolder` (**pasta oculta**, não aparece na interface do Google Drive) |
 
 Em Configurações → **Provedores de backup** os dois aparecem: o Google Drive

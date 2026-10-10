@@ -27,7 +27,7 @@ jobs:
             const body = [
               `Obrigado, @${pr.user.login}, pela contribuição!`,
               '',
-              `Seu PR #${pr.number} (${pr.title}) foi mesclado no Chronos Biblioteca.`,
+              `Seu PR #${pr.number} (${pr.title}) foi mesclado no Cronologia.`,
               'Ajudou o projeto a ficar melhor para todo mundo que usa.',
               '',
               'Para as próximas mudanças, veja o CONTRIBUTING.md.',

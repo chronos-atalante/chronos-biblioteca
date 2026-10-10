@@ -26,7 +26,7 @@ que ela protege.
 | Chave-mestra só na sessão, auto-lock de 5 min e wipe no quit              | `src/main/vault/session.ts` (wipe chamado por `src/main/index.ts` no `before-quit`)     |
 | Auto-lock por ociosidade **real** (atividade da UI, não acesso a segredo) | `src/main/vault/session.ts` (`touch` com throttle), `src/main/index.ts` (`vault:touch`) |
 | Segredos com nome canônico (sem string solta)                             | `src/main/vault/secrets.ts`                                                             |
-| Cofre fora de `~` em `/var/lib` (raiz `0711` + vault `0700`)              | `build/scripts/after-install.sh`, `build/scripts/biblioteca-setup`                      |
+| Cofre fora de `~` em `/var/lib` (raiz `0711` + vault `0700`)              | `build/scripts/after-install.sh`, `build/scripts/cronologia-setup`                      |
 | Reparo da pasta do cofre só com PolicyKit (senha do sistema)              | `src/main/vault/privilege.ts` (`pkexec` + ação no `.policy`)                            |
 | Sem cofre não há segredo (falha fechada; nada em claro)                   | `src/main/settings.ts`, `src/main/drive/state.ts`                                       |
 | Canais `vault:*` com origem validada e envelope sem lançar                | `src/main/index.ts`                                                                     |
@@ -49,7 +49,7 @@ que ela protege.
 | Guarda de origem em todo canal IPC (`assertAppFrame`)                               | `src/main/index.ts`                                                                          |
 | Navegação presa ao app, `window.open` negado, permissões web negadas (só clipboard) | `src/main/index.ts`                                                                          |
 | Capas por `cover://` com `basename`, decifradas sob demanda                         | `src/main/protocols.ts` (`registerCoverProtocol`), `src/main/library.ts` (`readCoverBuffer`) |
-| SPA em produção por `chronos://` (`path.resolve` + prefixo)                         | `src/main/protocols.ts` (`registerAppProtocol`)                                              |
+| SPA em produção por `cronologia://` (`path.resolve` + prefixo)                      | `src/main/protocols.ts` (`registerAppProtocol`)                                              |
 | `shell.openExternal` só para `https:`                                               | `src/main/external.ts` (`openExternalSafe`)                                                  |
 | CSP no HTML da interface                                                            | `src/renderer/index.html`                                                                    |
 | Preload sandboxed (CommonJS) com `contextIsolation`                                 | `src/preload/index.ts`                                                                       |
@@ -76,7 +76,7 @@ que ela protege.
 ## Fluxo de confiança
 
 ```
-Página do app (chronos://) → assertAppFrame → regra de domínio → cofre/drive → arquivo cifrado
+Página do app (cronologia://) → assertAppFrame → regra de domínio → cofre/drive → arquivo cifrado
                                   ^                              ^                  ^
                                   |                              |                  |
                           só o frame oficial            requireSessionKey    0600 + atômico

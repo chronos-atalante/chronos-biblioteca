@@ -64,7 +64,7 @@ export const ko: Messages = {
     toastSaved: '작품이 저장되었습니다.',
     toastRemoved: '작품이 삭제되었습니다.',
     startupFailed: (detail: string): string =>
-      `Chronos Biblioteca를 시작하지 못했습니다.\n\n기술 세부 정보: ${detail}`,
+      `Cronologia를 시작하지 못했습니다.\n\n기술 세부 정보: ${detail}`,
   },
 
   settings: {
@@ -173,7 +173,7 @@ export const ko: Messages = {
     title: '크레딧',
     bannerTitle: '프로젝트 크레딧.',
     bannerBody:
-      'Chronos Biblioteca에 사용된 오픈 소스 의존성 목록이며, 모두 OSI 승인 허용 ' +
+      'Cronologia에 사용된 오픈 소스 의존성 목록이며, 모두 OSI 승인 허용 ' +
       '라이선스입니다. 정확한 버전은 `package.json` / `package-lock.json`에 있습니다.',
     pause: '일시정지',
     resume: '계속',
@@ -231,10 +231,10 @@ export const ko: Messages = {
   },
 
   providers: {
-    dropboxStorageTarget: '/Apps/Chronos Biblioteca (계정에 보이는 폴더)',
+    dropboxStorageTarget: '/Apps/Cronologia (계정에 보이는 폴더)',
     googleStorageTarget: 'appDataFolder (숨김 폴더, Google Drive 화면에 나타나지 않음)',
     googleUnavailable:
-      'Google Drive는 아직 사용할 수 없습니다: Chronos가 Google 요구사항(앱 확인, 동의 ' +
+      'Google Drive는 아직 사용할 수 없습니다: Cronologia가 Google 요구사항(앱 확인, 동의 ' +
       '화면, 범위 심사)을 충족해야 통합이 활성화됩니다. 그때까지 백업은 Dropbox를 ' +
       '사용합니다.',
   },

@@ -64,7 +64,7 @@ export const en: Messages = {
     toastSaved: 'Work saved.',
     toastRemoved: 'Work removed.',
     startupFailed: (detail: string): string =>
-      `Could not start Chronos Biblioteca.\n\nTechnical details: ${detail}`,
+      `Could not start Cronologia.\n\nTechnical details: ${detail}`,
   },
 
   settings: {
@@ -175,7 +175,7 @@ export const en: Messages = {
     title: 'Attributions',
     bannerTitle: 'Project credits.',
     bannerBody:
-      'These are the open source dependencies used in Chronos Biblioteca, all under ' +
+      'These are the open source dependencies used in Cronologia, all under ' +
       'OSI-approved permissive licenses. Exact versions are in ' +
       '`package.json` / `package-lock.json`.',
     pause: 'Pause',
@@ -235,12 +235,12 @@ export const en: Messages = {
   },
 
   providers: {
-    dropboxStorageTarget: '/Apps/Chronos Biblioteca (folder visible in your account)',
+    dropboxStorageTarget: '/Apps/Cronologia (folder visible in your account)',
     googleStorageTarget:
       'appDataFolder (hidden folder, does not appear in the Google Drive interface)',
     googleUnavailable:
       'Google Drive is not operational yet: the integration will only be enabled once ' +
-      'Chronos meets Google’s requirements (app verification, consent screen and scope ' +
+      'Cronologia meets Google’s requirements (app verification, consent screen and scope ' +
       'review). In the meantime, backups use Dropbox.',
   },
 

@@ -1,12 +1,12 @@
 # Backup no Dropbox
 
-Guia completo de como conectar o **Chronos Biblioteca** ao Dropbox e proteger sua
+Guia completo de como conectar o **Cronologia** ao Dropbox e proteger sua
 biblioteca na nuvem. O mapa dos provedores de backup (quem está operante e por
 que o Google Drive ainda não) está em [`backup-providers.md`](backup-providers.md).
 
 O app usa **OAuth 2.0 direto no aplicativo** (fluxo loopback + PKCE, sem servidor
 intermediário e sem bibliotecas pesadas, apenas `fetch` nativo) e guarda tudo na
-**pasta do app** (`/Apps/Chronos Biblioteca`), um espaço reservado que o Dropbox
+**pasta do app** (`/Apps/Cronologia`), um espaço reservado que o Dropbox
 cria para cada aplicativo. Todos os arquivos sobem **criptografados**
 (AES-256-GCM). Com PKCE **não há segredo embutido**: só a App key identifica o
 app; o segredo real é o `refresh_token`, guardado somente na sua máquina.
@@ -64,7 +64,7 @@ Para criar o seu:
 1. Acesse <https://www.dropbox.com/developers/apps> e clique em **Create app**.
 2. Escolha **Scoped access** → **App folder**. É esse tipo que cria a pasta
    reservada `/Apps/<nome>`: o app enxerga **somente** ela, nunca o resto do
-   seu Dropbox. Dê um nome (ex.: `Chronos Biblioteca`).
+   seu Dropbox. Dê um nome (ex.: `Cronologia`).
 3. Na aba **Permissions**, marque exatamente:
    `account_info.read`, `files.metadata.read`, `files.metadata.write`,
    `files.content.read`, `files.content.write`.
@@ -91,7 +91,7 @@ contas, é só pedir a produção, bem mais simples que a verificação do Googl
 
 ## 2. Conectar no aplicativo
 
-1. Abra o Chronos Biblioteca → botão **⚙ Configurações** (canto superior direito).
+1. Abra o Cronologia → botão **⚙ Configurações** (canto superior direito).
 2. Defina a **senha de criptografia do backup** (obrigatória; ver abaixo) e clique em **Salvar**.
 3. Clique em **Conectar ao Dropbox**:
    - O navegador padrão abre a página de consentimento do Dropbox.
@@ -157,7 +157,7 @@ sequenceDiagram
 - **Restaurar sem senha**: se algum arquivo não estiver cifrado (formato muito antigo),
   o modal aceita confirmação em branco para ele; senha errada mostra “Senha de
   criptografia incorreta ou backup corrompido.”.
-- **Zerar o backup na nuvem**: apague a pasta `/Apps/Chronos Biblioteca` pelo
+- **Zerar o backup na nuvem**: apague a pasta `/Apps/Cronologia` pelo
   Dropbox Web e faça um backup novo.
 - Os backups são disparados **manualmente** pelo botão _Fazer backup agora_.
 
@@ -179,7 +179,7 @@ sequenceDiagram
 | Erro de rede / `Erro do Dropbox (HTTP …)`                          | Sem conexão, proxy/VPN bloqueando, ou cota do Dropbox estourada. Tente novamente.                                                                                                                                     |
 | Janela abre mas nada acontece após consentir                       | O navegador não conseguiu voltar para `localhost:17431` (porta bloqueada). Feche e tente de novo.                                                                                                                     |
 | “Fazer backup” falha / nada local                                  | A base local ainda não existe (instalação nova). Adicione ao menos uma obra antes de fazer o backup.                                                                                                                  |
-| App reinstalado localmente                                         | O cofre (`/var/lib/.chronos-biblioteca/.vault`) vai embora com o `apt purge` e o `settings.json` fica onde sempre esteve. Reconecte: o backup na nuvem é reaproveitado.                                               |
+| App reinstalado localmente                                         | O cofre (`/var/lib/.cronologia/.vault`) vai embora com o `apt purge` e o `settings.json` fica onde sempre esteve. Reconecte: o backup na nuvem é reaproveitado.                                                       |
 
 ---
 
@@ -187,7 +187,7 @@ sequenceDiagram
 
 - Os tokens ficam **somente na sua máquina**: no cofre de segredos
   (`dropbox.tokens`, sob a senha mestra; ver [`cofre.md`](cofre.md)), em
-  `/var/lib/.chronos-biblioteca/.vault`. Nunca em repositório, nunca em
+  `/var/lib/.cronologia/.vault`. Nunca em repositório, nunca em
   arquivo em claro.
 - **Sem segredo embutido**: com PKCE o `app secret` nem entra no fluxo. A App key é pública por definição e a proteção vem do PKCE + loopback. O segredo de verdade é o `refresh_token`, que nunca sai da sua máquina. Para revogar tudo, desconecte no app **e** remova o app em <https://www.dropbox.com/account/security>.
 - Escopo mínimo: só a **pasta do app** (App folder; o app nem fica sabendo que o resto do seu Dropbox existe) + leitura do e-mail da conta (só para exibir qual conta está conectada).

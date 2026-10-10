@@ -19,7 +19,7 @@ vi.mock('@zero/main/drive', async (importOriginal) => {
 });
 
 beforeAll(async () => {
-  app.getPath.mockReturnValue(path.join(os.tmpdir(), 'chronos-tests-startup'));
+  app.getPath.mockReturnValue(path.join(os.tmpdir(), 'cronologia-tests-startup'));
   await import('@zero/main/index');
   await vi.waitFor(() => expect(BrowserWindow.instances.length).toBeGreaterThan(0));
 });

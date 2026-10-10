@@ -25,7 +25,7 @@ function strengthOf(password: string): Strength {
   const predictable =
     password.length < 12 ||
     /^(.)\1+$/.test(password) ||
-    ['senha', 'password', 'chronos', 'biblioteca', 'qwerty', '123456'].some((word) =>
+    ['senha', 'password', 'cronos', 'cronologia', 'biblioteca', 'qwerty', '123456'].some((word) =>
       lower.includes(word),
     );
   if (predictable) return 'weak';

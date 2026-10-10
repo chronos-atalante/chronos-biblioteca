@@ -12,7 +12,7 @@ import { mimeFor, readCoverBuffer } from '@zero/main/library';
  * `app.whenReady` (exigência do Electron); daí o registro ficar no topo.
  */
 
-export const APP_SCHEME = 'chronos';
+export const APP_SCHEME = 'cronologia';
 export const APP_ORIGIN = `${APP_SCHEME}://app`;
 
 protocol.registerSchemesAsPrivileged([
@@ -92,7 +92,7 @@ function rendererMime(file: string): string {
 }
 
 /**
- * Serve a SPA empacotada sob o scheme `chronos://`: todo `/assets/...`
+ * Serve a SPA empacotada sob o scheme `cronologia://`: todo `/assets/...`
  * resolve dentro de `out/renderer`, com path traversal rejeitado por
  * `path.resolve` + prefixo (`/../../../../etc/passwd` cai fora e vira 403;
  * o parser de URL do Chromium normaliza os `..` antes, então o handler

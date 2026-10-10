@@ -69,7 +69,7 @@ export const ptBR = {
     toastSaved: 'Obra salva.',
     toastRemoved: 'Obra removida.',
     startupFailed: (detail: string): string =>
-      `Não foi possível iniciar o Chronos Biblioteca.\n\nDetalhes técnicos: ${detail}`,
+      `Não foi possível iniciar o Cronologia.\n\nDetalhes técnicos: ${detail}`,
   },
 
   settings: {
@@ -181,7 +181,7 @@ export const ptBR = {
     title: 'Atribuições',
     bannerTitle: 'Créditos do projeto.',
     bannerBody:
-      'Estas são as dependências de código aberto usadas no Chronos Biblioteca, todas com ' +
+      'Estas são as dependências de código aberto usadas no Cronologia, todas com ' +
       'licenças permissivas aprovadas pela OSI. As versões exatas estão em ' +
       '`package.json` / `package-lock.json`.',
     pause: 'Pausar',
@@ -242,11 +242,11 @@ export const ptBR = {
   },
 
   providers: {
-    dropboxStorageTarget: '/Apps/Chronos Biblioteca (pasta visível na sua conta)',
+    dropboxStorageTarget: '/Apps/Cronologia (pasta visível na sua conta)',
     googleStorageTarget: 'appDataFolder (pasta oculta, não aparece na interface do Google Drive)',
     googleUnavailable:
       'O Google Drive ainda não está operante: a integração só será ativada quando o ' +
-      'Chronos atender às exigências do Google (verificação do app, tela de ' +
+      'Cronologia atende às exigências do Google (verificação do app, tela de ' +
       'consentimento e revisão dos escopos). Enquanto isso, o backup usa o Dropbox.',
   },
 

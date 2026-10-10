@@ -1,4 +1,4 @@
-# Chronos Biblioteca
+# Cronologia
 
 Aplicativo desktop (Electron + TypeScript + React) para anotar o progresso das suas leituras de
 **webtoons, manhwas, manhuas, mangás, livros e outros**: capa da obra, título, descrição, barra de
@@ -31,7 +31,7 @@ Feito para **Linux Mint 22.3 (Zena)** e distribuído como pacote **`.deb`**.
 - **Busca** por título ou descrição e **filtros** por status (Lendo, Planejados, Pausados,
   Concluídos, Cancelados); o contador e o progresso médio do cabeçalho acompanham o que está
   sendo exibido, e o bloco de estatísticas continua mostrando o total da biblioteca.
-- **Backup no Dropbox**: grava na **pasta do app** (`/Apps/Chronos Biblioteca`, um espaço
+- **Backup no Dropbox**: grava na **pasta do app** (`/Apps/Cronologia`, um espaço
   que só este app acessa via API), com login **OAuth + PKCE direto no app** (sem segredo
   embutido e sem servidor intermediário). Arquivos sempre **criptografados** (nomes opacos +
   AES-256-GCM), com **Fazer backup agora**, **Restaurar** (pede a senha), **Desconectar** e
@@ -63,23 +63,23 @@ publicação e regras de manutenção: [`docs/distribuicao-apt.md`](docs/distrib
 Na primeira instalação:
 
 ```bash
-curl -fsSL https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download/public.key \
-  | sudo gpg --dearmor --yes -o /usr/share/keyrings/chronos.gpg
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/chronos.gpg] \
-https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download/ ./" \
-  | sudo tee /etc/apt/sources.list.d/chronos.list
-sudo apt update && sudo apt install chronos-biblioteca
+curl -fsSL https://github.com/chronos-atalante/cronologia/releases/latest/download/public.key \
+  | sudo gpg --dearmor --yes -o /usr/share/keyrings/cronologia.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/cronologia.gpg] \
+https://github.com/chronos-atalante/cronologia/releases/latest/download/ ./" \
+  | sudo tee /etc/apt/sources.list.d/cronologia.list
+sudo apt update && sudo apt install cronologia
 ```
 
 ### Download direto
 
-Baixe o `.deb` da [página de Releases](https://github.com/chronos-atalante/chronos-biblioteca/releases)
+Baixe o `.deb` da [página de Releases](https://github.com/chronos-atalante/cronologia/releases)
 (baixar direto:
-`https://github.com/chronos-atalante/chronos-biblioteca/releases/latest/download/chronos-biblioteca_amd64.deb`)
+`https://github.com/chronos-atalante/cronologia/releases/latest/download/cronologia_amd64.deb`)
 e instale:
 
 ```bash
-sudo apt install ./chronos-biblioteca_amd64.deb
+sudo apt install ./cronologia_amd64.deb
 ```
 
 ### Compilando localmente
@@ -90,17 +90,17 @@ npm install
 npm run dist
 
 # instale
-sudo apt install ./release/chronos-biblioteca_*_amd64.deb
+sudo apt install ./release/cronologia_*_amd64.deb
 ```
 
-O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
+O aplicativo aparece no menu do sistema como **Cronologia**.
 
-- Executável: `/opt/Chronos Biblioteca/chronos-biblioteca` (alternativa
-  `/usr/bin/chronos-biblioteca`)
-- Ícone instalado em `/usr/share/icons/hicolor/512x512/apps/chronos-biblioteca.png`
-- Dados: obras e capas em `~/.local/share/chronos-biblioteca/` (`library.enc`, `covers/*.enc`), **cifrados** com a chave do cofre;
-  configurações em `~/.config/chronos-biblioteca/` (`settings.json`, só o idioma) e
-  cofre de segredos em `/var/lib/.chronos-biblioteca/.vault/` (raiz `0711 root`, vault
+- Executável: `/opt/Cronologia/cronologia` (alternativa
+  `/usr/bin/cronologia`)
+- Ícone instalado em `/usr/share/icons/hicolor/512x512/apps/cronologia.png`
+- Dados: obras e capas em `~/.local/share/cronologia/` (`library.enc`, `covers/*.enc`), **cifrados** com a chave do cofre;
+  configurações em `~/.config/cronologia/` (`settings.json`, só o idioma) e
+  cofre de segredos em `/var/lib/.cronologia/.vault/` (raiz `0711 root`, vault
   `0700` do usuário; criado no `postinst` e reparado pelo PolicyKit)
 
 ---
@@ -109,7 +109,7 @@ O aplicativo aparece no menu do sistema como **Chronos Biblioteca**.
 
 ### App parou de funcionar depois de excluir a pasta `/tmp`
 
-O Chronos (e a maioria dos aplicativos Electron) usa `/tmp` para sockets e
+O Cronologia (e a maioria dos aplicativos Electron) usa `/tmp` para sockets e
 arquivos temporários. Se essa pasta for excluída, o app pode falhar ao abrir ou
 parar de responder sem motivo aparente. Restaure o diretório com as permissões
 padrão do sistema e, em geral, o app volta ao normal:
@@ -249,7 +249,7 @@ flowchart TD
 
     subgraph MAIN["Main: Electron (src/main)"]
         IDX["index.ts: janela, IPC, ciclo de vida, F11"]
-        PRT["protocols.ts: cover:// (capas) e chronos:// (SPA)"]
+        PRT["protocols.ts: cover:// (capas) e cronologia:// (SPA)"]
         LIB["library.ts + store-crypto.ts:<br/>acervo cifrado"]
         SET["settings.ts: App key, senha do backup e idioma"]
         DRV["drive/: provedor Dropbox, OAuth PKCE, backup (AES-256-GCM)"]
@@ -260,10 +260,10 @@ flowchart TD
     end
 
     subgraph STORAGE["Persistência"]
-        LOKAL[("~/.local/share/chronos-biblioteca/<br/>library.enc · covers/*.enc<br/>(cifrados)")]
-        CFG[("~/.config/chronos-biblioteca/<br/>settings.json (só idioma)")]
-        VAULT[("/var/lib/.chronos-biblioteca/<br/>.vault/ · vault.zkv")]
-        DRIVE[("Dropbox · pasta do app /Apps/Chronos Biblioteca")]
+        LOKAL[("~/.local/share/cronologia/<br/>library.enc · covers/*.enc<br/>(cifrados)")]
+        CFG[("~/.config/cronologia/<br/>settings.json (só idioma)")]
+        VAULT[("/var/lib/.cronologia/<br/>.vault/ · vault.zkv")]
+        DRIVE[("Dropbox · pasta do app /Apps/Cronologia")]
     end
 
     BRIDGE -->|"ipcRenderer.invoke"| IDX
@@ -326,7 +326,7 @@ sequenceDiagram
 ## Estrutura do projeto
 
 ```
-chronos-biblioteca/
+cronologia/
 ├── build/
 │   ├── after-pack.cjs        # slim do pacote (locales/SwiftShader; nunca libffmpeg)
 │   ├── apparmor-profile      # perfil AppArmor real instalado no .deb
@@ -334,7 +334,7 @@ chronos-biblioteca/
 │   ├── make-icon.py          # gerador do ícone (PIL)
 │   ├── scripts/
 │   │   ├── after-install.sh   # postinst: dirs do cofre em /var/lib + ação do PolicyKit
-│   │   └── biblioteca-setup   # helper root (pkexec) que só cria os dirs do cofre
+│   │   └── cronologia-setup   # helper root (pkexec) que só cria os dirs do cofre
 │   └── postrm                # after-remove: unload do perfil, alternatives, policy e purge
 ├── docs/
 │   ├── visao-geral.md          # visão geral: o que é/não é, dependências, glossário
@@ -356,7 +356,7 @@ chronos-biblioteca/
 ├── src/
 │   ├── main/                 # processo main (Electron)
 │   │   ├── index.ts          # janela, IPC, ciclo de vida e F11 em tela cheia
-│   │   ├── protocols.ts      # schemes cover:// (capas) e chronos:// (SPA)
+│   │   ├── protocols.ts      # schemes cover:// (capas) e cronologia:// (SPA)
 │   │   ├── library.ts        # acervo cifrado + reset destrutivo
 │   │   ├── settings.ts       # App key, idioma e leitura/gravação no cofre
 │   │   ├── jsonfile.ts       # writeJsonAtomic (escrita atômica com mode)
@@ -430,17 +430,17 @@ flowchart LR
     PRT --> VITE
     VITE --> EB["electron-builder --linux deb"]
     ICON["build/icon.png"] --> EB
-    EB --> DEB[("release/<br/>chronos-biblioteca_<versão>_amd64.deb")]
+    EB --> DEB[("release/<br/>cronologia_<versão>_amd64.deb")]
 ```
 
 Detalhes da configuração (campo `build` do `package.json`):
 
-- Alvo exclusivo `deb`, `executableName: chronos-biblioteca`
+- Alvo exclusivo `deb`, `executableName: cronologia`
 - `desktopName` + `syncDesktopName` para o `StartupWMClass` casar com a janela (associação
   correta no menu/ALT+TAB do Mint)
 - Ícone empacotado em `usr/share/icons/hicolor/512x512/apps/`
 - `homepage` no `package.json` aponta para o repositório
-  (`https://github.com/chronos-atalante/chronos-biblioteca`): o alvo `deb` do
+  (`https://github.com/chronos-atalante/cronologia`): o alvo `deb` do
   electron-builder exige uma URL no campo `Homepage:` do controle do pacote
 - `postinst` do electron-builder instala o perfil AppArmor real
   (`build/apparmor-profile`, pulado onde a base é antiga) e cuida do `chrome-sandbox`;
@@ -466,7 +466,7 @@ Fluxo resumido (passo a passo completo em [`docs/dropbox.md`](docs/dropbox.md)):
    desbloquear antes de continuar.
 3. **Fazer backup agora** → `library.json` + capas sobem **sempre criptografados**
    (AES-256-GCM, nomes de arquivo opacos via HMAC) para a **pasta do app**
-   (`/Apps/Chronos Biblioteca`). A pasta aparece na sua conta, mas só este app a acessa
+   (`/Apps/Cronologia`). A pasta aparece na sua conta, mas só este app a acessa
    via API, e mesmo bisbilhotando, só há blobs sem nome legível.
 4. **Restaurar** → pede a **senha de criptografia**, baixa o backup e substitui a biblioteca
    local.

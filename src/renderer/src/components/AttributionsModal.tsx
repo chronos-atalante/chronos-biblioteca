@@ -68,7 +68,7 @@ export default function AttributionsModal({ onClose }: AttributionsModalProps): 
                   className="credits-half"
                   aria-hidden={hidden ? 'true' : undefined}
                 >
-                  <p className="credits-title">Chronos Biblioteca</p>
+                  <p className="credits-title">Cronologia</p>
                   <p className="credits-subtitle">{m.attributions.creditsSubtitle}</p>
                   {ATTRIBUTIONS.map((item) => (
                     <article key={`${hidden ? 'copy-' : ''}${item.name}`} className="credits-item">

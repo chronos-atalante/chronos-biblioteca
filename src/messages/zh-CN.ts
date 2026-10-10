@@ -63,8 +63,7 @@ export const zhCN: Messages = {
     toastSaveError: '无法保存作品。',
     toastSaved: '作品已保存。',
     toastRemoved: '作品已删除。',
-    startupFailed: (detail: string): string =>
-      `无法启动 Chronos Biblioteca。\n\n技术详情：${detail}`,
+    startupFailed: (detail: string): string => `无法启动 Cronologia。\n\n技术详情：${detail}`,
   },
 
   settings: {
@@ -169,7 +168,7 @@ export const zhCN: Messages = {
     title: '致谢',
     bannerTitle: '项目致谢。',
     bannerBody:
-      '以下是Chronos Biblioteca使用的开源依赖，全部采用OSI认可的宽松许可证。确切版本见' +
+      '以下是Cronologia使用的开源依赖，全部采用OSI认可的宽松许可证。确切版本见' +
       '`package.json` / `package-lock.json`。',
     pause: '暂停',
     resume: '继续',
@@ -218,10 +217,10 @@ export const zhCN: Messages = {
   },
 
   providers: {
-    dropboxStorageTarget: '/Apps/Chronos Biblioteca（您账号中可见的文件夹）',
+    dropboxStorageTarget: '/Apps/Cronologia（您账号中可见的文件夹）',
     googleStorageTarget: 'appDataFolder（隐藏文件夹，不显示在Google云端硬盘界面中）',
     googleUnavailable:
-      'Google云端硬盘暂不可用：只有当Chronos满足Google的要求（应用验证、同意屏幕、' +
+      'Google云端硬盘暂不可用：只有当Cronologia满足Google的要求（应用验证、同意屏幕、' +
       '范围审核）后才会启用集成。在此之前，备份使用Dropbox。',
   },
 

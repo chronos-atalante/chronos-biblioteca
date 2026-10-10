@@ -92,9 +92,11 @@ describe('vault/crypto: força da senha mestra', () => {
     expect(passwordProblem('abcabcabcabc')).toBe('trivial');
   });
 
-  it('recusa fragmento comum (senha, password, chronos…)', () => {
+  it('recusa fragmento comum (senha, password, nome do projeto…)', () => {
     expect(passwordProblem('minha-senha-forte-1')).toBe('trivial');
     expect(passwordProblem('MyPasswordIsGreat12')).toBe('trivial');
+    // Nome atual e nome antigo: os dois seguem sendo senha previsível.
+    expect(passwordProblem('CronologiaSeguro12!')).toBe('trivial');
     expect(passwordProblem('ChronosBiblioteca1!')).toBe('trivial');
   });
 

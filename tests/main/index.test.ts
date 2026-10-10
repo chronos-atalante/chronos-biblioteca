@@ -38,7 +38,7 @@ function handler(channel: string): IpcHandler {
   return call[1];
 }
 
-const FAKE_EVENT = { senderFrame: { url: 'chronos://app/index.html' } };
+const FAKE_EVENT = { senderFrame: { url: 'cronologia://app/index.html' } };
 
 function invoke(channel: string, ...args: unknown[]): unknown {
   return handler(channel)(FAKE_EVENT, ...args);
@@ -110,7 +110,7 @@ beforeAll(async () => {
 });
 
 describe('inicialização', () => {
-  it('registra os schemes cover e chronos como privilegiados', () => {
+  it('registra os schemes cover e cronologia como privilegiados', () => {
     expect(protocol.registerSchemesAsPrivileged).toHaveBeenCalledWith([
       {
         scheme: 'cover',
@@ -122,7 +122,7 @@ describe('inicialização', () => {
         },
       },
       {
-        scheme: 'chronos',
+        scheme: 'cronologia',
         privileges: {
           standard: true,
           secure: true,
@@ -136,7 +136,7 @@ describe('inicialização', () => {
   it('move o userData para o cache XDG', () => {
     expect(app.setPath).toHaveBeenCalledWith(
       'userData',
-      path.join(sandboxPath('XDG_CACHE_HOME'), 'chronos-biblioteca'),
+      path.join(sandboxPath('XDG_CACHE_HOME'), 'cronologia'),
     );
   });
 
@@ -159,7 +159,7 @@ describe('inicialização', () => {
     expect(options.width).toBe(1200);
     expect(options.minWidth).toBe(520);
     expect(options.minHeight).toBe(360);
-    expect(options.title).toBe('Chronos Biblioteca');
+    expect(options.title).toBe('Cronologia');
     expect(options.webPreferences.contextIsolation).toBe(true);
     expect(options.webPreferences.nodeIntegration).toBe(false);
     expect(options.webPreferences.sandbox).toBe(true);
@@ -168,8 +168,8 @@ describe('inicialização', () => {
     // empacotado isPackaged vira true e `devTools` desliga.
     expect(options.webPreferences.devTools).toBe(true);
     expect(String(options.webPreferences.preload)).toContain(path.join('preload', 'index'));
-    // Em produção o renderer é servido pelo scheme custom `chronos://` (sem file://).
-    expect(win?.loadURL.mock.calls[0]?.[0]).toBe('chronos://app/index.html');
+    // Em produção o renderer é servido pelo scheme custom `cronologia://` (sem file://).
+    expect(win?.loadURL.mock.calls[0]?.[0]).toBe('cronologia://app/index.html');
     // Sem dev URL, loadFile não é usado (scheme custom cobre a home).
     expect(win?.loadFile).not.toHaveBeenCalled();
   });
@@ -415,7 +415,7 @@ describe('handler cover:pick', () => {
   });
 
   it('importa a imagem escolhida para a pasta de capas', async () => {
-    const source = path.join(os.tmpdir(), `chronos-pick-${Date.now()}.png`);
+    const source = path.join(os.tmpdir(), `cronologia-pick-${Date.now()}.png`);
     fs.writeFileSync(source, 'imagem-escolhida', 'utf-8');
     try {
       dialog.showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: [source] });
